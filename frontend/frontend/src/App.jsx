@@ -1,27 +1,12 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
-import Register from "./Pages/Register";
-import Login from "./Pages/Login";
-import Dashboard from "./Pages/Dashboard";
-import ProtectedRoute from "./components/ProtectedRoute";
+import './App.css'
 
 function App() {
+ 
   return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<Navigate to="/login" replace />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/login" element={<Login />} />
-        <Route 
-          path="/dashboard" 
-          element={
-            <ProtectedRoute>
-              <Dashboard />
-            </ProtectedRoute>
-          } 
-        />
-      </Routes>
-    </Router>
-  );
+    <div>
+
+    </div>
+  )
 }
 
 export default App;
