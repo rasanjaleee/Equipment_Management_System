@@ -26,11 +26,21 @@ export default function Login() {
       
       // Store JWT token and user info
       const { token, id, username, email, role } = res.data;
+      console.log("Login response data:", res.data);
+      console.log("User role:", role);
+      
       localStorage.setItem("token", token);
       localStorage.setItem("user", JSON.stringify({ id, username, email, role }));
 
       // Redirect to dashboard
-      navigate("/home");
+      if (role === "ADMIN") {
+        console.log("Redirecting to admin dashboard");
+        navigate("/admin/dashboard");
+      } else {
+        console.log("Redirecting to user home");
+        navigate("/home");
+      }
+
     } catch (err) {
       setError(err.response?.data?.message || "Invalid username or password");
     } finally {
