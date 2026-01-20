@@ -19,22 +19,25 @@ public class UserService {
     private PasswordEncoder passwordEncoder;
 
     public User registerUser(UserRegistrationRequest request) {
-        // You can add validations here (check if username/email exists)
         User user = new User();
         user.setUsername(request.getUsername());
         user.setEmail(request.getEmail());
-        user.setPassword(passwordEncoder.encode(request.getPassword())); // 🔹 encode password
-        user.setRole("STUDENT"); // default role
+        user.setPassword(passwordEncoder.encode(request.getPassword()));
+        user.setRole("STUDENT");
         return userRepository.save(user);
     }
 
-
-    public boolean verifyUser(String username, String password){
+    public boolean verifyUser(String username, String password) {
         Optional<User> userOptional = userRepository.findByUsername(username);
-        if(userOptional.isPresent()){
+        if (userOptional.isPresent()) {
             User user = userOptional.get();
-            return passwordEncoder.matches(password,user.getPassword());
+            return passwordEncoder.matches(password, user.getPassword());
         }
         return false;
+    }
+
+    // ✅ ADD THIS METHOD (REQUIRED FOR ADMIN LOGIN RESPONSE)
+    public Optional<User> getUserByUsername(String username) {
+        return userRepository.findByUsername(username);
     }
 }
