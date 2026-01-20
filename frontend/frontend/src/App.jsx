@@ -12,6 +12,8 @@ import Equipment from './Pages/Equipment';
 import About from './Pages/About';
 import Navbar from './components/Navbar';
 import EquipmentDetails from './Pages/EquipmentDetails';
+import Footer from './components/Footer';
+
 
 // Wrapper to provide Router context
 function AppWrapper() {
@@ -30,21 +32,27 @@ function App() {
   const shouldShowNavbar = !hideNavbarOn.includes(location.pathname);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       
       {/* Show Navbar only on allowed pages */}
       {shouldShowNavbar && <Navbar />}
 
-      <Routes>
-        <Route path='/' element={<Landing />} />
-        <Route path='/login' element={<Login />} />
-        <Route path='/register' element={<Register />} />
-        <Route path='/dashboard' element={<Dashboard />} />
-        <Route path='/home' element={<Home />} />
-        <Route path='/equipment' element={<Equipment />} />
-        <Route path='/equipment/:id' element={<EquipmentDetails />} />
-        <Route path='/about' element={<About />} />
-      </Routes>
+      <main className="flex-grow">
+        <Routes>
+          <Route path='/' element={<Landing />} />
+          <Route path='/login' element={<Login />} />
+          <Route path='/register' element={<Register />} />
+          <Route path='/dashboard' element={<Dashboard />} />
+          <Route path='/home' element={<Home />} />
+          <Route path='/equipment' element={<Equipment />} />
+          <Route path='/equipment/:id' element={<EquipmentDetails />} />
+          <Route path='/about' element={<About />} />
+        </Routes>
+      </main>
+
+      {/* Show Footer only on allowed pages */}
+      {shouldShowNavbar && <Footer />}
+
     </div>
   );
 }

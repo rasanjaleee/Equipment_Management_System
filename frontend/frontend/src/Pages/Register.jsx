@@ -1,6 +1,8 @@
 import { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import signuppage01 from "/images/signuppage01.png";
+
 
 export default function Register() {
   const navigate = useNavigate();
@@ -184,26 +186,11 @@ export default function Register() {
       <div className="hidden lg:block lg:w-1/2 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 to-transparent z-10"></div>
         <img
-          src="https://images.unsplash.com/photo-1562774053-701939374585?w=1200&h=1600&fit=crop&q=80"
+          src={signuppage01}
           alt="University Campus"
           className="w-full h-full object-cover"
         />
-        <div className="absolute bottom-8 left-8 right-8 z-20">
-          <div className="bg-white/95 backdrop-blur-sm p-6 rounded-xl shadow-2xl">
-            <h3 className="text-xl font-bold text-gray-800 mb-2">
-              Welcome to Faculty of Engineering
-            </h3>
-            <p className="text-sm text-gray-600 mb-3">
-              Equipment Management System - A centralized platform that makes managing laboratory equipment efficient and accessible.
-            </p>
-            <div className="flex items-center gap-2 text-sm text-gray-500">
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
-              </svg>
-              <span>Secure • Efficient • Transparent</span>
-            </div>
-          </div>
-        </div>
+        
       </div>
     </div>
   );

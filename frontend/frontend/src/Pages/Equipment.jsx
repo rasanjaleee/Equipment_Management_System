@@ -1,5 +1,6 @@
 import { Search, ChevronDown } from 'lucide-react';
 import { useState } from 'react';
+import image from '/images/1.webp';
 
 const Equipment = () => {
   const [selectedDepartment, setSelectedDepartment] = useState('');
@@ -132,7 +133,7 @@ const Equipment = () => {
             {/* Right Image */}
             <div className="flex-1">
               <img 
-                src="https://images.unsplash.com/photo-1562774053-701939374585?w=600" 
+                src={image}
                 alt="Engineering Building"
                 className="w-full h-64 object-cover rounded-lg shadow-md"
               />

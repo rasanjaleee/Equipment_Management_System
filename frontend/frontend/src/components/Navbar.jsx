@@ -1,92 +1,124 @@
-import { Bell, User, Link as LinkIcon } from 'lucide-react';
-import { Link } from 'react-router-dom';
-
+import React, { useState, useRef, useEffect } from 'react';
+import { Bell, MessageSquare, LogOut, User } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 
 const Navbar = () => {
-  const userName = "John Doe"; // Replace with actual user data
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
+  const navigate = useNavigate();
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleLogout = () => {
+    // Add your logout logic here
+    // For example: clear localStorage, clear tokens, etc.
+    localStorage.clear();
+    sessionStorage.clear();
+    
+    // Redirect to login page
+    navigate('/login');
+  };
 
   return (
-    <nav className="bg-gradient-to-r from-gray-700 to-gray-800 shadow-lg">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          {/* Left side - Logo */}
-          <div className="flex-shrink-0 flex items-center">
-            <div className="text-2xl font-bold text-white">
-              YourLogo
-            </div>
-          </div>
-
-          {/* Center - Navigation Links */}
-          <div className="hidden md:flex items-center space-x-1">
-            <a
-              href="/"
-              className="text-black bg-yellow-500 hover:bg-yellow-400 px-6 py-2 text-sm font-semibold uppercase transition-colors"
-            >
-              HOME
-            </a>
-            <a
-              href="/equipment"
-              className="text-black bg-yellow-500 hover:bg-yellow-400 px-6 py-2 text-sm font-semibold uppercase transition-colors"
-            >
-              EQUIPMENT
-            </a>
-            <a
-              href="/about"
-              className="text-black bg-yellow-500 hover:bg-yellow-400 px-6 py-2 text-sm font-semibold uppercase transition-colors"
-            >
-              ABOUT
-            </a>
-          </div>
-
-          {/* Right side - User Info & Icons */}
-          <div className="flex items-center space-x-4">
-            {/* Notification Icon */}
-            <a
-              href="/notifications"
-              className="p-2 text-white hover:text-yellow-400 transition-colors relative"
-              title="Notifications"
-            >
-              <Bell size={22} />
-              {/* Notification badge */}
-              <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full"></span>
-            </a>
-
-            {/* Profile Icon */}
-            <a
-              href="/profile"
-              className="p-2 text-white hover:text-yellow-400 transition-colors"
-              title="Profile"
-            >
-              <User size={22} />
-            </a>
-
-            {/* User Name Circle */}
-            <div className="w-10 h-10 bg-yellow-500 rounded-full flex items-center justify-center text-black font-bold text-lg cursor-pointer hover:bg-yellow-400 transition-colors">
-              H
-            </div>
+    <nav className="bg-gradient-to-r from-yellow-500 to-orange-400 px-6 py-1 shadow-md">
+      <div className="max-w-7xl mx-auto flex items-center justify-between">
+        {/* Left Section - Logo and Title */}
+        <div className="flex items-center justify-center gap-0">
+          {/* Logo */}
+          <img 
+            src="/images/home_logo.png" 
+            alt="University Logo" 
+            className="w-24 h-20 object-contain mt-1"
+          />
+          
+          {/* Title */}
+          <div className="flex flex-col leading-tight -ml-4">
+            <h1 className="text-white font-bold text-xl tracking-wide">
+              FACULTY OF ENGINEERING
+            </h1>
+            <p className="text-white text-base font-medium">
+              UNIVERSITY OF RUHUNA
+            </p>
           </div>
         </div>
 
-        {/* Mobile menu */}
-        <div className="md:hidden pb-3 space-y-1">
-          <a
-            href="/"
-            className="block text-black bg-yellow-500 hover:bg-yellow-400 px-3 py-2 text-sm font-semibold uppercase rounded"
+        {/* Center Section - Navigation Links */}
+        <div className="flex items-center gap-8">
+          <Link 
+            to="/home" 
+            className="text-white font-semibold text-base hover:text-gray-100 transition-colors duration-200"
           >
             HOME
-          </a>
-          <a
-            href="/equipment"
-            className="block text-black bg-yellow-500 hover:bg-yellow-400 px-3 py-2 text-sm font-semibold uppercase rounded"
+          </Link>
+          <Link 
+            to="/equipment" 
+            className="text-white font-semibold text-base hover:text-gray-100 transition-colors duration-200"
           >
             EQUIPMENT
-          </a>
-          <a
-            href="/about"
-            className="block text-black bg-yellow-500 hover:bg-yellow-400 px-3 py-2 text-sm font-semibold uppercase rounded"
+          </Link>
+          <Link 
+            to="/about" 
+            className="text-white font-semibold text-base hover:text-gray-100 transition-colors duration-200"
           >
             ABOUT
-          </a>
+          </Link>
+        </div>
+
+        {/* Right Section - Icons and Profile */}
+        <div className="flex items-center gap-4">
+          {/* Notification Bell */}
+          <button className="text-white hover:text-gray-100 transition-colors duration-200">
+            <Bell size={26} />
+          </button>
+
+          {/* Message Icon */}
+          <button className="text-white hover:text-gray-100 transition-colors duration-200 border-2 border-white rounded p-1.5">
+            <MessageSquare size={22} />
+          </button>
+
+          {/* Profile Circle with Dropdown */}
+          <div className="relative" ref={dropdownRef}>
+            <button
+              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+              className="bg-amber-900 rounded-full w-11 h-11 flex items-center justify-center text-white font-bold text-xl hover:bg-amber-800 transition-colors duration-200 cursor-pointer"
+            >
+              H
+            </button>
+
+            {/* Dropdown Menu */}
+            {isDropdownOpen && (
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-1 z-50">
+                <Link
+                  to="/profile"
+                  className="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors duration-200"
+                  onClick={() => setIsDropdownOpen(false)}
+                >
+                  <User size={18} />
+                  <span>Profile</span>
+                </Link>
+                
+                <div className="border-t border-gray-200 my-1"></div>
+                
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center gap-3 w-full px-4 py-2 text-red-600 hover:bg-red-50 transition-colors duration-200"
+                >
+                  <LogOut size={18} />
+                  <span>Logout</span>
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </nav>
