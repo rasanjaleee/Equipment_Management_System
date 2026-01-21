@@ -4,7 +4,7 @@ const EquipmentDetails = () => {
   // Sample equipment data - in real app, this would come from props or API based on equipment ID
   const equipmentData = {
     name: 'Digital Oscilloscope',
-    image: '/images/img1.jpeg', // Ensure this image exists in the public/images folder
+    image: '/images/oscilloscope.jpg', // Ensure this image exists in the public/images folder
     details: {
       'Equipment Name': 'Oscilloscope',
       'Laboratory Name': 'Electronic and Power Laboratory',

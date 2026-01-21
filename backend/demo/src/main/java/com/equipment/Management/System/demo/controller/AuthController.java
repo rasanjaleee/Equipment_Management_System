@@ -1,4 +1,5 @@
 package com.equipment.Management.System.demo.controller;
+import java.util.Map;
 
 import com.equipment.Management.System.demo.model.User;
 import com.equipment.Management.System.demo.model.UserRegistrationRequest;
@@ -36,13 +37,35 @@ public class AuthController {
 
 
     @PostMapping("/login")
-    public ResponseEntity<?> loginUser(@RequestBody User user) {
-        boolean success = userService.verifyUser(user.getUsername(), user.getPassword());
-        if (success) {
-            String token = jwtUtil.generateToken(user.getUsername());
-            return ResponseEntity.ok("Bearer"+ token);
-        } else {
-            return ResponseEntity.status(401).body("Invalid credentials");
+    public ResponseEntity<?> loginUser(@RequestBody User loginRequest) {
+
+        boolean success = userService.verifyUser(
+                loginRequest.getUsername(),
+                loginRequest.getPassword()
+        );
+
+        if (!success) {
+            return ResponseEntity
+                    .status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("message", "Invalid username or password"));
         }
+
+        // ✅ Get full user details
+        User user = userService
+                .getUserByUsername(loginRequest.getUsername())
+                .orElseThrow();
+
+        // ✅ Generate JWT
+        String token = jwtUtil.generateToken(user.getUsername());
+
+        // ✅ Send response expected by frontend
+        return ResponseEntity.ok(Map.of(
+                "token", "Bearer " + token,
+                "id", user.getId(),
+                "username", user.getUsername(),
+                "email", user.getEmail(),
+                "role", user.getRole()
+        ));
     }
+
 }

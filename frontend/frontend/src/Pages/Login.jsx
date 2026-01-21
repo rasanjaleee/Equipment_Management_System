@@ -33,7 +33,13 @@ export default function Login() {
       localStorage.setItem("user", JSON.stringify({ id, username, email, role }));
 
       // Redirect to dashboard
-      navigate("/home");
+      if (role === "ADMIN") {
+        console.log("Redirecting to admin dashboard");
+        navigate("/admin/dashboard");
+      } else {
+        console.log("Redirecting to user home");
+        navigate("/home");
+      }
     } catch (err) {
       setError(err.response?.data?.message || "Invalid username or password");
     } finally {

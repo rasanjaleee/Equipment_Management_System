@@ -1,6 +1,8 @@
 import { Search, ChevronDown } from 'lucide-react';
 import { useState } from 'react';
 import image from '/images/1.webp';
+import oscilloscope from '/images/oscilloscope.jpg';
+import multimeter from '/images/multimeter.jpg';
 
 const Equipment = () => {
   const [selectedDepartment, setSelectedDepartment] = useState('');
@@ -38,21 +40,21 @@ const Equipment = () => {
           name: 'Oscilloscope',
           type: 'Total Equipment - 07',
           model: 'Model01 - 02',
-          image:'/images/img1.jpeg'
+          image: oscilloscope
         },
         {
           id: 2,
           name: 'Digital Multimeter',
           type: 'Total Equipment - 07',
           model: 'Model01 - 02',
-          image: 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=400'
+          image: multimeter
         },
         {
           id: 3,
           name: 'Function Generator',
           type: 'Total Equipment - 07',
           model: 'Model01 - 02',
-          image: 'https://images.unsplash.com/photo-1581092918056-0c4c3acd3789?w=400'
+          image: oscilloscope
         }
       ]
     },
@@ -66,21 +68,21 @@ const Equipment = () => {
           name: 'Oscilloscope',
           type: 'Total Equipment - 05',
           model: 'Model01 - 02',
-          image: 'https://images.unsplash.com/photo-1583794834234-c5ebaa5a3a9b?w=400'
+          image: oscilloscope
         },
         {
           id: 5,
           name: 'Digital Multimeter',
           type: 'Total Equipment - 05',
           model: 'Model01 - 02',
-          image: 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=400'
+          image: multimeter
         },
         {
           id: 6,
           name: 'Function Generator',
           type: 'Total Equipment - 05',
           model: 'Model01 - 02',
-          image: 'https://images.unsplash.com/photo-1581092918056-0c4c3acd3789?w=400'
+          image: oscilloscope
         }
       ]
     },
@@ -94,21 +96,21 @@ const Equipment = () => {
           name: 'Oscilloscope',
           type: 'Total Equipment - 06',
           model: 'Model01 - 02',
-          image: 'https://images.unsplash.com/photo-1583794834234-c5ebaa5a3a9b?w=400'
+          image: oscilloscope
         },
         {
           id: 8,
           name: 'Digital Multimeter',
           type: 'Total Equipment - 06',
           model: 'Model01 - 02',
-          image: 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=400'
+          image: multimeter
         },
         {
           id: 9,
           name: 'Function Generator',
           type: 'Total Equipment - 06',
           model: 'Model01 - 02',
-          image: 'https://images.unsplash.com/photo-1581092918056-0c4c3acd3789?w=400'
+          image: oscilloscope
         }
       ]
     }
