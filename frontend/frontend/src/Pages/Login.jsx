@@ -24,8 +24,20 @@ export default function Login() {
     setLoading(true);
     setError("");
 
+    // Sanitize inputs
+    const sanitized = {
+      username: form.username.trim(),
+      password: form.password.trim()
+    };
+
+    if (!sanitized.username || !sanitized.password) {
+      setError("Username and password are required.");
+      setLoading(false);
+      return;
+    }
+
     try {
-      const res = await axios.post("http://localhost:8080/auth/login", form);
+      const res = await axios.post("http://localhost:8080/auth/login", sanitized);
       
       // Store JWT token and user info
       const { token, id, username, email, role } = res.data;
@@ -40,9 +52,17 @@ export default function Login() {
         console.log("Redirecting to user home");
         navigate("/home");
       }
-    } catch (err) {
-      setError(err.response?.data?.message || "Invalid username or password");
-    } finally {
+   } catch (err) {
+  const status = err.response?.status;
+  const msg = err.response?.data?.message;
+
+  if (status === 429) {
+    setError(msg || "Too many attempts. Please try again later.");
+  } else {
+    setError(msg || "Invalid username or password");
+  }
+}
+ finally {
       setLoading(false);
     }
   };
