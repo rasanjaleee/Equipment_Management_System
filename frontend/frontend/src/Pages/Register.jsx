@@ -20,14 +20,47 @@ export default function Register() {
     setError("");
   };
 
+  const isValidEmail = (email) => /^[a-zA-Z0-9._%-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email);
+
+  const isValidUsername = (username) => /^[a-zA-Z0-9_]{3,}$/.test(username);
+
+  const isStrongPassword = (pw) =>
+  /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&._#^()-+=]).{8,}$/.test(pw);
+
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError("");
     setSuccess("");
 
+    // Sanitize inputs
+    const sanitized = {
+      username: form.username.trim(),
+      email: form.email.trim(),
+      password: form.password
+    };
+
+    if (!isValidUsername(sanitized.username)) {
+      setError("Username must be 3+ characters (letters, numbers, underscore only).");
+      setLoading(false);
+      return;
+    }
+
+    if (!isValidEmail(sanitized.email)) {
+      setError("Please enter a valid email address.");
+      setLoading(false);
+      return;
+    }
+
+    if (!isStrongPassword(sanitized.password)) {
+      setError("Password must be 8+ chars and include uppercase, lowercase, number, and a symbol.");
+      setLoading(false);
+      return;
+    }
+
     try {
-      const res = await axios.post("http://localhost:8080/auth/register", form);
+      const res = await axios.post("http://localhost:8080/auth/register", sanitized);
       setSuccess("Registration successful! Redirecting to login...");
       setForm({ username: "", email: "", password: "" });
       
@@ -35,7 +68,18 @@ export default function Register() {
         navigate("/login");
       }, 2000);
     } catch (err) {
-      setError(err.response?.data?.message || "Registration failed. Please try again.");
+      const status = err.response?.status;
+      const msg = err.response?.data?.message;
+
+      if (status === 429) {
+        setError(msg || "Too many registration attempts. Please try again later.");
+      } else if (status === 409) {
+        setError(msg || "Email or username already exists. Please try a different one.");
+      } else if (status === 400) {
+        setError(msg || "Invalid input. Please check your information.");
+      } else {
+        setError(msg || "Registration failed. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -120,7 +164,7 @@ export default function Register() {
                 className="w-full px-4 py-3 bg-gray-100 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition"
                 required
                 minLength={6}
-                placeholder="Enter your password (min 6 characters)"
+                placeholder="Enter your password "
               />
             </div>
 

@@ -19,13 +19,24 @@ public class UserService {
     private PasswordEncoder passwordEncoder;
 
     public User registerUser(UserRegistrationRequest request) {
+
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw new RuntimeException("Email already exists");
+        }
+
+        if (userRepository.existsByUsername(request.getUsername())) {
+            throw new RuntimeException("Username already exists");
+        }
+
         User user = new User();
-        user.setUsername(request.getUsername());
-        user.setEmail(request.getEmail());
+        user.setUsername(request.getUsername().trim());
+        user.setEmail(request.getEmail().trim().toLowerCase());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setRole("STUDENT");
+
         return userRepository.save(user);
     }
+
 
     public boolean verifyUser(String username, String password) {
         Optional<User> userOptional = userRepository.findByUsername(username);
