@@ -13,8 +13,8 @@ import About from './Pages/About';
 import Navbar from './components/Navbar';
 import EquipmentDetails from './Pages/EquipmentDetails';
 import Footer from './components/Footer';
-import AdminDashboard from "./Pages/AdminDashboard";
-import AdminEquipment from "./Pages/AdminEquipment";
+import AdminDashboard from "./Pages/admin/AdminDashboard";
+import AdminEquipment from "./Pages/admin/AdminEquipment";
 import AdminRoute from "./routes/AdminRoute";
 
 // Wrapper to provide Router context
