@@ -1,4 +1,7 @@
 package com.equipment.Management.System.demo.model;
 
-public class EquipmentStatus {
+public enum EquipmentStatus {
+    WORKING,
+    BROKEN,
+    UNDER_REPAIR
 }
