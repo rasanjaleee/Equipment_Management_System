@@ -14,7 +14,7 @@ import Navbar from './components/Navbar';
 import EquipmentDetails from './Pages/EquipmentDetails';
 import Footer from './components/Footer';
 import AdminDashboard from "./Pages/AdminDashboard";
-import AdminEquipment from "./Pages/AdminEquipment";
+import AdminEquipment from "./Pages/admin/AdminEquipment";
 import AdminRoute from "./routes/AdminRoute";
 import MaintenancePage from "./Pages/admin/MaintenancePage";
 import AdminLayout from "./Pages/AdminLayout";

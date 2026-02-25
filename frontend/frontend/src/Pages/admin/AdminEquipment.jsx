@@ -193,7 +193,7 @@ export default function AdminEquipment() {
 
   // ================= RENDER =================
   return (
-    <AdminLayout pageTitle="Equipment Management">
+   
       <div className="bg-gradient-to-br from-gray-50 via-gray-100 to-gray-200 p-8 min-h-full">
         <div className="max-w-7xl mx-auto">
 
@@ -589,6 +589,6 @@ export default function AdminEquipment() {
 
         </div>
       </div>
-    </AdminLayout>
+   
   );
 }
