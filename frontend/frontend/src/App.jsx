@@ -20,6 +20,7 @@ import MaintenancePage from "./Pages/admin/MaintenancePage";
 import AdminLayout from "./Pages/AdminLayout";
 import Profile from "./Pages/Profile";
 
+
 // Wrapper to provide Router context
 function AppWrapper() {
   return (
@@ -28,6 +29,9 @@ function AppWrapper() {
     </Router>
   );
 }
+
+  const hideNavbarOn = ['/', '/login', '/register'];
+  const shouldShowNavbar = !hideNavbarOn.includes(location.pathname) && !location.pathname.startsWith('/admin');
 
 function App() {
   const location = useLocation();
@@ -44,6 +48,7 @@ const shouldShowNavbar =
 // ✅ Footer always shown except login/landing pages
 const shouldShowFooter =
   !hideNavbarOn.includes(location.pathname);
+
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -70,12 +75,12 @@ const shouldShowFooter =
           <Route path="maintenance" element={<MaintenancePage />} />
           <Route path="/admin/profile" element={<Profile />} />
           </Route>
+
         </Routes>
       </main>
 
       {/* Show Footer only on allowed pages */}
       {shouldShowFooter && <Footer />}
-
     </div>
   );
 }
