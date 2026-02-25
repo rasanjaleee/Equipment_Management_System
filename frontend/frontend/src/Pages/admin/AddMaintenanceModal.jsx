@@ -1,29 +1,39 @@
+// src/pages/admin/AddMaintenanceModal.jsx
 import { useState } from "react";
 
-export default function AddMaintenanceModal({ onClose, onSaved }) {
+export default function AddMaintenanceModal({ onClose, onSaved, equipment }) {
   const [form, setForm] = useState({
     equipmentId: "",
     issueDescription: "",
     status: "PENDING",
-    reportedDate: new Date().toISOString().split('T')[0],
+    priority: "LOW",
     dueDate: "",
   });
 
   const [loading, setLoading] = useState(false);
 
   const handleChange = (e) =>
-    setForm({ ...form, [e.target.name]: e.target.value });
+    setForm((p) => ({ ...p, [e.target.name]: e.target.value }));
 
   const submit = async (e) => {
     e.preventDefault();
+
     if (!form.equipmentId || !form.issueDescription || !form.dueDate) {
       alert("Please fill in all required fields.");
       return;
     }
-    
+
+    const payload = {
+      equipmentId: Number(form.equipmentId), // ✅ ManyToOne format
+      issueDescription: form.issueDescription,
+      status: form.status,
+      priority: form.priority,
+      dueDate: form.dueDate,
+    };
+
     setLoading(true);
     try {
-      await onSaved(form);
+      await onSaved(payload);
     } catch (err) {
       console.error("Failed to add maintenance record:", err);
       alert("Failed to add record. Please try again.");
@@ -41,14 +51,20 @@ export default function AddMaintenanceModal({ onClose, onSaved }) {
 
         <form onSubmit={submit} className="grid gap-4">
           <div className="grid grid-cols-2 gap-4">
-            <Field label="Equipment ID">
-              <input
+            <Field label="Equipment">
+              <select
                 name="equipmentId"
                 value={form.equipmentId}
                 onChange={handleChange}
                 className="w-full px-3 py-2 rounded border"
-                placeholder="eg: 1"
-              />
+              >
+                <option value="">Select equipment</option>
+                {equipment?.map((e) => (
+                  <option key={e.id} value={e.id}>
+                    {e.equipmentName} - {e.laboratory} (ID: {e.id})
+                  </option>
+                ))}
+              </select>
             </Field>
 
             <Field label="Issue Description">
@@ -70,9 +86,9 @@ export default function AddMaintenanceModal({ onClose, onSaved }) {
                 onChange={handleChange}
                 className="w-full px-3 py-2 rounded border"
               >
-                <option>LOW</option>
-                <option>MEDIUM</option>
-                <option>HIGH</option>
+                <option value="LOW">LOW</option>
+                <option value="MEDIUM">MEDIUM</option>
+                <option value="HIGH">HIGH</option>
               </select>
             </Field>
 
@@ -87,13 +103,29 @@ export default function AddMaintenanceModal({ onClose, onSaved }) {
             </Field>
           </div>
 
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Status">
+              <select
+                name="status"
+                value={form.status}
+                onChange={handleChange}
+                className="w-full px-3 py-2 rounded border"
+              >
+                <option value="PENDING">PENDING</option>
+                <option value="IN_PROGRESS">IN_PROGRESS</option>
+                <option value="COMPLETED">COMPLETED</option>
+              </select>
+            </Field>
+          </div>
+
           <div className="flex justify-center gap-4 mt-2">
-            <button 
+            <button
               className="bg-yellow-500 px-8 py-2 rounded font-semibold hover:bg-yellow-600 disabled:opacity-50"
               disabled={loading}
             >
               {loading ? "Saving..." : "Save"}
             </button>
+
             <button
               type="button"
               onClick={onClose}

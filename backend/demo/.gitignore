@@ -33,6 +33,6 @@ build/
 .vscode/
 
 # Spring Boot application properties
-/backend/src/main/resources/application.properties
+backend/demo/src/main/resources/application-local.properties
 /backend/src/main/resources/application.yml
 

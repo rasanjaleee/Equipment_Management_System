@@ -1,13 +1,18 @@
 // src/pages/admin/EditMaintenanceModal.jsx
 import { useState } from "react";
 
-export default function EditMaintenanceModal({ item, onClose, onSaved }) {
+export default function EditMaintenanceModal({ item, onClose, onSaved, equipment }) {
+  // Works for both DTO and entity response
+  const initialEquipmentId = item?.equipmentId ?? item?.equipment?.id ?? "";
+
   const [form, setForm] = useState({
-    equipmentId: item?.equipmentId || "",
+    equipmentId: initialEquipmentId,
     issueDescription: item?.issueDescription || "",
-    reportedDate: item?.reportedDate || "",
     dueDate: item?.dueDate || "",
     status: item?.status || "PENDING",
+    priority: item?.priority || "LOW",
+    repairNote: item?.repairNote || "",
+    cost: item?.cost ?? "",
   });
 
   const [loading, setLoading] = useState(false);
@@ -18,14 +23,25 @@ export default function EditMaintenanceModal({ item, onClose, onSaved }) {
 
   const submit = async (e) => {
     e.preventDefault();
+
     if (!form.equipmentId || !form.issueDescription || !form.dueDate) {
       alert("Please fill in all required fields.");
       return;
     }
-    
+
+    const payload = {
+      equipment: { id: Number(form.equipmentId) }, // ✅ ManyToOne format
+      issueDescription: form.issueDescription,
+      dueDate: form.dueDate,
+      status: form.status,
+      priority: form.priority,
+      repairNote: form.repairNote,
+      cost: form.cost === "" ? null : Number(form.cost),
+    };
+
     setLoading(true);
     try {
-      await onSaved(form);
+      await onSaved(payload);
     } catch (err) {
       console.error("Failed to update maintenance record:", err);
       alert("Failed to update record. Please try again.");
@@ -43,14 +59,20 @@ export default function EditMaintenanceModal({ item, onClose, onSaved }) {
 
         <form onSubmit={submit} className="grid gap-4">
           <div className="grid grid-cols-2 gap-4">
-            <Field label="Equipment ID">
-              <input
+            <Field label="Equipment">
+              <select
                 name="equipmentId"
                 value={form.equipmentId}
                 onChange={handleChange}
                 className="w-full px-3 py-2 rounded border"
-                placeholder="eg: 1"
-              />
+              >
+                <option value="">Select equipment</option>
+                {equipment?.map((e) => (
+                  <option key={e.id} value={e.id}>
+                    {e.equipmentName} - {e.laboratory} (ID: {e.id})
+                  </option>
+                ))}
+              </select>
             </Field>
 
             <Field label="Issue Description">
@@ -65,16 +87,6 @@ export default function EditMaintenanceModal({ item, onClose, onSaved }) {
           </div>
 
           <div className="grid grid-cols-3 gap-4">
-            <Field label="Reported Date">
-              <input
-                type="date"
-                name="reportedDate"
-                value={form.reportedDate}
-                onChange={handleChange}
-                className="w-full px-3 py-2 rounded border"
-              />
-            </Field>
-
             <Field label="Due Date">
               <input
                 type="date"
@@ -83,6 +95,19 @@ export default function EditMaintenanceModal({ item, onClose, onSaved }) {
                 onChange={handleChange}
                 className="w-full px-3 py-2 rounded border"
               />
+            </Field>
+
+            <Field label="Priority">
+              <select
+                name="priority"
+                value={form.priority}
+                onChange={handleChange}
+                className="w-full px-3 py-2 rounded border"
+              >
+                <option value="LOW">LOW</option>
+                <option value="MEDIUM">MEDIUM</option>
+                <option value="HIGH">HIGH</option>
+              </select>
             </Field>
 
             <Field label="Status">
@@ -99,8 +124,32 @@ export default function EditMaintenanceModal({ item, onClose, onSaved }) {
             </Field>
           </div>
 
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Repair Note (optional)">
+              <input
+                name="repairNote"
+                value={form.repairNote}
+                onChange={handleChange}
+                className="w-full px-3 py-2 rounded border"
+                placeholder="eg: Replaced cable"
+              />
+            </Field>
+
+            <Field label="Cost (optional)">
+              <input
+                type="number"
+                step="0.01"
+                name="cost"
+                value={form.cost}
+                onChange={handleChange}
+                className="w-full px-3 py-2 rounded border"
+                placeholder="eg: 2500"
+              />
+            </Field>
+          </div>
+
           <div className="flex justify-center gap-4 mt-2">
-            <button 
+            <button
               className="bg-yellow-500 px-8 py-2 rounded font-semibold hover:bg-yellow-600 disabled:opacity-50"
               disabled={loading}
             >
