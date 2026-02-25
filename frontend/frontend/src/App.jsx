@@ -12,8 +12,9 @@ import Equipment from './Pages/Equipment';
 import About from './Pages/About';
 import Navbar from './components/Navbar';
 import EquipmentDetails from './Pages/EquipmentDetails';
-import AdminDashboard from "./Pages/AdminDashboard";
-import AdminEquipment from "./Pages/AdminEquipment";
+import Footer from './components/Footer';
+import AdminDashboard from "./Pages/admin/AdminDashboard";
+import AdminEquipment from "./Pages/admin/AdminEquipment";
 import AdminRoute from "./routes/AdminRoute";
 
 // Wrapper to provide Router context
@@ -25,6 +26,9 @@ function AppWrapper() {
   );
 }
 
+  const hideNavbarOn = ['/', '/login', '/register'];
+  const shouldShowNavbar = !hideNavbarOn.includes(location.pathname) && !location.pathname.startsWith('/admin');
+
 function App() {
   const location = useLocation();
 
@@ -33,21 +37,22 @@ function App() {
   const shouldShowNavbar = !hideNavbarOn.includes(location.pathname) && !location.pathname.startsWith('/admin');
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       
       {/* Show Navbar only on allowed pages */}
       {shouldShowNavbar && <Navbar />}
 
-      <Routes>
-        <Route path='/' element={<Landing />} />
-        <Route path='/login' element={<Login />} />
-        <Route path='/register' element={<Register />} />
-        <Route path='/dashboard' element={<Dashboard />} />
-        <Route path='/home' element={<Home />} />
-        <Route path='/equipment' element={<Equipment />} />
-        <Route path='/equipment/:id' element={<EquipmentDetails />} />
-        <Route path='/about' element={<About />} />
-        <Route 
+      <main className="flex-grow">
+        <Routes>
+          <Route path='/' element={<Landing />} />
+          <Route path='/login' element={<Login />} />
+          <Route path='/register' element={<Register />} />
+          <Route path='/dashboard' element={<Dashboard />} />
+          <Route path='/home' element={<Home />} />
+          <Route path='/equipment' element={<Equipment />} />
+          <Route path='/equipment/:id' element={<EquipmentDetails />} />
+          <Route path='/about' element={<About />} />
+          <Route 
           path='/admin/dashboard' 
           element={
             <AdminRoute>
@@ -63,7 +68,12 @@ function App() {
             </AdminRoute>
           } 
         />
-      </Routes>
+        </Routes>
+      </main>
+
+      {/* Show Footer only on allowed pages */}
+      {shouldShowNavbar && <Footer />}
+
     </div>
   );
 }

@@ -25,7 +25,6 @@ public class EquipmentController {
         this.equipmentService = equipmentService;
     }
 
-    // Add equipment with photo
     @PostMapping("/add")
     public ResponseEntity<?> addEquipment(
             @RequestParam String equipmentName,
@@ -62,17 +61,21 @@ public class EquipmentController {
             equipment.setPhotoPath(filePath.toString());
 
             equipmentService.saveEquipment(equipment);
-
             return ResponseEntity.ok("Equipment added successfully");
-
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Error: " + e.getMessage());
         }
     }
 
-    // Get all equipment (Admin table)
-    @GetMapping("/all")
+    // Get all equipment
+    @GetMapping
     public List<Equipment> getAllEquipment() {
+        return equipmentService.getAllEquipment();
+    }
+
+    // Keep the old endpoint for backwards compatibility
+    @GetMapping("/all")
+    public List<Equipment> getAllEquipmentAlt() {
         return equipmentService.getAllEquipment();
     }
 }
