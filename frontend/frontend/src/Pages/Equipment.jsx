@@ -1,6 +1,8 @@
 import { Search, ChevronDown } from 'lucide-react';
-import { useState, useEffect } from 'react';
-import axios from 'axios';
+import { useState } from 'react';
+import image from '/images/1.webp';
+import oscilloscope from '/images/oscilloscope.jpg';
+import multimeter from '/images/multimeter.jpg';
 
 const Equipment = () => {
   const [selectedDepartment, setSelectedDepartment] = useState('');
@@ -8,61 +10,6 @@ const Equipment = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showDeptDropdown, setShowDeptDropdown] = useState(false);
   const [showLabDropdown, setShowLabDropdown] = useState(false);
-  const [equipmentData, setEquipmentData] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  // Fetch equipment from backend
-  useEffect(() => {
-    fetchEquipment();
-  }, []);
-
-  const fetchEquipment = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:8080/api/equipment', {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-      setEquipmentData(response.data);
-    } catch (err) {
-      console.error('Failed to fetch equipment:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Group equipment by laboratory
-  const groupedEquipment = equipmentData.reduce((acc, item) => {
-    const lab = item.laboratory || 'Uncategorized';
-    if (!acc[lab]) {
-      acc[lab] = [];
-    }
-    acc[lab].push(item);
-    return acc;
-  }, {});
-
-  // Filter equipment based on search and filters
-  const getFilteredEquipment = () => {
-    let filtered = { ...groupedEquipment };
-    
-    if (selectedLaboratory) {
-      filtered = { [selectedLaboratory]: filtered[selectedLaboratory] || [] };
-    }
-    
-    if (searchQuery) {
-      Object.keys(filtered).forEach(lab => {
-        filtered[lab] = filtered[lab].filter(item =>
-          item.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          item.category?.toLowerCase().includes(searchQuery.toLowerCase())
-        );
-      });
-    }
-    
-    return filtered;
-  };
-
-  const filteredLabs = getFilteredEquipment();
 
   const departments = [
     'Department of Electrical and Information Engineering',
@@ -72,7 +19,102 @@ const Equipment = () => {
     'Department of Interdisciplinary Studies'
   ];
 
-  const laboratoriesList = Object.keys(groupedEquipment).sort();
+  const laboratoriesList = [
+    'Electrical Machines and Power Electronics Laboratory',
+    'Power Systems and High Voltage Laboratory',
+    'Electronics and Measurements Laboratory',
+    'Control Systems Laboratory',
+    'Communication Systems Laboratory',
+    'Computer Networks Laboratory'
+  ];
+
+  // Sample equipment data
+  const laboratories = [
+    {
+      id: 1,
+      name: '01 Electrical Machines and Power Electronics Laboratory',
+      totalEquipment: 30,
+      equipment: [
+        {
+          id: 1,
+          name: 'Oscilloscope',
+          type: 'Total Equipment - 07',
+          model: 'Model01 - 02',
+          image: oscilloscope
+        },
+        {
+          id: 2,
+          name: 'Digital Multimeter',
+          type: 'Total Equipment - 07',
+          model: 'Model01 - 02',
+          image: multimeter
+        },
+        {
+          id: 3,
+          name: 'Function Generator',
+          type: 'Total Equipment - 07',
+          model: 'Model01 - 02',
+          image: oscilloscope
+        }
+      ]
+    },
+    {
+      id: 2,
+      name: '02. Power systems and High voltage laboratory',
+      totalEquipment: 25,
+      equipment: [
+        {
+          id: 4,
+          name: 'Oscilloscope',
+          type: 'Total Equipment - 05',
+          model: 'Model01 - 02',
+          image: oscilloscope
+        },
+        {
+          id: 5,
+          name: 'Digital Multimeter',
+          type: 'Total Equipment - 05',
+          model: 'Model01 - 02',
+          image: multimeter
+        },
+        {
+          id: 6,
+          name: 'Function Generator',
+          type: 'Total Equipment - 05',
+          model: 'Model01 - 02',
+          image: oscilloscope
+        }
+      ]
+    },
+    {
+      id: 3,
+      name: '03. Electronics and Measurements laboratory',
+      totalEquipment: 28,
+      equipment: [
+        {
+          id: 7,
+          name: 'Oscilloscope',
+          type: 'Total Equipment - 06',
+          model: 'Model01 - 02',
+          image: oscilloscope
+        },
+        {
+          id: 8,
+          name: 'Digital Multimeter',
+          type: 'Total Equipment - 06',
+          model: 'Model01 - 02',
+          image: multimeter
+        },
+        {
+          id: 9,
+          name: 'Function Generator',
+          type: 'Total Equipment - 06',
+          model: 'Model01 - 02',
+          image: oscilloscope
+        }
+      ]
+    }
+  ];
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -93,7 +135,7 @@ const Equipment = () => {
             {/* Right Image */}
             <div className="flex-1">
               <img 
-                src="https://images.unsplash.com/photo-1562774053-701939374585?w=600" 
+                src={image}
                 alt="Engineering Building"
                 className="w-full h-64 object-cover rounded-lg shadow-md"
               />
@@ -192,7 +234,7 @@ const Equipment = () => {
         <div className="flex gap-3 mb-8">
           <button 
             onClick={() => {
-              // Filters are applied automatically through state
+              // Apply filter logic here
               console.log('Filters applied:', { selectedDepartment, selectedLaboratory, searchQuery });
             }}
             className="bg-yellow-500 hover:bg-yellow-400 text-black font-semibold px-6 py-2 rounded-full text-sm transition-colors"
@@ -211,80 +253,44 @@ const Equipment = () => {
           </button>
         </div>
 
-        {/* Loading State */}
-        {loading && (
-          <div className="text-center py-12">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500"></div>
-            <p className="text-gray-600 mt-4">Loading equipment...</p>
-          </div>
-        )}
-
-        {/* No Equipment Message */}
-        {!loading && Object.keys(filteredLabs).length === 0 && (
-          <div className="bg-yellow-50 border-2 border-yellow-400 rounded-lg p-8 text-center">
-            <p className="text-gray-700 text-lg font-medium">No equipment found</p>
-            <p className="text-gray-600 text-sm mt-2">
-              {searchQuery || selectedLaboratory 
-                ? 'Try adjusting your search filters' 
-                : 'Equipment will appear here once added by administrators'}
-            </p>
-          </div>
-        )}
-
         {/* Laboratory Sections */}
-        {!loading && Object.entries(filteredLabs).map(([labName, equipment]) => (
-          equipment.length > 0 && (
-            <div key={labName} className="mb-12">
-              <div className="bg-white border-l-4 border-yellow-500 p-4 mb-6 shadow-sm">
-                <h2 className="text-xl font-bold text-gray-900">{labName}</h2>
-                <p className="text-gray-600 text-sm">Total Equipment = {equipment.length}</p>
-              </div>
-
-              {/* Equipment Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {equipment.map((item) => (
-                  <div key={item.id} className="bg-white rounded-lg shadow-md overflow-hidden border-2 border-yellow-400 hover:shadow-xl transition-shadow">
-                    {/* Equipment Image */}
-                    <div className="aspect-video bg-gray-100 flex items-center justify-center overflow-hidden">
-                      <img 
-                        src={item.image || '/images/placeholder-equipment.jpg'} 
-                        alt={item.name}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          e.target.src = 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=400';
-                        }}
-                      />
-                    </div>
-
-                    {/* Equipment Details */}
-                    <div className="p-4">
-                      <h3 className="font-bold text-gray-900 mb-1">{item.name}</h3>
-                      <p className="text-sm text-gray-600 mb-1">Category: {item.category}</p>
-                      <p className="text-sm text-gray-600 mb-1">Total: {item.totalQuantity}</p>
-                      <div className="flex gap-2 mb-4 text-xs">
-                        <span className="px-2 py-1 bg-green-100 text-green-700 rounded">
-                          Working: {item.workingAmount}
-                        </span>
-                        <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded">
-                          Repair: {item.underRepair}
-                        </span>
-                        <span className="px-2 py-1 bg-red-100 text-red-700 rounded">
-                          Broken: {item.broken}
-                        </span>
-                      </div>
-
-                      <button 
-                        onClick={() => window.location.href = `/equipment/${item.id}`}
-                        className="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-semibold py-2 px-4 rounded transition-colors"
-                      >
-                        View Details
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+        {laboratories.map((lab) => (
+          <div key={lab.id} className="mb-12">
+            <div className="bg-white border-l-4 border-yellow-500 p-4 mb-6 shadow-sm">
+              <h2 className="text-xl font-bold text-gray-900">{lab.name}</h2>
+              <p className="text-gray-600 text-sm">Total Equipment = {lab.totalEquipment}</p>
             </div>
-          )
+
+            {/* Equipment Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {lab.equipment.map((item) => (
+                <div key={item.id} className="bg-white rounded-lg shadow-md overflow-hidden border-2 border-yellow-400 hover:shadow-xl transition-shadow">
+                  {/* Equipment Image */}
+                  <div className="aspect-video bg-gray-100 flex items-center justify-center overflow-hidden">
+                    <img 
+                      src={item.image} 
+                      alt={item.name}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+
+                  {/* Equipment Details */}
+                  <div className="p-4">
+                    <h3 className="font-bold text-gray-900 mb-1">{item.name}</h3>
+                    <p className="text-sm text-gray-600 mb-1">{item.type}</p>
+                    <p className="text-sm text-gray-600 mb-4">{item.model}</p>
+
+                    <button 
+                      onClick={() => window.location.href = `/equipment/${item.id}`}
+                      className="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-semibold py-2 px-4 rounded transition-colors"
+                    >
+                      View Details
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         ))}
       </div>
     </div>

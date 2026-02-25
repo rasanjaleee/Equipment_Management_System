@@ -1,3 +1,6 @@
+import logo from '/images/home_logo.png';
+import bgImage from '/images/1.webp';
+
 const Landing = () => {
   return (
     <div className="min-h-screen flex flex-col">
@@ -6,9 +9,7 @@ const Landing = () => {
         <div className="max-w-7xl mx-auto flex items-center gap-6">
           {/* Logo */}
           <div className="flex-shrink-0">
-            <div className="w-20 h-20 bg-red-900 rounded-full flex items-center justify-center">
-              <span className="text-white text-xs font-bold text-center">LOGO</span>
-            </div>
+            <img src={logo} alt="University Logo" className="w-20 h-20 rounded-full object-cover" />
           </div>
           
           {/* Header Text */}
@@ -30,7 +31,7 @@ const Landing = () => {
       <main 
         className="flex-1 flex items-center justify-center px-4 py-12"
         style={{
-          backgroundImage: "url('https://images.unsplash.com/photo-1562774053-701939374585?w=1200')",
+          backgroundImage: `url(${bgImage})`,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           backgroundRepeat: 'no-repeat'
