@@ -55,6 +55,8 @@ public class SecurityConfig {
                         // ✅ Equipment APIs
                         .requestMatchers(HttpMethod.GET, "/api/equipment/**").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/equipment/**").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/equipment/**").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/equipment/**").hasAuthority("ROLE_ADMIN")
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

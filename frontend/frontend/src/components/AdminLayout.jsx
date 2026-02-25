@@ -35,7 +35,7 @@ const AdminLayout = ({ children, pageTitle = 'Dashboard' }) => {
   return (
     <div className="flex h-screen bg-gray-50 font-sans">
       {/* Sidebar */}
-      <aside className="w-64 bg-gray-200 flex flex-col border-r border-gray-300">
+      <aside className="w-52 bg-gray-200 flex flex-col border-r border-gray-300">
         <div className="p-6">
           <h1 className="text-sm font-bold leading-tight">
             Faculty of Engineering <br />
