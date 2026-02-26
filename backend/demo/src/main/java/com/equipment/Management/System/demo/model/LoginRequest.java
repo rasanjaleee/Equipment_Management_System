@@ -5,17 +5,13 @@ import lombok.Data;
 
 @Data
 public class LoginRequest {
+
     @NotBlank(message = "Username is required")
     private String username;
 
     @NotBlank(message = "Password is required")
     private String password;
 
-    public String getUsername() {
-        return username;
-    }
-
-    public String getPassword() {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
+    // NO custom getters or setters
+    // Lombok @Data generates getUsername(), getPassword(), setUsername(), setPassword()
 }
