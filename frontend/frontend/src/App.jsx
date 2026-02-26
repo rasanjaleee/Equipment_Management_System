@@ -1,7 +1,7 @@
-// frontend/frontend/src/App.jsx
-
+// frontend/src/App.jsx
 import './App.css';
-
+import LaboratoryPage from './Pages/Laboratory'; // adjust path if needed
+import ProfilePage from './Pages/Profile';
 import Login from './Pages/Login';    
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import Dashboard from './Pages/Dashboard';
@@ -16,6 +16,7 @@ import Footer from './components/Footer';
 import AdminDashboard from "./Pages/AdminDashboard";
 import AdminEquipment from "./Pages/AdminEquipment";
 import AdminRoute from "./routes/AdminRoute";
+
 
 // Wrapper to provide Router context
 function AppWrapper() {
@@ -52,6 +53,8 @@ function App() {
           <Route path='/equipment' element={<Equipment />} />
           <Route path='/equipment/:id' element={<EquipmentDetails />} />
           <Route path='/about' element={<About />} />
+          <Route path='/laboratory' element={<LaboratoryPage />} />
+          <Route path='/profile' element={<ProfilePage />} />
           <Route 
           path='/admin/dashboard' 
           element={

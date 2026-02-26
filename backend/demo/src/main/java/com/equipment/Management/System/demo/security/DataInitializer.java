@@ -2,11 +2,10 @@ package com.equipment.Management.System.demo.security;
 
 import com.equipment.Management.System.demo.model.User;
 import com.equipment.Management.System.demo.repository.UserRepository;
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.crypto.password.PasswordEncoder;
-
-import jakarta.annotation.PostConstruct;
 
 @Configuration
 public class DataInitializer {
@@ -19,13 +18,11 @@ public class DataInitializer {
 
     @PostConstruct
     public void createAdminUser() {
-
         if (userRepository.findByUsername("admin").isEmpty()) {
-
             User admin = new User();
-            admin.setUsername("admin");
+            admin.setUsername("admin"); // ✅ must use setUsername
             admin.setEmail("admin@lab.com");
-            admin.setPassword(passwordEncoder.encode("admin123")); // 🔐
+            admin.setPassword(passwordEncoder.encode("admin123")); // 🔐 hashed
             admin.setRole("ADMIN");
 
             userRepository.save(admin);
