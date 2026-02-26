@@ -135,4 +135,13 @@ public class EquipmentController {
     public List<Equipment> getAllEquipmentAlt() {
         return equipmentService.getAllEquipment();
     }
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getEquipmentById(@PathVariable Long id) {
+        try {
+            Equipment equipment = equipmentService.getById(id);
+            return ResponseEntity.ok(equipment);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Equipment not found");
+        }
+    }
 }

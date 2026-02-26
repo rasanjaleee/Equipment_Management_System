@@ -14,6 +14,16 @@ export default function AdminEquipment() {
   const [editMode, setEditMode] = useState(false);
   const [editingId, setEditingId] = useState(null);
 
+  // Laboratories list under Electrical and Information Engineering
+  const laboratoriesList = [
+    'Electrical Machines and Power Electronics Laboratory',
+    'Power Systems and High Voltage Laboratory',
+    'Electronics and Measurements Laboratory',
+    'Control Systems Laboratory',
+    'Communication Systems Laboratory',
+    'Computer Networks Laboratory'
+  ];
+
   const [formData, setFormData] = useState({
     equipmentName: '',
     laboratory: '',
@@ -275,15 +285,20 @@ export default function AdminEquipment() {
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Laboratory <span className="text-red-500">*</span>
                       </label>
-                      <input
-                        type="text"
+                      <select
                         name="laboratory"
-                        placeholder="Enter laboratory name"
                         value={formData.laboratory}
                         onChange={handleChange}
                         required
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all outline-none"
-                      />
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all outline-none bg-white cursor-pointer"
+                      >
+                        <option value="">Select Laboratory</option>
+                        {laboratoriesList.map((lab, index) => (
+                          <option key={index} value={lab}>
+                            {lab}
+                          </option>
+                        ))}
+                      </select>
                     </div>
 
                     <div>
