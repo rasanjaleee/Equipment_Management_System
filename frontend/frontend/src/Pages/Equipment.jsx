@@ -303,7 +303,7 @@ const Equipment = () => {
                   <div className="aspect-video bg-gray-100 flex items-center justify-center overflow-hidden">
                     {item.photoPath ? (
                       <img 
-                        src={`http://localhost:8080${item.photoPath}?t=${Date.now()}`}
+                        src={`http://localhost:8080/${item.photoPath}?t=${Date.now()}`}
                         alt={item.equipmentName}
                         className="w-full h-full object-cover"
                         onError={(e) => {

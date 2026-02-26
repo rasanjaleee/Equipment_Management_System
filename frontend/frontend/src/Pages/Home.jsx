@@ -1,6 +1,34 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
+import axios from "axios";
 
 export default function HomePage() {
+  const [totalEquipment, setTotalEquipment] = useState(0);
+  const [borrowedItems, setBorrowedItems] = useState(0);
+  const [pendingRequests, setPendingRequests] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchStats();
+  }, []);
+
+  const fetchStats = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('token');
+
+      // Fetch all equipment
+      const res = await axios.get('http://localhost:8080/api/equipment/all', {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
+
+      setTotalEquipment(res.data.length);
+      setLoading(false);
+    } catch (err) {
+      console.error('Failed to fetch equipment stats:', err);
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="w-full min-h-screen bg-gray-100 font-sans">
 
@@ -37,9 +65,9 @@ export default function HomePage() {
       {/* Stats Cards */}
       <section className="max-w-7xl mx-auto px-6 -mt-14 relative z-10">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <StatCard title="Borrowed Items" value="03" />
-          <StatCard title="Pending Requests" value="01" />
-          <StatCard title="Total Available Equipment" value="500" />
+          <StatCard title="Borrowed Items" value={borrowedItems.toString().padStart(2, '0')} />
+          <StatCard title="Pending Requests" value={pendingRequests.toString().padStart(2, '0')} />
+          <StatCard title="Total Available Equipment" value={loading ? '...' : totalEquipment} />
         </div>
       </section>
 
