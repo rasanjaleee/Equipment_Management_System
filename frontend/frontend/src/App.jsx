@@ -13,6 +13,7 @@ import About from './Pages/About';
 import Navbar from './components/Navbar';
 import EquipmentDetails from './Pages/EquipmentDetails';
 import Footer from './components/Footer';
+import Issuance from "./Pages/admin/issuance";
 import AdminDashboard from "./Pages/AdminDashboard";
 import AdminEquipment from "./Pages/AdminEquipment";
 import AdminRoute from "./routes/AdminRoute";
@@ -73,6 +74,7 @@ const shouldShowFooter =
           <Route path="dashboard" element={<AdminDashboard />} />
           <Route path="equipment" element={<AdminEquipment />} />
           <Route path="maintenance" element={<MaintenancePage />} />
+           <Route path="issuance" element={<Issuance />} /> 
           <Route path="/admin/profile" element={<Profile />} />
           </Route>
 

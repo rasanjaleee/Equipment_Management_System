@@ -57,6 +57,13 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/equipment/**").hasAuthority("ROLE_ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/equipment/**").hasAuthority("ROLE_ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/equipment/**").hasAuthority("ROLE_ADMIN")
+
+                        // ✅ Issuance APIs
+                        .requestMatchers(HttpMethod.GET, "/api/issuances/**").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/issuances/**").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/issuances/**").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/issuances/**").hasAuthority("ROLE_ADMIN")
+
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
