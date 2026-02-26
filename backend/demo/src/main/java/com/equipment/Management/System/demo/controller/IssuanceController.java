@@ -3,106 +3,116 @@ package com.equipment.Management.System.demo.controller;
 import com.equipment.Management.System.demo.dto.IssuanceDTO;
 import com.equipment.Management.System.demo.dto.IssuanceRequest;
 import com.equipment.Management.System.demo.service.IssuanceService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/issuances")
-@CrossOrigin(origins = "*", allowedHeaders = "*")
+@CrossOrigin(origins = "http://localhost:5173")
 public class IssuanceController {
 
     @Autowired
     private IssuanceService issuanceService;
 
-    // Create a new issuance
+    // Create new issuance
     @PostMapping
-    public ResponseEntity<IssuanceDTO> createIssuance(@RequestBody IssuanceRequest request) {
+    public ResponseEntity<?> createIssuance(@Valid @RequestBody IssuanceRequest request) {
         try {
-            IssuanceDTO issuance = issuanceService.createIssuance(request);
-            return new ResponseEntity<>(issuance, HttpStatus.CREATED);
-        } catch (Exception e) {
-            return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+            IssuanceDTO created = issuanceService.createIssuance(request);
+            return ResponseEntity.status(HttpStatus.CREATED).body(created);
+        } catch (RuntimeException e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
         }
     }
 
     // Get all issuances
     @GetMapping
     public ResponseEntity<List<IssuanceDTO>> getAllIssuances() {
-        try {
-            List<IssuanceDTO> issuances = issuanceService.getAllIssuances();
-            return new ResponseEntity<>(issuances, HttpStatus.OK);
-        } catch (Exception e) {
-            return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+        List<IssuanceDTO> issuances = issuanceService.getAllIssuances();
+        return ResponseEntity.ok(issuances);
     }
 
     // Get issuance by ID
     @GetMapping("/{id}")
-    public ResponseEntity<IssuanceDTO> getIssuanceById(@PathVariable Long id) {
+    public ResponseEntity<?> getIssuanceById(@PathVariable Long id) {
         try {
             IssuanceDTO issuance = issuanceService.getIssuanceById(id);
-            return new ResponseEntity<>(issuance, HttpStatus.OK);
-        } catch (Exception e) {
-            return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
+            return ResponseEntity.ok(issuance);
+        } catch (RuntimeException e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
         }
     }
 
-    // Get issuance by Issuance ID
-    @GetMapping("/issuanceId/{issuanceId}")
-    public ResponseEntity<IssuanceDTO> getIssuanceByIssuanceId(@PathVariable String issuanceId) {
+    // Get issuance by issuance ID (string)
+    @GetMapping("/code/{issuanceId}")
+    public ResponseEntity<?> getIssuanceByIssuanceId(@PathVariable String issuanceId) {
         try {
             IssuanceDTO issuance = issuanceService.getIssuanceByIssuanceId(issuanceId);
-            return new ResponseEntity<>(issuance, HttpStatus.OK);
-        } catch (Exception e) {
-            return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
+            return ResponseEntity.ok(issuance);
+        } catch (RuntimeException e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
         }
     }
 
     // Get issuances by status
     @GetMapping("/status/{status}")
     public ResponseEntity<List<IssuanceDTO>> getIssuancesByStatus(@PathVariable String status) {
-        try {
-            List<IssuanceDTO> issuances = issuanceService.getIssuancesByStatus(status);
-            return new ResponseEntity<>(issuances, HttpStatus.OK);
-        } catch (Exception e) {
-            return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+        List<IssuanceDTO> issuances = issuanceService.getIssuancesByStatus(status);
+        return ResponseEntity.ok(issuances);
     }
 
     // Get issuances by user ID
     @GetMapping("/user/{userId}")
     public ResponseEntity<List<IssuanceDTO>> getIssuancesByUserId(@PathVariable Long userId) {
-        try {
-            List<IssuanceDTO> issuances = issuanceService.getIssuancesByUserId(userId);
-            return new ResponseEntity<>(issuances, HttpStatus.OK);
-        } catch (Exception e) {
-            return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+        List<IssuanceDTO> issuances = issuanceService.getIssuancesByUserId(userId);
+        return ResponseEntity.ok(issuances);
     }
 
-    // Update an issuance
+    // Get issuances by equipment ID
+    @GetMapping("/equipment/{equipmentId}")
+    public ResponseEntity<List<IssuanceDTO>> getIssuancesByEquipmentId(@PathVariable Long equipmentId) {
+        List<IssuanceDTO> issuances = issuanceService.getIssuancesByEquipmentId(equipmentId);
+        return ResponseEntity.ok(issuances);
+    }
+
+    // Update issuance
     @PutMapping("/{id}")
-    public ResponseEntity<IssuanceDTO> updateIssuance(@PathVariable Long id, @RequestBody IssuanceRequest request) {
+    public ResponseEntity<?> updateIssuance(@PathVariable Long id, @Valid @RequestBody IssuanceRequest request) {
         try {
-            IssuanceDTO issuance = issuanceService.updateIssuance(id, request);
-            return new ResponseEntity<>(issuance, HttpStatus.OK);
-        } catch (Exception e) {
-            return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+            IssuanceDTO updated = issuanceService.updateIssuance(id, request);
+            return ResponseEntity.ok(updated);
+        } catch (RuntimeException e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
         }
     }
 
-    // Delete an issuance
+    // Delete issuance
     @DeleteMapping("/{id}")
-    public ResponseEntity<String> deleteIssuance(@PathVariable Long id) {
+    public ResponseEntity<?> deleteIssuance(@PathVariable Long id) {
         try {
             issuanceService.deleteIssuance(id);
-            return new ResponseEntity<>("Issuance deleted successfully", HttpStatus.OK);
-        } catch (Exception e) {
-            return new ResponseEntity<>("Error deleting issuance", HttpStatus.INTERNAL_SERVER_ERROR);
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "Issuance deleted successfully");
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
         }
     }
 }
