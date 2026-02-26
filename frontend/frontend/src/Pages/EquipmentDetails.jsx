@@ -129,7 +129,7 @@ const fetchEquipmentDetails = async () => {
             <div className="flex-shrink-0 w-full md:w-80">
               {equipment.photoPath ? (
                 <img
-                  src={`http://localhost:8080${equipment.photoPath}?t=${Date.now()}`}
+                  src={`http://localhost:8080/${equipment.photoPath}?t=${Date.now()}`}
                   alt={equipment.equipmentName}
                   className="w-full h-64 object-cover rounded-lg border-2 border-gray-200"
                   onError={(e) => {
