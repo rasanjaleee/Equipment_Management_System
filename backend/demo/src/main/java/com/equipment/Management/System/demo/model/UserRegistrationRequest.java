@@ -23,4 +23,16 @@ public class UserRegistrationRequest {
             message = "Password must contain uppercase, lowercase, number, and special character"
     )
     private String password;
+
+    public String getUsername() {
+        return username;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public String getPassword() {
+        return password;
+    }
 }

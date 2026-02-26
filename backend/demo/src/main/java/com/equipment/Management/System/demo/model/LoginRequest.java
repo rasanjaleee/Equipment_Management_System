@@ -10,4 +10,12 @@ public class LoginRequest {
 
     @NotBlank(message = "Password is required")
     private String password;
+
+    public String getUsername() {
+        return username;
+    }
+
+    public String getPassword() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
 }
