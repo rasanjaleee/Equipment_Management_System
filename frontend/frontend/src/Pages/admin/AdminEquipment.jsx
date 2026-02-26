@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Plus, Save, X, Package, Search, Filter, Edit, Trash2, Eye } from 'lucide-react';
 import axios from 'axios';
+import AdminLayout from '../../components/AdminLayout';
 
 export default function AdminEquipment() {
   const [showForm, setShowForm] = useState(false);
@@ -11,12 +12,15 @@ export default function AdminEquipment() {
   const [equipmentList, setEquipmentList] = useState([]);
   const [formData, setFormData] = useState({
     equipmentName: '',
-    laboratoryName: '',
-    category: '',
-    totalQuantity: '',
-    workingAmount: '',
-    underRepair: '',
-    broken: ''
+    laboratory: '',
+    model: '',
+    serialNumber: '',
+    cost: '',
+    purchaseDate: '',
+    supplier: '',
+    status: 'WORKING',
+    qrCode: '',
+    grnNumber: ''
   });
 
   // Fetch equipment list from backend
@@ -54,28 +58,19 @@ export default function AdminEquipment() {
     setError('');
     setSuccess('');
 
-    // Validation
-    const total = parseInt(formData.totalQuantity) || 0;
-    const working = parseInt(formData.workingAmount) || 0;
-    const repair = parseInt(formData.underRepair) || 0;
-    const broken = parseInt(formData.broken) || 0;
-
-    if (working + repair + broken !== total) {
-      setError('Working + Under Repair + Broken must equal Total Quantity');
-      setLoading(false);
-      return;
-    }
-
     try {
       const token = localStorage.getItem('token');
       const response = await axios.post('http://localhost:8080/api/admin/equipment', {
-        name: formData.equipmentName,
-        laboratory: formData.laboratoryName,
-        category: formData.category,
-        totalQuantity: parseInt(formData.totalQuantity),
-        workingAmount: parseInt(formData.workingAmount),
-        underRepair: parseInt(formData.underRepair),
-        broken: parseInt(formData.broken)
+        equipmentName: formData.equipmentName,
+        laboratory: formData.laboratory,
+        model: formData.model,
+        serialNumber: formData.serialNumber,
+        cost: formData.cost ? parseFloat(formData.cost) : null,
+        purchaseDate: formData.purchaseDate || null,
+        supplier: formData.supplier,
+        status: formData.status,
+        qrCode: formData.qrCode,
+        grnNumber: formData.grnNumber
       }, {
         headers: {
           Authorization: `Bearer ${token}`
@@ -90,12 +85,15 @@ export default function AdminEquipment() {
       // Reset form
       setFormData({
         equipmentName: '',
-        laboratoryName: '',
-        category: '',
-        totalQuantity: '',
-        workingAmount: '',
-        underRepair: '',
-        broken: ''
+        laboratory: '',
+        model: '',
+        serialNumber: '',
+        cost: '',
+        purchaseDate: '',
+        supplier: '',
+        status: 'WORKING',
+        qrCode: '',
+        grnNumber: ''
       });
       
       setTimeout(() => {
@@ -112,12 +110,15 @@ export default function AdminEquipment() {
   const resetForm = () => {
     setFormData({
       equipmentName: '',
-      laboratoryName: '',
-      category: '',
-      totalQuantity: '',
-      workingAmount: '',
-      underRepair: '',
-      broken: ''
+      laboratory: '',
+      model: '',
+      serialNumber: '',
+      cost: '',
+      purchaseDate: '',
+      supplier: '',
+      status: 'WORKING',
+      qrCode: '',
+      grnNumber: ''
     });
     setError('');
     setSuccess('');
@@ -125,26 +126,30 @@ export default function AdminEquipment() {
   };
 
   const filteredEquipment = equipmentList.filter(item =>
-    item.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.equipmentName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     item.laboratory?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.category?.toLowerCase().includes(searchTerm.toLowerCase())
+    item.model?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.serialNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.supplier?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.status?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-gray-100 to-gray-200 p-8">
-      <div className="max-w-7xl mx-auto">
-        {/* Header Section */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-800 mb-2 flex items-center gap-3">
-                <div className="bg-gradient-to-r from-yellow-400 to-orange-500 p-2 rounded-xl shadow-lg">
-                  <Package className="text-white" size={24} />
-                </div>
-                Equipment Management
-              </h1>
-              <p className="text-gray-600 text-sm">Manage and track all laboratory equipment</p>
-            </div>
+    <AdminLayout pageTitle="Equipment Management">
+      <div className="bg-gradient-to-br from-gray-50 via-gray-100 to-gray-200 p-8 min-h-full">
+        <div className="max-w-7xl mx-auto">
+          {/* Header Section */}
+          <div className="mb-8">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-2xl font-bold text-gray-800 mb-2 flex items-center gap-3">
+                  <div className="bg-gradient-to-r from-yellow-400 to-orange-500 p-2 rounded-xl shadow-lg">
+                    <Package className="text-white" size={24} />
+                  </div>
+                  Equipment Management
+                </h1>
+                <p className="text-gray-600 text-sm">Manage and track all laboratory equipment</p>
+              </div>
             
             {!showForm && (
               <button
@@ -201,16 +206,16 @@ export default function AdminEquipment() {
                     />
                   </div>
 
-                  {/* Laboratory Name and Category */}
+                  {/* Laboratory and Model */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <label className="block text-xs font-semibold text-gray-700 mb-2">
-                        Laboratory Name <span className="text-red-500">*</span>
+                        Laboratory <span className="text-red-500">*</span>
                       </label>
                       <input
                         type="text"
-                        name="laboratoryName"
-                        value={formData.laboratoryName}
+                        name="laboratory"
+                        value={formData.laboratory}
                         onChange={handleChange}
                         className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition text-sm"
                         placeholder="e.g., Electronics Lab A"
@@ -220,100 +225,147 @@ export default function AdminEquipment() {
 
                     <div>
                       <label className="block text-xs font-semibold text-gray-700 mb-2">
-                        Category <span className="text-red-500">*</span>
+                        Model
                       </label>
                       <input
                         type="text"
-                        name="category"
-                        value={formData.category}
+                        name="model"
+                        value={formData.model}
                         onChange={handleChange}
                         className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition text-sm"
-                        placeholder="e.g., Measurement Instruments"
-                        required
+                        placeholder="e.g., DSO-X 3024A"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Serial Number and QR Code */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-2">
+                        Serial Number
+                      </label>
+                      <input
+                        type="text"
+                        name="serialNumber"
+                        value={formData.serialNumber}
+                        onChange={handleChange}
+                        className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition text-sm font-mono"
+                        placeholder="e.g., SN123456789"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-2">
+                        QR Code
+                      </label>
+                      <input
+                        type="text"
+                        name="qrCode"
+                        value={formData.qrCode}
+                        onChange={handleChange}
+                        className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition text-sm font-mono"
+                        placeholder="e.g., QR-EQ-001"
                       />
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Quantity & Status Section */}
+              {/* Purchase & Supplier Section */}
               <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-6 rounded-xl border border-purple-200">
                 <h3 className="text-base font-semibold text-gray-700 mb-4 flex items-center gap-2">
                   <div className="w-2 h-6 bg-purple-500 rounded-full"></div>
-                  Quantity & Status
+                  Purchase Details
                 </h3>
 
                 <div className="space-y-6">
-                  {/* Total Quantity */}
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-2">
-                      Total Quantity <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="number"
-                      name="totalQuantity"
-                      value={formData.totalQuantity}
-                      onChange={handleChange}
-                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition text-sm font-semibold"
-                      placeholder="0"
-                      min="0"
-                      required
-                    />
-                  </div>
-
-                  {/* Status Breakdown */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="bg-white p-5 rounded-xl border-2 border-green-200 shadow-sm">
-                      <label className="block text-xs font-semibold text-green-700 mb-3 flex items-center gap-2">
-                        <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                        Working Amount <span className="text-red-500">*</span>
+                  {/* Cost and Purchase Date */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-2">
+                        Cost (USD)
                       </label>
                       <input
                         type="number"
-                        name="workingAmount"
-                        value={formData.workingAmount}
+                        name="cost"
+                        value={formData.cost}
                         onChange={handleChange}
-                        className="w-full px-4 py-3 bg-green-50 border-2 border-green-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition text-lg font-bold text-green-700 text-center"
-                        placeholder="0"
+                        className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition text-sm font-semibold"
+                        placeholder="0.00"
+                        step="0.01"
                         min="0"
-                        required
                       />
                     </div>
 
-                    <div className="bg-white p-5 rounded-xl border-2 border-orange-200 shadow-sm">
-                      <label className="block text-xs font-semibold text-orange-700 mb-3 flex items-center gap-2">
-                        <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
-                        Under Repair <span className="text-red-500">*</span>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-2">
+                        Purchase Date
                       </label>
                       <input
-                        type="number"
-                        name="underRepair"
-                        value={formData.underRepair}
+                        type="date"
+                        name="purchaseDate"
+                        value={formData.purchaseDate}
                         onChange={handleChange}
-                        className="w-full px-4 py-3 bg-orange-50 border-2 border-orange-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition text-lg font-bold text-orange-700 text-center"
-                        placeholder="0"
-                        min="0"
-                        required
-                      />
-                    </div>
-
-                    <div className="bg-white p-5 rounded-xl border-2 border-red-200 shadow-sm">
-                      <label className="block text-xs font-semibold text-red-700 mb-3 flex items-center gap-2">
-                        <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                        Broken <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="number"
-                        name="broken"
-                        value={formData.broken}
-                        onChange={handleChange}
-                        className="w-full px-4 py-3 bg-red-50 border-2 border-red-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition text-lg font-bold text-red-700 text-center"
-                        placeholder="0"
-                        min="0"
-                        required
+                        className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition text-sm"
                       />
                     </div>
                   </div>
+
+                  {/* Supplier and GRN Number */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-2">
+                        Supplier
+                      </label>
+                      <input
+                        type="text"
+                        name="supplier"
+                        value={formData.supplier}
+                        onChange={handleChange}
+                        className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition text-sm"
+                        placeholder="e.g., Tech Supplies Inc."
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-2">
+                        GRN Number
+                      </label>
+                      <input
+                        type="text"
+                        name="grnNumber"
+                        value={formData.grnNumber}
+                        onChange={handleChange}
+                        className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition text-sm"
+                        placeholder="e.g., GRN-2024-001"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Status Section */}
+              <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-6 rounded-xl border border-green-200">
+                <h3 className="text-base font-semibold text-gray-700 mb-4 flex items-center gap-2">
+                  <div className="w-2 h-6 bg-green-500 rounded-full"></div>
+                  Equipment Status
+                </h3>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-2">
+                    Status <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    name="status"
+                    value={formData.status}
+                    onChange={handleChange}
+                    className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition text-sm font-semibold"
+                    required
+                  >
+                    <option value="WORKING">Working</option>
+                    <option value="UNDER_REPAIR">Under Repair</option>
+                    <option value="BROKEN">Broken</option>
+                  </select>
                 </div>
               </div>
 
@@ -386,7 +438,7 @@ export default function AdminEquipment() {
                     type="text"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="Search equipment by name, lab, or category..."
+                    placeholder="Search equipment by name, lab, model, serial number, supplier, or status..."
                     className="w-full pl-12 pr-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition text-sm"
                   />
                 </div>
@@ -402,60 +454,50 @@ export default function AdminEquipment() {
               <table className="w-full">
                 <thead className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white">
                   <tr>
-                    <th className="px-6 py-3 text-left font-bold text-sm">Equipment Name</th>
-                    <th className="px-6 py-3 text-left font-bold text-sm">Laboratory</th>
-                    <th className="px-6 py-3 text-left font-bold text-sm">Category</th>
-                    <th className="px-6 py-3 text-center font-bold text-sm">Total</th>
-                    <th className="px-6 py-3 text-center font-bold text-sm">Working</th>
-                    <th className="px-6 py-3 text-center font-bold text-sm">Repair</th>
-                    <th className="px-6 py-3 text-center font-bold text-sm">Broken</th>
-                    <th className="px-6 py-3 text-center font-bold text-sm">Actions</th>
+                    <th className="px-4 py-3 text-left font-bold text-xs">ID</th>
+                    <th className="px-4 py-3 text-left font-bold text-xs">Equipment Name</th>
+                    <th className="px-4 py-3 text-left font-bold text-xs">Laboratory</th>
+                    <th className="px-4 py-3 text-left font-bold text-xs">Model</th>
+                    <th className="px-4 py-3 text-left font-bold text-xs">Serial Number</th>
+                    <th className="px-4 py-3 text-right font-bold text-xs">Cost</th>
+                    <th className="px-4 py-3 text-left font-bold text-xs">Purchase Date</th>
+                    <th className="px-4 py-3 text-left font-bold text-xs">Supplier</th>
+                    <th className="px-4 py-3 text-center font-bold text-xs">Status</th>
+                    <th className="px-4 py-3 text-left font-bold text-xs">QR Code</th>
+                    <th className="px-4 py-3 text-left font-bold text-xs">GRN Number</th>
+                    <th className="px-4 py-3 text-center font-bold text-xs">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {filteredEquipment.map((item, index) => (
+                  {filteredEquipment.map((item) => (
                     <tr key={item.id} className="hover:bg-gray-50 transition">
-                      <td className="px-6 py-4">
-                        <div className="font-semibold text-gray-800 text-sm">{item.name}</div>
+                      <td className="px-4 py-4 text-gray-600 text-xs">{item.id}</td>
+                      <td className="px-4 py-4">
+                        <div className="font-semibold text-gray-800 text-xs">{item.equipmentName}</div>
                       </td>
-                      <td className="px-6 py-4 text-gray-600 text-sm">{item.laboratory}</td>
-                      <td className="px-6 py-4">
-                        <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
-                          {item.category}
+                      <td className="px-4 py-4 text-gray-600 text-xs">{item.laboratory}</td>
+                      <td className="px-4 py-4 text-gray-600 text-xs">{item.model || '-'}</td>
+                      <td className="px-4 py-4 text-gray-600 text-xs font-mono">{item.serialNumber || '-'}</td>
+                      <td className="px-4 py-4 text-right text-gray-800 text-xs font-semibold">
+                        {item.cost ? `$${item.cost.toFixed(2)}` : '-'}
+                      </td>
+                      <td className="px-4 py-4 text-gray-600 text-xs">
+                        {item.purchaseDate ? new Date(item.purchaseDate).toLocaleDateString() : '-'}
+                      </td>
+                      <td className="px-4 py-4 text-gray-600 text-xs">{item.supplier || '-'}</td>
+                      <td className="px-4 py-4 text-center">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          item.status === 'WORKING' ? 'bg-green-100 text-green-700' :
+                          item.status === 'UNDER_REPAIR' ? 'bg-orange-100 text-orange-700' :
+                          item.status === 'BROKEN' ? 'bg-red-100 text-red-700' :
+                          'bg-gray-100 text-gray-700'
+                        }`}>
+                          {item.status?.replace('_', ' ')}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-center">
-                        <span className="font-bold text-gray-800 text-sm">{item.totalQuantity}</span>
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <span className="px-3 py-1 bg-green-100 text-green-700 rounded-lg font-bold text-sm">
-                          {item.workingAmount}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <span className="px-3 py-1 bg-orange-100 text-orange-700 rounded-lg font-bold text-sm">
-                          {item.underRategory}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <span className="font-bold text-gray-800 text-sm">{item.total}</span>
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <span className="px-3 py-1 bg-green-100 text-green-700 rounded-lg font-bold text-sm">
-                          {item.working}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <span className="px-3 py-1 bg-orange-100 text-orange-700 rounded-lg font-bold text-sm">
-                          {item.repair}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <span className="px-3 py-1 bg-red-100 text-red-700 rounded-lg font-bold text-sm">
-                          {item.broken}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
+                      <td className="px-4 py-4 text-gray-600 text-xs font-mono">{item.qrCode || '-'}</td>
+                      <td className="px-4 py-4 text-gray-600 text-xs">{item.grnNumber || '-'}</td>
+                      <td className="px-4 py-4">
                         <div className="flex items-center justify-center gap-2">
                           <button className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition" title="View">
                             <Eye size={16} />
@@ -482,7 +524,8 @@ export default function AdminEquipment() {
             )}
           </div>
         )}
+        </div>
       </div>
-    </div>
+    </AdminLayout>
   );
 }
