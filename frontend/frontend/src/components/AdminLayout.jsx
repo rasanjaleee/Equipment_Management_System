@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   Wrench, 
@@ -9,48 +9,22 @@ import {
   FileBarChart, 
   Bell, 
   Settings,
-  Search
+  LogOut
 } from 'lucide-react';
 
-const AdminDashboard = () => {
+const AdminLayout = ({ children, pageTitle = 'Dashboard' }) => {
   const navigate = useNavigate();
-  
-  // State for dynamic stats
-  const [stats, setStats] = useState({
-    totalEquipment: 0,
-    working: 0,
-    underRepair: 0,
-    broken: 0,
-    borrowedItems: 0,
-    laboratories: 0,
-    overdueReturns: 0,
-    pendingRequests: 0,
-  });
+  const location = useLocation();
 
-  // Fetch data from your backend/admin panel
-  useEffect(() => {
-    // Replace this with your actual API call
-    const fetchData = async () => {
-      // const response = await fetch('/api/admin/stats');
-      // const data = await response.json();
-      const mockData = {
-        totalEquipment: 247,
-        working: 198,
-        underRepair: 28,
-        broken: 21,
-        borrowedItems: 8,
-        laboratories: 5,
-        overdueReturns: 3,
-        pendingRequests: 12,
-      };
-      setStats(mockData);
-    };
-
-    fetchData();
-  }, []);
+  // Logout handler
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    navigate('/login');
+  };
 
   const menuItems = [
-    { icon: <LayoutDashboard size={20} />, label: 'Dashboard', active: true, path: '/admin/dashboard' },
+    { icon: <LayoutDashboard size={20} />, label: 'Dashboard', path: '/admin/dashboard' },
     { icon: <Wrench size={20} />, label: 'Equipment', path: '/admin/equipment' },
     { icon: <FlaskConical size={20} />, label: 'Laboratories', path: '/admin/laboratories' },
     { icon: <ClipboardList size={20} />, label: 'Issuance', path: '/admin/issuance' },
@@ -75,7 +49,9 @@ const AdminDashboard = () => {
               key={index}
               onClick={() => navigate(item.path)}
               className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors text-sm ${
-                item.active ? 'bg-orange-400 text-black font-semibold' : 'hover:bg-gray-300'
+                location.pathname === item.path
+                  ? 'bg-orange-400 text-black font-semibold'
+                  : 'hover:bg-gray-300'
               }`}
             >
               {item.icon}
@@ -97,11 +73,11 @@ const AdminDashboard = () => {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col">
+      <main className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
         <header className="bg-orange-400 p-4 flex justify-between items-center shadow-md">
           <div className="text-xs font-medium">
-            <p>Dashboard</p>
+            <p>{pageTitle}</p>
             <p className="text-xs">Welcome Admin!</p>
           </div>
           
@@ -116,41 +92,24 @@ const AdminDashboard = () => {
                 <p>Administrator</p>
               </div>
             </div>
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-2 bg-white hover:bg-gray-100 text-gray-800 font-semibold px-4 py-2 rounded-lg transition duration-200 shadow-sm text-xs"
+              title="Logout"
+            >
+              <LogOut size={16} />
+              <span>Logout</span>
+            </button>
           </div>
         </header>
 
-        {/* Stats Grid */}
-        <div className="p-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8 max-w-5xl mx-auto w-full">
-          <StatCard label="Total Equipment" value={stats.totalEquipment} color="bg-red-500" />
-          <StatCard label="Working" value={stats.working} color="bg-green-500" />
-          <StatCard label="Under Repair" value={stats.underRepair} color="bg-red-500" />
-          <StatCard label="Broken" value={stats.broken} color="bg-red-500" />
-          <StatCard label="Borrowed Items" value={stats.borrowedItems} color="bg-red-500" />
-          <StatCard label="Laboratories" value={stats.laboratories} color="bg-green-500" />
-          <StatCard label="Overdue Returns" value={stats.overdueReturns} color="bg-red-500" />
-          <StatCard label="Pending Requests" value={stats.pendingRequests} color="bg-red-500" />
+        {/* Content Area */}
+        <div className="flex-1 overflow-auto">
+          {children}
         </div>
       </main>
     </div>
   );
 };
 
-// Sub-component for individual Stat Cards
-const StatCard = ({ label, value, color }) => {
-  return (
-    <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-start justify-between">
-      <div>
-        <div className={`${color} p-2 rounded-lg inline-block mb-3`}>
-          <Wrench size={18} className="text-white" />
-        </div>
-        <h3 className="text-gray-500 font-medium text-xs">{label}</h3>
-        <p className="text-gray-400 text-xs mt-1">+12 this month</p>
-      </div>
-      <div className="text-3xl font-light text-gray-800">
-        {value.toString().padStart(2, '0')}
-      </div>
-    </div>
-  );
-};
-
-export default AdminDashboard;
+export default AdminLayout;
