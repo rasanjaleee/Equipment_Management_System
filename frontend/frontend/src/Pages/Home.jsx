@@ -3,11 +3,38 @@ import React from "react";
 export default function HomePage() {
   return (
     <div className="w-full min-h-screen bg-gray-100 font-sans">
+      {/* Navbar */}
+      <header className="w-full bg-yellow-500 text-black shadow">
+        <div className="max-w-7xl mx-auto flex items-center justify-between px-6 py-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-black text-yellow-400 flex items-center justify-center font-bold rounded">
+              FE
+            </div>
+            <div>
+              <h1 className="text-lg font-semibold leading-tight">
+                Faculty of Engineering
+              </h1>
+              <p className="text-xs">Equipment Management System</p>
+            </div>
+          </div>
+
+          <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
+            <a href="#" className="hover:underline">Home</a>
+            <a href="#" className="hover:underline">Equipment</a>
+            <a href="#" className="hover:underline">Requests</a>
+            <a href="#" className="hover:underline">About</a>
+          </nav>
+
+          <div className="w-9 h-9 rounded-full bg-black text-yellow-400 flex items-center justify-center font-bold">
+            H
+          </div>
+        </div>
+      </header>
 
       {/* Hero Section */}
       <section className="relative w-full h-[420px] bg-black">
         <img
-          src="/images/header.png"
+          src="\header.png"
           alt="Lab"
           className="w-full h-full object-cover opacity-70"
         />
@@ -49,12 +76,12 @@ export default function HomePage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
           <EquipmentCard
             name="Oscilloscope"
-            image="/images/oscilloscope.jpg"
+            image="\oscilloscope.png"
             status="Available"
           />
           <EquipmentCard
             name="Digital Multimeter"
-            image="/images/multimeter.jpg"
+            image="\multimeter.png"
             status="Available"
           />
         </div>
@@ -63,7 +90,7 @@ export default function HomePage() {
       {/* Department Section */}
       <section className="relative w-full mt-16">
         <img
-          src="/images/image.png"
+          src="\image.png"
           alt="Building"
           className="w-full h-[380px] object-cover"
         />
@@ -84,7 +111,12 @@ export default function HomePage() {
         </div>
       </section>
 
-      
+      {/* Footer */}
+      <footer className="bg-black text-gray-300 text-sm mt-16">
+        <div className="max-w-7xl mx-auto px-6 py-6 text-center">
+          © 2026 Faculty of Engineering – Equipment Management System
+        </div>
+      </footer>
     </div>
   );
 }
