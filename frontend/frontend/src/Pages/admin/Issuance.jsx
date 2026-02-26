@@ -1,5 +1,4 @@
 import { useState } from "react";
-import axios from "axios";
 
 const SectionTitle = ({ icon, title }) => (
   <div className="flex items-center gap-2 text-gray-700 font-semibold mt-6 mb-3">
@@ -56,57 +55,12 @@ export default function Issuance() {
   const update = (key) => (e) =>
     setForm((prev) => ({ ...prev, [key]: e.target.value }));
 
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
-
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
-    setError("");
 
-    const token = localStorage.getItem("token");
-    if (!token) {
-      setError("Please login first.");
-      return;
-    }
-
-    const payload = {
-      issuanceId: form.issuanceId,
-      issueDate: form.issueDate || null,
-      returnDueDate: form.returnDueDate || null,
-      status: form.status,
-      equipmentId: form.equipmentId ? Number(form.equipmentId) : null,
-      qtyIssued: form.qtyIssued ? Number(form.qtyIssued) : null,
-      conditionAtIssue: form.conditionAtIssue,
-      userId: form.userId ? Number(form.userId) : null,
-      roleDept: form.roleDept || null,
-      contact: form.contact || null,
-      returnDate: form.returnDate || null,
-      conditionOnReturn: form.conditionOnReturn || null,
-      remarks: form.remarks || null,
-    };
-
-    try {
-      setSaving(true);
-      const res = await axios.post(
-        "http://localhost:8080/api/issuances",
-        payload,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-
-      console.log("Issuance saved:", res.data);
-      alert("Saved ✅");
-      handleClear();
-    } catch (err) {
-      const message =
-        err.response?.data?.error ||
-        err.response?.data?.message ||
-        "Failed to save issuance.";
-      setError(message);
-    } finally {
-      setSaving(false);
-    }
+    // TODO: connect to backend API later (POST /issuance)
+    console.log("Issuance payload:", form);
+    alert("Saved ✅ (check console)");
   };
 
   const handleClear = () => {
@@ -130,7 +84,6 @@ export default function Issuance() {
       conditionOnReturn: "Working",
       remarks: "",
     });
-    setError("");
   };
 
   return (
@@ -142,11 +95,6 @@ export default function Issuance() {
           onSubmit={handleSubmit}
           className="bg-white border border-gray-200 rounded-lg shadow-sm p-6"
         >
-          {error && (
-            <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-              {error}
-            </div>
-          )}
           {/* Issuance Details */}
           <SectionTitle icon="🧾" title="Issuance Details" />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -303,11 +251,10 @@ export default function Issuance() {
           <div className="mt-6 flex gap-3">
             <button
               type="submit"
-              disabled={saving}
               className="h-10 px-5 rounded-md bg-amber-500 text-white font-semibold
-                         hover:bg-amber-600 active:scale-[0.99] disabled:opacity-60"
+                         hover:bg-amber-600 active:scale-[0.99]"
             >
-              {saving ? "Saving..." : "Save"}
+              Save
             </button>
 
             <button

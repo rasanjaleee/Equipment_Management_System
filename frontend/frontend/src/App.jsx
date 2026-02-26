@@ -1,8 +1,7 @@
 // frontend/frontend/src/App.jsx
 
 import './App.css';
-import LaboratoryPage from './Pages/Laboratory'; // adjust path if needed
-import ProfilePage from './Pages/Profile';
+
 import Login from './Pages/Login';    
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import Dashboard from './Pages/Dashboard';
@@ -14,13 +13,13 @@ import About from './Pages/About';
 import Navbar from './components/Navbar';
 import EquipmentDetails from './Pages/EquipmentDetails';
 import Footer from './components/Footer';
+import Issuance from "./Pages/admin/issuance";
 import AdminDashboard from "./Pages/AdminDashboard";
-import AdminEquipment from "./Pages/admin/AdminEquipment";
+import AdminEquipment from "./Pages/AdminEquipment";
 import AdminRoute from "./routes/AdminRoute";
 import MaintenancePage from "./Pages/admin/MaintenancePage";
 import AdminLayout from "./Pages/AdminLayout";
-import IssuancePage from './Pages/admin/Issuance';
-
+import Profile from "./Pages/Profile";
 
 
 // Wrapper to provide Router context
@@ -68,18 +67,15 @@ const shouldShowFooter =
           <Route path='/equipment' element={<Equipment />} />
           <Route path='/equipment/:id' element={<EquipmentDetails />} />
           <Route path='/about' element={<About />} />
-          <Route path='/profile' element={<ProfilePage />} />
-
-
-
+          <Route path="/profile" element={<Profile />} />
+          
           {/* Admin routes */}
           <Route path="/admin" element={ <AdminRoute>   <AdminLayout /> </AdminRoute> }>
           <Route path="dashboard" element={<AdminDashboard />} />
           <Route path="equipment" element={<AdminEquipment />} />
-          <Route path="laboratories" element={<LaboratoryPage />} />
           <Route path="maintenance" element={<MaintenancePage />} />
-          <Route path="issuance" element={<IssuancePage />} />
-          {/* <Route path="/admin/profile" element={<Profile />} /> */}
+           <Route path="issuance" element={<Issuance />} /> 
+          <Route path="/admin/profile" element={<Profile />} />
           </Route>
 
         </Routes>
