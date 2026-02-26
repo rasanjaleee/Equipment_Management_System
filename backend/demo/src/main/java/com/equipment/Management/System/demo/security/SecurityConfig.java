@@ -5,6 +5,7 @@ import com.equipment.Management.System.demo.filter.JwtFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
@@ -37,6 +38,10 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/auth/**").permitAll()  // public endpoints
+                        .requestMatchers(HttpMethod.GET, "/api/issuances/**").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/issuances/**").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/issuances/**").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/issuances/**").hasAuthority("ROLE_ADMIN")
                         .anyRequest().authenticated()             // secured endpoints
                 )
                 .sessionManagement(session -> session
