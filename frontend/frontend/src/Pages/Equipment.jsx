@@ -1,15 +1,19 @@
-import { Search, ChevronDown } from 'lucide-react';
-import { useState } from 'react';
+import { Search, ChevronDown, X } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import image from '/images/1.webp';
-import oscilloscope from '/images/oscilloscope.jpg';
-import multimeter from '/images/multimeter.jpg';
 
 const Equipment = () => {
+  const navigate = useNavigate();
   const [selectedDepartment, setSelectedDepartment] = useState('');
   const [selectedLaboratory, setSelectedLaboratory] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [showDeptDropdown, setShowDeptDropdown] = useState(false);
   const [showLabDropdown, setShowLabDropdown] = useState(false);
+  const [equipmentList, setEquipmentList] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   const departments = [
     'Department of Electrical and Information Engineering',
@@ -19,7 +23,8 @@ const Equipment = () => {
     'Department of Interdisciplinary Studies'
   ];
 
-  const laboratoriesList = [
+  // Laboratories list under Electrical and Information Engineering
+  const laboratoriesListOptions = [
     'Electrical Machines and Power Electronics Laboratory',
     'Power Systems and High Voltage Laboratory',
     'Electronics and Measurements Laboratory',
@@ -28,93 +33,62 @@ const Equipment = () => {
     'Computer Networks Laboratory'
   ];
 
-  // Sample equipment data
-  const laboratories = [
-    {
-      id: 1,
-      name: '01 Electrical Machines and Power Electronics Laboratory',
-      totalEquipment: 30,
-      equipment: [
-        {
-          id: 1,
-          name: 'Oscilloscope',
-          type: 'Total Equipment - 07',
-          model: 'Model01 - 02',
-          image: oscilloscope
-        },
-        {
-          id: 2,
-          name: 'Digital Multimeter',
-          type: 'Total Equipment - 07',
-          model: 'Model01 - 02',
-          image: multimeter
-        },
-        {
-          id: 3,
-          name: 'Function Generator',
-          type: 'Total Equipment - 07',
-          model: 'Model01 - 02',
-          image: oscilloscope
-        }
-      ]
-    },
-    {
-      id: 2,
-      name: '02. Power systems and High voltage laboratory',
-      totalEquipment: 25,
-      equipment: [
-        {
-          id: 4,
-          name: 'Oscilloscope',
-          type: 'Total Equipment - 05',
-          model: 'Model01 - 02',
-          image: oscilloscope
-        },
-        {
-          id: 5,
-          name: 'Digital Multimeter',
-          type: 'Total Equipment - 05',
-          model: 'Model01 - 02',
-          image: multimeter
-        },
-        {
-          id: 6,
-          name: 'Function Generator',
-          type: 'Total Equipment - 05',
-          model: 'Model01 - 02',
-          image: oscilloscope
-        }
-      ]
-    },
-    {
-      id: 3,
-      name: '03. Electronics and Measurements laboratory',
-      totalEquipment: 28,
-      equipment: [
-        {
-          id: 7,
-          name: 'Oscilloscope',
-          type: 'Total Equipment - 06',
-          model: 'Model01 - 02',
-          image: oscilloscope
-        },
-        {
-          id: 8,
-          name: 'Digital Multimeter',
-          type: 'Total Equipment - 06',
-          model: 'Model01 - 02',
-          image: multimeter
-        },
-        {
-          id: 9,
-          name: 'Function Generator',
-          type: 'Total Equipment - 06',
-          model: 'Model01 - 02',
-          image: oscilloscope
-        }
-      ]
+  // Fetch equipment from backend
+  useEffect(() => {
+    fetchEquipment();
+  }, []);
+
+ const fetchEquipment = async () => {
+  try {
+    setLoading(true);
+
+    const token = localStorage.getItem('token'); // ✅ get token if user logged in
+
+    const res = await axios.get('http://localhost:8080/api/equipment/all', {
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    });
+
+    setEquipmentList(res.data);
+    setError('');
+  } catch (err) {
+    console.error('Failed to fetch equipment:', err);
+    setError('Failed to load equipment. Please try again later.');
+  } finally {
+    setLoading(false);
+  }
+};
+
+  // Group equipment by laboratory
+  const groupedByLaboratory = equipmentList.reduce((acc, equipment) => {
+    const labName = equipment.laboratory || 'Other';
+    if (!acc[labName]) {
+      acc[labName] = [];
     }
-  ];
+    acc[labName].push(equipment);
+    return acc;
+  }, {});
+
+  // Get unique laboratories for filter - combine predefined list with dynamic ones
+  const dynamicLabs = [...new Set(equipmentList.map(eq => eq.laboratory).filter(Boolean))];
+  const laboratoriesList = [...new Set([...laboratoriesListOptions, ...dynamicLabs])];
+
+  // Filter equipment based on search and filters
+  const filteredEquipment = Object.entries(groupedByLaboratory)
+    .map(([labName, equipment]) => ({
+      name: labName,
+      equipment: equipment.filter(item => {
+        const matchesSearch = searchQuery === '' || 
+          item.equipmentName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          item.model?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          item.serialNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          item.supplier?.toLowerCase().includes(searchQuery.toLowerCase());
+        
+        const matchesLab = selectedLaboratory === '' || item.laboratory === selectedLaboratory;
+        
+        return matchesSearch && matchesLab;
+      })
+    }))
+    .filter(lab => lab.equipment.length > 0);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -151,11 +125,20 @@ const Equipment = () => {
             <Search className="text-gray-400 mr-3" size={20} />
             <input
               type="text"
-              placeholder="Search for equipment name"
+              placeholder="Search by equipment name, model, serial number..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="flex-1 border-none outline-none text-gray-700 placeholder-gray-400 text-sm"
             />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="ml-2 p-1 hover:bg-gray-100 rounded-full transition-colors"
+                title="Clear search"
+              >
+                <X className="text-gray-400 hover:text-gray-600" size={18} />
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -231,10 +214,10 @@ const Equipment = () => {
         </div>
 
         {/* Filter Buttons */}
-        <div className="flex gap-3 mb-8">
+        <div className="flex gap-3 mb-4">
           <button 
             onClick={() => {
-              // Apply filter logic here
+              // Filters are applied automatically via filteredEquipment
               console.log('Filters applied:', { selectedDepartment, selectedLaboratory, searchQuery });
             }}
             className="bg-yellow-500 hover:bg-yellow-400 text-black font-semibold px-6 py-2 rounded-full text-sm transition-colors"
@@ -253,12 +236,63 @@ const Equipment = () => {
           </button>
         </div>
 
+        {/* Search Results Indicator */}
+        {(searchQuery || selectedLaboratory) && (
+          <div className="mb-6 p-3 bg-blue-50 border-l-4 border-blue-500 rounded">
+            <p className="text-sm text-gray-700">
+              {searchQuery && (
+                <span>Searching for: <strong>"{searchQuery}"</strong></span>
+              )}
+              {searchQuery && selectedLaboratory && <span className="mx-2">•</span>}
+              {selectedLaboratory && (
+                <span>Laboratory: <strong>{selectedLaboratory}</strong></span>
+              )}
+              <span className="ml-2">
+                - Found <strong>{filteredEquipment.reduce((acc, lab) => acc + lab.equipment.length, 0)}</strong> equipment
+              </span>
+            </p>
+          </div>
+        )}
+
+        {/* Loading State */}
+        {loading && (
+          <div className="text-center py-12">
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500"></div>
+            <p className="mt-4 text-gray-600">Loading equipment...</p>
+          </div>
+        )}
+
+        {/* Error State */}
+        {error && !loading && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+            <strong className="font-bold">Error!</strong>
+            <span className="block sm:inline"> {error}</span>
+          </div>
+        )}
+
+        {/* No Equipment Found */}
+        {!loading && !error && filteredEquipment.length === 0 && (
+          <div className="text-center py-12 bg-white rounded-lg shadow-sm">
+            <p className="text-gray-600 text-lg">No equipment found matching your criteria.</p>
+            <button 
+              onClick={() => {
+                setSelectedDepartment('');
+                setSelectedLaboratory('');
+                setSearchQuery('');
+              }}
+              className="mt-4 bg-yellow-500 hover:bg-yellow-400 text-black font-semibold px-6 py-2 rounded-full text-sm transition-colors"
+            >
+              Clear Filters
+            </button>
+          </div>
+        )}
+
         {/* Laboratory Sections */}
-        {laboratories.map((lab) => (
-          <div key={lab.id} className="mb-12">
+        {!loading && !error && filteredEquipment.map((lab, index) => (
+          <div key={index} className="mb-12">
             <div className="bg-white border-l-4 border-yellow-500 p-4 mb-6 shadow-sm">
               <h2 className="text-xl font-bold text-gray-900">{lab.name}</h2>
-              <p className="text-gray-600 text-sm">Total Equipment = {lab.totalEquipment}</p>
+              <p className="text-gray-600 text-sm">Total Equipment = {lab.equipment.length}</p>
             </div>
 
             {/* Equipment Grid */}
@@ -267,21 +301,38 @@ const Equipment = () => {
                 <div key={item.id} className="bg-white rounded-lg shadow-md overflow-hidden border-2 border-yellow-400 hover:shadow-xl transition-shadow">
                   {/* Equipment Image */}
                   <div className="aspect-video bg-gray-100 flex items-center justify-center overflow-hidden">
-                    <img 
-                      src={item.image} 
-                      alt={item.name}
-                      className="w-full h-full object-cover"
-                    />
+                    {item.photoPath ? (
+                      <img 
+                        src={`http://localhost:8080${item.photoPath}?t=${Date.now()}`}
+                        alt={item.equipmentName}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.src = '/images/1.webp';
+                        }}
+                      />
+                    ) : (
+                      <img 
+                        src="/images/1.webp"
+                        alt={item.equipmentName}
+                        className="w-full h-full object-cover"
+                      />
+                    )}
                   </div>
 
                   {/* Equipment Details */}
                   <div className="p-4">
-                    <h3 className="font-bold text-gray-900 mb-1">{item.name}</h3>
-                    <p className="text-sm text-gray-600 mb-1">{item.type}</p>
-                    <p className="text-sm text-gray-600 mb-4">{item.model}</p>
+                    <h3 className="font-bold text-gray-900 mb-1">{item.equipmentName}</h3>
+                    <p className="text-sm text-gray-600 mb-1">Model: {item.model || 'N/A'}</p>
+                    <p className="text-sm text-gray-600 mb-1">Serial: {item.serialNumber || 'N/A'}</p>
+                    <p className="text-sm text-gray-600 mb-4">
+                      Status: <span className={`font-semibold ${item.status === 'WORKING' ? 'text-green-600' : 'text-red-600'}`}>
+                        {item.status || 'N/A'}
+                      </span>
+                    </p>
 
                     <button 
-                      onClick={() => window.location.href = `/equipment/${item.id}`}
+                      onClick={() => navigate(`/equipment/${item.id}`)}
                       className="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-semibold py-2 px-4 rounded transition-colors"
                     >
                       View Details
