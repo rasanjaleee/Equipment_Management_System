@@ -16,5 +16,4 @@ public interface IssuanceRepository extends JpaRepository<Issuance, Long> {
     
     List<Issuance> findByUserId(Long userId);
     
-    List<Issuance> findByEquipmentEquipmentPk(Long equipmentPk);
-}
+    List<Issuance> findByEquipment_Id(Long equipmentId);}
