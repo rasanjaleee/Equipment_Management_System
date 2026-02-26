@@ -36,3 +36,6 @@ build/
 /backend/src/main/resources/application.properties
 /backend/src/main/resources/application.yml
 
+# User uploaded files
+uploads/
+

@@ -43,23 +43,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Popular Equipment */}
-      <section className="max-w-7xl mx-auto px-6 mt-12">
-        <h3 className="text-xl font-semibold mb-6">Popular Equipment</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-          <EquipmentCard
-            name="Oscilloscope"
-            image="/images/oscilloscope.jpg"
-            status="Available"
-          />
-          <EquipmentCard
-            name="Digital Multimeter"
-            image="/images/multimeter.jpg"
-            status="Available"
-          />
-        </div>
-      </section>
-
       {/* Department Section */}
       <section className="relative w-full mt-16">
         <img
@@ -94,25 +77,6 @@ function StatCard({ title, value }) {
     <div className="bg-yellow-500 rounded-xl shadow p-6 text-center">
       <p className="text-sm font-medium mb-2">{title}</p>
       <p className="text-3xl font-bold">{value}</p>
-    </div>
-  );
-}
-
-function EquipmentCard({ name, image, status }) {
-  return (
-    <div className="bg-white rounded-xl shadow hover:shadow-lg transition">
-      <img
-        src={image}
-        alt={name}
-        className="w-full h-40 object-cover rounded-t-xl"
-      />
-      <div className="p-4">
-        <h4 className="font-semibold mb-1">{name}</h4>
-        <p className="text-xs text-gray-500 mb-3">Status: {status}</p>
-        <button className="w-full bg-yellow-500 py-2 rounded font-semibold text-sm">
-          View Details
-        </button>
-      </div>
     </div>
   );
 }
