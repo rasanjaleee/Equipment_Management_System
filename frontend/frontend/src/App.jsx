@@ -19,6 +19,7 @@ import AdminRoute from "./routes/AdminRoute";
 import MaintenancePage from "./Pages/admin/MaintenancePage";
 import AdminLayout from "./Pages/AdminLayout";
 import Profile from "./Pages/Profile";
+import LaboratoryPage from './Pages/Laboratory';
 
 
 // Wrapper to provide Router context
@@ -67,6 +68,7 @@ const shouldShowFooter =
           <Route path='/equipment/:id' element={<EquipmentDetails />} />
           <Route path='/about' element={<About />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path='/laboratory' element={<LaboratoryPage />} />
           
           {/* Admin routes */}
           <Route path="/admin" element={ <AdminRoute>   <AdminLayout /> </AdminRoute> }>
