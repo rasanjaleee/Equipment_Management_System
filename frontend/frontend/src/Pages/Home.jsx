@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 
@@ -32,6 +33,8 @@ export default function HomePage() {
   return (
     <div className="w-full min-h-screen bg-gray-100 font-sans">
 
+
+
       {/* Hero Section */}
       <section className="relative w-full h-[420px] bg-black">
         <img
@@ -65,16 +68,20 @@ export default function HomePage() {
       {/* Stats Cards */}
       <section className="max-w-7xl mx-auto px-6 -mt-14 relative z-10">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+
           <StatCard title="Borrowed Items" value={borrowedItems.toString().padStart(2, '0')} />
           <StatCard title="Pending Requests" value={pendingRequests.toString().padStart(2, '0')} />
           <StatCard title="Total Available Equipment" value={loading ? '...' : totalEquipment} />
+
         </div>
       </section>
 
       {/* Department Section */}
       <section className="relative w-full mt-16">
         <img
+
           src="/images/image.png"
+
           alt="Building"
           className="w-full h-[380px] object-cover"
         />
@@ -96,6 +103,7 @@ export default function HomePage() {
       </section>
 
       
+
     </div>
   );
 }
@@ -107,4 +115,6 @@ function StatCard({ title, value }) {
       <p className="text-3xl font-bold">{value}</p>
     </div>
   );
+
 }
+

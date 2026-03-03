@@ -19,7 +19,7 @@ import AdminEquipment from "./Pages/admin/AdminEquipment";
 import AdminRoute from "./routes/AdminRoute";
 import MaintenancePage from "./Pages/admin/MaintenancePage";
 import AdminLayout from "./Pages/AdminLayout";
-
+import IssuancePage from './Pages/admin/Issuance';
 
 
 
@@ -78,6 +78,7 @@ const shouldShowFooter =
           <Route path="equipment" element={<AdminEquipment />} />
           <Route path="laboratories" element={<LaboratoryPage />} />
           <Route path="maintenance" element={<MaintenancePage />} />
+          <Route path="issuance" element={<IssuancePage />} />
           {/* <Route path="/admin/profile" element={<Profile />} /> */}
           </Route>
 
