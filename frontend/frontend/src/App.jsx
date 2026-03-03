@@ -68,7 +68,6 @@ const shouldShowFooter =
           <Route path='/equipment' element={<Equipment />} />
           <Route path='/equipment/:id' element={<EquipmentDetails />} />
           <Route path='/about' element={<About />} />
-          <Route path='/laboratory' element={<LaboratoryPage />} />
           <Route path='/profile' element={<ProfilePage />} />
 
 
@@ -77,8 +76,9 @@ const shouldShowFooter =
           <Route path="/admin" element={ <AdminRoute>   <AdminLayout /> </AdminRoute> }>
           <Route path="dashboard" element={<AdminDashboard />} />
           <Route path="equipment" element={<AdminEquipment />} />
+          <Route path="laboratories" element={<LaboratoryPage />} />
           <Route path="maintenance" element={<MaintenancePage />} />
-          <Route path="/admin/profile" element={<Profile />} />
+          {/* <Route path="/admin/profile" element={<Profile />} /> */}
           </Route>
 
         </Routes>
