@@ -18,28 +18,35 @@ public class UserService {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    // ✅ Registration with normalized username and email
     public User registerUser(UserRegistrationRequest request) {
 
-        if (userRepository.existsByEmail(request.getEmail())) {
+        String normalizedUsername = request.getUsername().trim().toLowerCase();
+        String normalizedEmail = request.getEmail().trim().toLowerCase();
+
+        if (userRepository.existsByEmail(normalizedEmail)) {
             throw new RuntimeException("Email already exists");
         }
 
-        if (userRepository.existsByUsername(request.getUsername())) {
+        if (userRepository.existsByUsername(normalizedUsername)) {
             throw new RuntimeException("Username already exists");
         }
 
         User user = new User();
-        user.setUsername(request.getUsername().trim());
-        user.setEmail(request.getEmail().trim().toLowerCase());
+        user.setUsername(normalizedUsername); // store lowercase username
+        user.setEmail(normalizedEmail);
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setRole("STUDENT");
 
         return userRepository.save(user);
     }
 
-
+    // ✅ Login verification with normalized username
     public boolean verifyUser(String username, String password) {
-        Optional<User> userOptional = userRepository.findByUsername(username);
+
+        String normalizedUsername = username.trim().toLowerCase();
+
+        Optional<User> userOptional = userRepository.findByUsername(normalizedUsername);
         if (userOptional.isPresent()) {
             User user = userOptional.get();
             return passwordEncoder.matches(password, user.getPassword());
@@ -47,8 +54,10 @@ public class UserService {
         return false;
     }
 
-    // ✅ ADD THIS METHOD (REQUIRED FOR ADMIN LOGIN RESPONSE)
+    // ✅ Fetch user by normalized username
     public Optional<User> getUserByUsername(String username) {
-        return userRepository.findByUsername(username);
+        return userRepository.findByUsername(username.trim().toLowerCase());
     }
+
+    
 }
