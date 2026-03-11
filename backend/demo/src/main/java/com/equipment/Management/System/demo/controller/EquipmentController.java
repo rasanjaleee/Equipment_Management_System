@@ -25,7 +25,10 @@ public class EquipmentController {
         this.equipmentService = equipmentService;
     }
 
+<<<<<<< HEAD
     // Add equipment with photo
+=======
+>>>>>>> c934fe99cf1d8f0211b0868148fcabf2c9af0ae4
     @PostMapping("/add")
     public ResponseEntity<?> addEquipment(
             @RequestParam String equipmentName,
@@ -62,13 +65,65 @@ public class EquipmentController {
             equipment.setPhotoPath(filePath.toString());
 
             equipmentService.saveEquipment(equipment);
+<<<<<<< HEAD
 
             return ResponseEntity.ok("Equipment added successfully");
+=======
+            return ResponseEntity.ok("Equipment added successfully");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error: " + e.getMessage());
+        }
+    }
+    @PutMapping("/update/{id}")
+    public ResponseEntity<?> updateEquipment(
+            @PathVariable Long id,
+            @RequestParam String equipmentName,
+            @RequestParam String laboratory,
+            @RequestParam(required = false) String model,
+            @RequestParam(required = false) String serialNumber,
+            @RequestParam(required = false) Double cost,
+            @RequestParam(required = false) String purchaseDate,
+            @RequestParam(required = false) String supplier,
+            @RequestParam EquipmentStatus status,
+            @RequestParam(required = false) String qrCode,
+            @RequestParam(required = false) String grnNumber,
+            @RequestParam(required = false) MultipartFile photo
+    ) {
+        try {
+            Equipment equipment = equipmentService.getById(id);
+
+            equipment.setEquipmentName(equipmentName);
+            equipment.setLaboratory(laboratory);
+            equipment.setModel(model);
+            equipment.setSerialNumber(serialNumber);
+            equipment.setCost(cost);
+            equipment.setSupplier(supplier);
+            equipment.setStatus(status);
+            equipment.setQrCode(qrCode);
+            equipment.setGrnNumber(grnNumber);
+
+            if (purchaseDate != null && !purchaseDate.isBlank()) {
+                equipment.setPurchaseDate(LocalDate.parse(purchaseDate));
+            }
+
+            // Optional photo update
+            if (photo != null && !photo.isEmpty()) {
+                Files.createDirectories(Paths.get(UPLOAD_DIR));
+                String fileName = System.currentTimeMillis() + "_" + photo.getOriginalFilename();
+                Path filePath = Paths.get(UPLOAD_DIR + fileName);
+                Files.write(filePath, photo.getBytes());
+                equipment.setPhotoPath(filePath.toString());
+            }
+
+            equipmentService.saveEquipment(equipment);
+            return ResponseEntity.ok("Equipment updated successfully");
+>>>>>>> c934fe99cf1d8f0211b0868148fcabf2c9af0ae4
 
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Error: " + e.getMessage());
         }
     }
+<<<<<<< HEAD
 
     // Get all equipment (Admin table)
     @GetMapping("/all")
@@ -76,3 +131,36 @@ public class EquipmentController {
         return equipmentService.getAllEquipment();
     }
 }
+=======
+    @DeleteMapping("/delete/{id}")
+    public ResponseEntity<?> deleteEquipment(@PathVariable Long id) {
+        try {
+            equipmentService.deleteEquipment(id);
+            return ResponseEntity.ok("Equipment deleted successfully");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error: " + e.getMessage());
+        }
+    }
+
+    // Get all equipment
+    @GetMapping
+    public List<Equipment> getAllEquipment() {
+        return equipmentService.getAllEquipment();
+    }
+
+    // Keep the old endpoint for backwards compatibility
+    @GetMapping("/all")
+    public List<Equipment> getAllEquipmentAlt() {
+        return equipmentService.getAllEquipment();
+    }
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getEquipmentById(@PathVariable Long id) {
+        try {
+            Equipment equipment = equipmentService.getById(id);
+            return ResponseEntity.ok(equipment);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Equipment not found");
+        }
+    }
+}
+>>>>>>> c934fe99cf1d8f0211b0868148fcabf2c9af0ae4
