@@ -1,7 +1,7 @@
-// frontend/frontend/src/App.jsx
-
+// frontend/src/App.jsx
 import './App.css';
-
+import LaboratoryPage from './Pages/Laboratory'; // adjust path if needed
+import ProfilePage from './Pages/Profile';
 import Login from './Pages/Login';    
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import Dashboard from './Pages/Dashboard';
@@ -19,6 +19,7 @@ import AdminRoute from "./routes/AdminRoute";
 import MaintenancePage from "./Pages/admin/MaintenancePage";
 import AdminLayout from "./Pages/AdminLayout";
 import Profile from "./Pages/Profile";
+
 
 
 // Wrapper to provide Router context
@@ -64,17 +65,26 @@ const shouldShowFooter =
           <Route path='/dashboard' element={<Dashboard />} />
           <Route path='/home' element={<Home />} />
           <Route path='/equipment' element={<Equipment />} />
-          <Route path='/equipment/:id' element={<EquipmentDetails />} />
+          <Route path='/equipment/details/:equipmentName/:laboratory' element={<EquipmentDetails />} />
           <Route path='/about' element={<About />} />
-          <Route path="/profile" element={<Profile />} />
+
+          
           
           {/* Admin routes */}
           <Route path="/admin" element={ <AdminRoute>   <AdminLayout /> </AdminRoute> }>
           <Route path="dashboard" element={<AdminDashboard />} />
           <Route path="equipment" element={<AdminEquipment />} />
           <Route path="maintenance" element={<MaintenancePage />} />
-          <Route path="/admin/profile" element={<Profile />} />
+          <Route path="profile" element={<Profile />} />
+          <Route path="laboratories" element={<LaboratoryPage />} />
+          
+          
           </Route>
+          
+
+          <Route path='/profile' element={<ProfilePage />} />
+          
+
 
         </Routes>
       </main>

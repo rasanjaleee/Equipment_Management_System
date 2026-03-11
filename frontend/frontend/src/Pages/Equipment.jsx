@@ -72,11 +72,11 @@ const Equipment = () => {
   const dynamicLabs = [...new Set(equipmentList.map(eq => eq.laboratory).filter(Boolean))];
   const laboratoriesList = [...new Set([...laboratoriesListOptions, ...dynamicLabs])];
 
-  // Filter equipment based on search and filters
+  // Filter equipment based on search and filters, then group by name
   const filteredEquipment = Object.entries(groupedByLaboratory)
-    .map(([labName, equipment]) => ({
-      name: labName,
-      equipment: equipment.filter(item => {
+    .map(([labName, equipment]) => {
+      // First filter the equipment
+      const filtered = equipment.filter(item => {
         const matchesSearch = searchQuery === '' || 
           item.equipmentName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
           item.model?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -86,8 +86,41 @@ const Equipment = () => {
         const matchesLab = selectedLaboratory === '' || item.laboratory === selectedLaboratory;
         
         return matchesSearch && matchesLab;
-      })
-    }))
+      });
+
+      // Group filtered equipment by name
+      const groupedByName = filtered.reduce((acc, item) => {
+        const name = item.equipmentName || 'Unknown';
+        if (!acc[name]) {
+          acc[name] = [];
+        }
+        acc[name].push(item);
+        return acc;
+      }, {});
+
+      // Convert to array with summary info
+      const equipmentGroups = Object.entries(groupedByName).map(([name, items]) => {
+        const working = items.filter(item => item.status === 'WORKING').length;
+        const underRepair = items.filter(item => item.status === 'UNDER_REPAIR').length;
+        const broken = items.filter(item => item.status === 'BROKEN').length;
+        
+        return {
+          name,
+          items,
+          totalQuantity: items.length,
+          working,
+          underRepair,
+          broken,
+          // Use first item for display image and other common properties
+          displayItem: items[0]
+        };
+      });
+
+      return {
+        name: labName,
+        equipment: equipmentGroups
+      };
+    })
     .filter(lab => lab.equipment.length > 0);
 
   return (
@@ -248,7 +281,8 @@ const Equipment = () => {
                 <span>Laboratory: <strong>{selectedLaboratory}</strong></span>
               )}
               <span className="ml-2">
-                - Found <strong>{filteredEquipment.reduce((acc, lab) => acc + lab.equipment.length, 0)}</strong> equipment
+                - Found <strong>{filteredEquipment.reduce((acc, lab) => acc + lab.equipment.reduce((sum, group) => sum + group.totalQuantity, 0), 0)}</strong> equipment 
+                ({filteredEquipment.reduce((acc, lab) => acc + lab.equipment.length, 0)} types)
               </span>
             </p>
           </div>
@@ -292,19 +326,22 @@ const Equipment = () => {
           <div key={index} className="mb-12">
             <div className="bg-white border-l-4 border-yellow-500 p-4 mb-6 shadow-sm">
               <h2 className="text-xl font-bold text-gray-900">{lab.name}</h2>
-              <p className="text-gray-600 text-sm">Total Equipment = {lab.equipment.length}</p>
+              <p className="text-gray-600 text-sm">
+                Total Equipment = {lab.equipment.reduce((acc, group) => acc + group.totalQuantity, 0)} 
+                ({lab.equipment.length} types)
+              </p>
             </div>
 
             {/* Equipment Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {lab.equipment.map((item) => (
-                <div key={item.id} className="bg-white rounded-lg shadow-md overflow-hidden border-2 border-yellow-400 hover:shadow-xl transition-shadow">
+              {lab.equipment.map((group, groupIndex) => (
+                <div key={groupIndex} className="bg-white rounded-lg shadow-md overflow-hidden border-2 border-yellow-400 hover:shadow-xl transition-shadow">
                   {/* Equipment Image */}
                   <div className="aspect-video bg-gray-100 flex items-center justify-center overflow-hidden">
-                    {item.photoPath ? (
+                    {group.displayItem.photoPath ? (
                       <img 
-                        src={`http://localhost:8080/${item.photoPath}?t=${Date.now()}`}
-                        alt={item.equipmentName}
+                        src={`http://localhost:8080/${group.displayItem.photoPath}?t=${Date.now()}`}
+                        alt={group.name}
                         className="w-full h-full object-cover"
                         onError={(e) => {
                           e.target.onerror = null;
@@ -314,7 +351,7 @@ const Equipment = () => {
                     ) : (
                       <img 
                         src="/images/1.webp"
-                        alt={item.equipmentName}
+                        alt={group.name}
                         className="w-full h-full object-cover"
                       />
                     )}
@@ -322,17 +359,29 @@ const Equipment = () => {
 
                   {/* Equipment Details */}
                   <div className="p-4">
-                    <h3 className="font-bold text-gray-900 mb-1">{item.equipmentName}</h3>
-                    <p className="text-sm text-gray-600 mb-1">Model: {item.model || 'N/A'}</p>
-                    <p className="text-sm text-gray-600 mb-1">Serial: {item.serialNumber || 'N/A'}</p>
-                    <p className="text-sm text-gray-600 mb-4">
-                      Status: <span className={`font-semibold ${item.status === 'WORKING' ? 'text-green-600' : 'text-red-600'}`}>
-                        {item.status || 'N/A'}
-                      </span>
-                    </p>
+                    <h3 className="font-bold text-gray-900 mb-2">{group.name}</h3>
+                    <div className="bg-gray-50 rounded p-2 mb-3">
+                      <p className="text-sm text-gray-700 mb-1">
+                        <span className="font-semibold">Total Quantity:</span> {group.totalQuantity}
+                      </p>
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className="flex items-center gap-1">
+                          <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                          Working: {group.working}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                          Repair: {group.underRepair}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <span className="w-2 h-2 rounded-full bg-red-500"></span>
+                          Broken: {group.broken}
+                        </span>
+                      </div>
+                    </div>
 
                     <button 
-                      onClick={() => navigate(`/equipment/${item.id}`)}
+                      onClick={() => navigate(`/equipment/details/${encodeURIComponent(group.name)}/${encodeURIComponent(lab.name)}`)}
                       className="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-semibold py-2 px-4 rounded transition-colors"
                     >
                       View Details
