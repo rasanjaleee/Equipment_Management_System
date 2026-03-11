@@ -44,4 +44,16 @@ public class User {
     public void setPassword(String password) { this.password = password; }
 
     public Long getId() { return id; }
+
+    public void setDepartment(Object department) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    public void setContact(Object contact) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    public void setProfileImage(Object profileImage) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
 }

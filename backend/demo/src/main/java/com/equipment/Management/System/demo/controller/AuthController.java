@@ -125,7 +125,8 @@ public class AuthController {
                 .orElseThrow();
 
         // 4️⃣ Generate JWT
-        String token = jwtUtil.generateToken(user.getUsername());
+
+        String token = jwtUtil.generateToken(user.getUsername(), user.getRole());
 
         return ResponseEntity.ok(Map.of(
                 "token", token,
