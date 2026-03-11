@@ -4,15 +4,15 @@ import axios from 'axios';
 import { ArrowLeft, Loader } from 'lucide-react';
 
 const EquipmentDetails = () => {
-  const { id } = useParams();
+  const { equipmentName, laboratory } = useParams();
   const navigate = useNavigate();
-  const [equipment, setEquipment] = useState(null);
+  const [equipmentList, setEquipmentList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
     fetchEquipmentDetails();
-  }, [id]);
+  }, [equipmentName, laboratory]);
 
 const fetchEquipmentDetails = async () => {
   try {
@@ -20,14 +20,21 @@ const fetchEquipmentDetails = async () => {
 
     const token = localStorage.getItem('token');
 
+    // Fetch all equipment and filter by name and laboratory
     const res = await axios.get(
-      `http://localhost:8080/api/equipment/${id}`,
+      `http://localhost:8080/api/equipment/all`,
       {
         headers: token ? { Authorization: `Bearer ${token}` } : {}
       }
     );
 
-    setEquipment(res.data);
+    // Filter equipment by name and laboratory
+    const filtered = res.data.filter(item => 
+      item.equipmentName === decodeURIComponent(equipmentName) && 
+      item.laboratory === decodeURIComponent(laboratory)
+    );
+
+    setEquipmentList(filtered);
     setError('');
   } catch (err) {
     console.error('Failed to fetch equipment details:', err);
@@ -50,6 +57,19 @@ const fetchEquipmentDetails = async () => {
     }
   };
 
+  const getStatusTextColor = (status) => {
+    switch (status?.toUpperCase()) {
+      case 'WORKING':
+        return 'text-green-600';
+      case 'UNDER_REPAIR':
+        return 'text-blue-600';
+      case 'BROKEN':
+        return 'text-red-600';
+      default:
+        return 'text-gray-600';
+    }
+  };
+
   const formatStatus = (status) => {
     if (!status) return 'N/A';
     return status.replace('_', ' ').split(' ').map(word => 
@@ -62,13 +82,20 @@ const fetchEquipmentDetails = async () => {
     try {
       return new Date(dateString).toLocaleDateString('en-US', {
         year: 'numeric',
-        month: 'long',
+        month: 'short',
         day: 'numeric'
       });
     } catch {
       return dateString;
     }
   };
+
+  // Calculate totals
+  const totalQuantity = equipmentList.length;
+  const working = equipmentList.filter(item => item.status === 'WORKING').length;
+  const underRepair = equipmentList.filter(item => item.status === 'UNDER_REPAIR').length;
+  const broken = equipmentList.filter(item => item.status === 'BROKEN').length;
+  const displayEquipment = equipmentList[0] || {};
 
   if (loading) {
     return (
@@ -81,7 +108,7 @@ const fetchEquipmentDetails = async () => {
     );
   }
 
-  if (error || !equipment) {
+  if (error || equipmentList.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50 py-8">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -108,7 +135,7 @@ const fetchEquipmentDetails = async () => {
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-[95%] mx-auto px-4 sm:px-6 lg:px-8">
         {/* Back Button */}
         <button 
           onClick={() => navigate('/equipment')}
@@ -118,19 +145,19 @@ const fetchEquipmentDetails = async () => {
           Back to Equipment List
         </button>
 
-        {/* Equipment Header */}
-        <div className="bg-white rounded-lg shadow-md p-8 mb-6">
-          <h1 className="text-3xl font-bold text-gray-900 text-center mb-8">
-            {equipment.equipmentName}
+        {/* Equipment Header with Image and Summary */}
+        <div className="bg-white rounded-lg shadow-md overflow-hidden mb-6">
+          <h1 className="text-2xl font-bold text-center pt-6 pb-4">
+            {decodeURIComponent(equipmentName)}
           </h1>
-
-          <div className="flex flex-col md:flex-row gap-8 items-start">
+          
+          <div className="flex flex-col md:flex-row gap-6 p-6">
             {/* Equipment Image */}
             <div className="flex-shrink-0 w-full md:w-80">
-              {equipment.photoPath ? (
+              {displayEquipment.photoPath ? (
                 <img
-                  src={`http://localhost:8080/${equipment.photoPath}?t=${Date.now()}`}
-                  alt={equipment.equipmentName}
+                  src={`http://localhost:8080/${displayEquipment.photoPath}?t=${Date.now()}`}
+                  alt={displayEquipment.equipmentName}
                   className="w-full h-64 object-cover rounded-lg border-2 border-gray-200"
                   onError={(e) => {
                     e.target.onerror = null;
@@ -140,14 +167,14 @@ const fetchEquipmentDetails = async () => {
               ) : (
                 <img
                   src="/images/1.webp"
-                  alt={equipment.equipmentName}
+                  alt={displayEquipment.equipmentName}
                   className="w-full h-64 object-cover rounded-lg border-2 border-gray-200"
                 />
               )}
             </div>
 
-            {/* Equipment Details Table */}
-            <div className="flex-1 w-full">
+            {/* Summary Table */}
+            <div className="flex-1">
               <div className="bg-gray-100 rounded-lg overflow-hidden">
                 <div className="flex bg-gray-200">
                   <div className="w-1/2 px-4 py-3 font-semibold text-gray-700 border-r border-gray-300">
@@ -155,7 +182,7 @@ const fetchEquipmentDetails = async () => {
                   </div>
                   <div className="w-1/2 px-4 py-3 text-gray-900 flex items-center">
                     <span className="mr-2">-</span>
-                    <span>{equipment.equipmentName}</span>
+                    <span>{decodeURIComponent(equipmentName)}</span>
                   </div>
                 </div>
 
@@ -165,50 +192,47 @@ const fetchEquipmentDetails = async () => {
                   </div>
                   <div className="w-1/2 px-4 py-3 text-gray-900 flex items-center">
                     <span className="mr-2">-</span>
-                    <span>{equipment.laboratory || 'N/A'}</span>
+                    <span>{decodeURIComponent(laboratory)}</span>
                   </div>
                 </div>
 
                 <div className="flex bg-gray-200">
                   <div className="w-1/2 px-4 py-3 font-semibold text-gray-700 border-r border-gray-300">
-                    Model
+                    Total Quantity
                   </div>
                   <div className="w-1/2 px-4 py-3 text-gray-900 flex items-center">
                     <span className="mr-2">-</span>
-                    <span>{equipment.model || 'N/A'}</span>
-                  </div>
-                </div>
-
-                <div className="flex bg-gray-100">
-                  <div className="w-1/2 px-4 py-3 font-semibold text-gray-700 border-r border-gray-300">
-                    Serial Number
-                  </div>
-                  <div className="w-1/2 px-4 py-3 text-gray-900 flex items-center">
-                    <span className="mr-2">-</span>
-                    <span>{equipment.serialNumber || 'N/A'}</span>
+                    <span className="font-bold">{totalQuantity}</span>
                   </div>
                 </div>
 
                 <div className="flex bg-gray-200">
                   <div className="w-1/2 px-4 py-3 font-semibold text-gray-700 border-r border-gray-300">
-                    Status
+                    Working
                   </div>
                   <div className="w-1/2 px-4 py-3 text-gray-900 flex items-center">
                     <span className="mr-2">-</span>
-                    <div className="flex items-center gap-2">
-                      <div className={`w-3 h-3 rounded-full ${getStatusColor(equipment.status)}`}></div>
-                      <span>{formatStatus(equipment.status)}</span>
-                    </div>
+                    <span className="font-bold text-green-600">{working}</span>
                   </div>
                 </div>
 
                 <div className="flex bg-gray-100">
                   <div className="w-1/2 px-4 py-3 font-semibold text-gray-700 border-r border-gray-300">
-                    QR Code
+                    Under Repair
                   </div>
                   <div className="w-1/2 px-4 py-3 text-gray-900 flex items-center">
                     <span className="mr-2">-</span>
-                    <span>{equipment.qrCode || 'N/A'}</span>
+                    <span className="font-bold text-blue-600">{underRepair}</span>
+                  </div>
+                </div>
+
+                <div className="flex bg-gray-200">
+                  <div className="w-1/2 px-4 py-3 font-semibold text-gray-700 border-r border-gray-300">
+                    Broken
+                  </div>
+                  <div className="w-1/2 px-4 py-3 text-gray-900 flex items-center">
+                    <span className="mr-2">-</span>
+                    <span className="font-bold text-red-600">{broken}</span>
                   </div>
                 </div>
               </div>
@@ -216,30 +240,88 @@ const fetchEquipmentDetails = async () => {
           </div>
         </div>
 
-        {/* Purchase Information */}
+        {/* Equipment Instances Table */}
         <div className="bg-white rounded-lg shadow-md overflow-hidden mb-6">
-          <div className="bg-yellow-500 px-6 py-4">
-            <h2 className="text-xl font-bold text-gray-900">Purchase Information</h2>
-          </div>
-          <div className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">Date of Purchase</label>
-                <p className="text-gray-900">{formatDate(equipment.purchaseDate)}</p>
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">Supplier</label>
-                <p className="text-gray-900">{equipment.supplier || 'N/A'}</p>
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">Cost/Price</label>
-                <p className="text-gray-900">{equipment.cost ? `$${equipment.cost}` : 'N/A'}</p>
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">GRN Number</label>
-                <p className="text-gray-900">{equipment.grnNumber || 'N/A'}</p>
-              </div>
-            </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-yellow-500">
+                <tr>
+                  <th className="px-3 py-3 text-left text-xs font-bold text-black uppercase tracking-wider">
+                    Number
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-bold text-black uppercase tracking-wider">
+                    Equipment ID
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-bold text-black uppercase tracking-wider">
+                    QR Code
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-bold text-black uppercase tracking-wider">
+                    Date
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-bold text-black uppercase tracking-wider">
+                    Supplier
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-bold text-black uppercase tracking-wider">
+                    Model
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-bold text-black uppercase tracking-wider">
+                    Serial
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-bold text-black uppercase tracking-wider">
+                    Cost
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-bold text-black uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-bold text-black uppercase tracking-wider">
+                    GRN
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {equipmentList.map((item, index) => (
+                  <tr key={item.id} className="hover:bg-gray-50">
+                    <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900">
+                      {String(index + 1).padStart(2, '0')}
+                    </td>
+                    <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900 font-medium">
+                      {item.qrCode || item.serialNumber || `ID-${item.id}`}
+                    </td>
+                    <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900">
+                      {item.qrCode || '-'}
+                    </td>
+                    <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900">
+                      {formatDate(item.purchaseDate)}
+                    </td>
+                    <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900">
+                      {item.supplier || '-'}
+                    </td>
+                    <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900">
+                      {item.model || '-'}
+                    </td>
+                    <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900">
+                      {item.serialNumber || '-'}
+                    </td>
+                    <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900">
+                      ${item.cost ? Number(item.cost).toLocaleString() : '-'}
+                    </td>
+                    <td className="px-3 py-3 whitespace-nowrap">
+                      <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        item.status === 'WORKING' ? 'bg-green-500 text-white' :
+                        item.status === 'UNDER_REPAIR' ? 'bg-blue-500 text-white' :
+                        item.status === 'BROKEN' ? 'bg-red-500 text-white' :
+                        'bg-gray-500 text-white'
+                      }`}>
+                        {formatStatus(item.status)}
+                      </span>
+                    </td>
+                    <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900">
+                      {item.grnNumber || '-'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
 
