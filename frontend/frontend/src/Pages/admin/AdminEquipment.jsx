@@ -1,12 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Plus, Save, X, Package, Search, Filter, Edit, Trash2, Eye, ArrowLeft, FileSpreadsheet } from 'lucide-react';
+import { Plus, Save, X, Package, Search, Filter, Edit, Trash2, Eye, ArrowLeft } from 'lucide-react';
 import axios from 'axios';
 import AdminLayout from '../../components/AdminLayout';
-import BulkImportModal from './BulkImportModal';
 
 export default function AdminEquipment() {
   const [showForm, setShowForm] = useState(false);
-  const [showBulkImport, setShowBulkImport] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -215,23 +213,15 @@ export default function AdminEquipment() {
               <Package /> Equipment Management
             </h1>
             {!showForm && (
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setShowBulkImport(true)}
-                  className="bg-green-500 text-white px-6 py-3 rounded-xl flex items-center gap-2 hover:bg-green-600 transition-colors"
-                >
-                  <FileSpreadsheet size={18} /> Bulk Import
-                </button>
-                <button
-                  onClick={() => {
-                    resetForm();
-                    setShowForm(true);
-                  }}
-                  className="bg-yellow-500 text-white px-6 py-3 rounded-xl flex items-center gap-2 hover:bg-yellow-600 transition-colors"
-                >
-                  <Plus size={18} /> Add Equipment
-                </button>
-              </div>
+              <button
+                onClick={() => {
+                  resetForm();
+                  setShowForm(true);
+                }}
+                className="bg-yellow-500 text-white px-6 py-3 rounded-xl flex items-center gap-2 hover:bg-yellow-600 transition-colors"
+              >
+                <Plus size={18} /> Add Equipment
+              </button>
             )}
           </div>
 
@@ -610,18 +600,6 @@ export default function AdminEquipment() {
               )}
             </div>
             </>
-          )}
-
-          {/* Bulk Import Modal */}
-          {showBulkImport && (
-            <BulkImportModal
-              onClose={() => setShowBulkImport(false)}
-              onSuccess={() => {
-                fetchEquipment();
-                setSuccess('Equipment imported successfully!');
-                setTimeout(() => setSuccess(''), 3000);
-              }}
-            />
           )}
 
         </div>
