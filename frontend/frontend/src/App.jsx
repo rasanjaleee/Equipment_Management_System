@@ -5,7 +5,7 @@ import LaboratoryPage from './Pages/Laboratory'; // adjust path if needed
 import ProfilePage from './Pages/Profile';
 import Login from './Pages/Login';    
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
-import Dashboard from './Pages/Dashboard';
+
 import Register from './Pages/Register';
 import Landing from './Pages/Landing';
 import Home from './Pages/Home';
@@ -31,9 +31,6 @@ function AppWrapper() {
     </Router>
   );
 }
-
-  const hideNavbarOn = ['/', '/login', '/register'];
-  const shouldShowNavbar = !hideNavbarOn.includes(location.pathname) && !location.pathname.startsWith('/admin');
 
 function App() {
   const location = useLocation();
@@ -63,7 +60,7 @@ const shouldShowFooter =
           <Route path='/' element={<Landing />} />
           <Route path='/login' element={<Login />} />
           <Route path='/register' element={<Register />} />
-          <Route path='/dashboard' element={<Dashboard />} />
+          
           <Route path='/home' element={<Home />} />
           <Route path='/equipment' element={<Equipment />} />
           <Route path='/equipment/:id' element={<EquipmentDetails />} />
