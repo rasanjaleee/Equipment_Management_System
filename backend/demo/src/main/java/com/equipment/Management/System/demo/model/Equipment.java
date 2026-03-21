@@ -24,6 +24,7 @@ public class Equipment {
     private Double cost;
     private LocalDate purchaseDate;
     private String supplier;
+    private String equipmentCode;
 
     @Enumerated(EnumType.STRING)
     private EquipmentStatus status;

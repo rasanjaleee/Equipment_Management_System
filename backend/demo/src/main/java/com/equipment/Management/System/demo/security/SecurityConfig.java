@@ -19,7 +19,6 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import java.util.Arrays;
 import java.util.List;
 
 @EnableMethodSecurity
@@ -47,7 +46,6 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
 
-
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/error").permitAll()
@@ -63,17 +61,16 @@ public class SecurityConfig {
 
                         // ✅ Only ADMIN or TECHNICIAN can CHANGE equipment
                         .requestMatchers(HttpMethod.POST, "/api/equipment/**").hasAnyRole("ADMIN", "TECHNICIAN")
-                        .requestMatchers(HttpMethod.PUT,  "/api/equipment/**").hasAnyRole("ADMIN", "TECHNICIAN")
-                        .requestMatchers(HttpMethod.DELETE,"/api/equipment/**").hasAnyRole("ADMIN", "TECHNICIAN")
+                        .requestMatchers(HttpMethod.PUT, "/api/equipment/**").hasAnyRole("ADMIN", "TECHNICIAN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/equipment/**").hasAnyRole("ADMIN", "TECHNICIAN")
 
                         // ✅ Only ADMIN or TECHNICIAN can CHANGE maintenance
                         .requestMatchers(HttpMethod.POST, "/api/maintenance/**").hasAnyRole("ADMIN", "TECHNICIAN")
-                        .requestMatchers(HttpMethod.PUT,  "/api/maintenance/**").hasAnyRole("ADMIN", "TECHNICIAN")
-                        .requestMatchers(HttpMethod.DELETE,"/api/maintenance/**").hasAnyRole("ADMIN", "TECHNICIAN")
+                        .requestMatchers(HttpMethod.PUT, "/api/maintenance/**").hasAnyRole("ADMIN", "TECHNICIAN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/maintenance/**").hasAnyRole("ADMIN", "TECHNICIAN")
 
                         // everything else requires login
-                        .anyRequest().authenticated()
-                )
+                        .anyRequest().authenticated())
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
                 .formLogin(form -> form.disable());
 
@@ -86,13 +83,13 @@ public class SecurityConfig {
 
         configuration.setAllowedOrigins(List.of(
                 "http://localhost:5173",
-                "http://localhost:3000"
-        ));
+                "http://localhost:3000"));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
         configuration.setExposedHeaders(List.of("Authorization"));
 
-        // ✅ If you use JWT in Authorization header, you DO NOT need credentials (cookies)
+        // ✅ If you use JWT in Authorization header, you DO NOT need credentials
+        // (cookies)
         configuration.setAllowCredentials(false);
 
         configuration.setMaxAge(3600L);
