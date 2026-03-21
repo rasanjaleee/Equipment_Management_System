@@ -10,6 +10,9 @@ const EquipmentDetails = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  const normalizeValue = (value) =>
+    (value || '').trim().replace(/\s+/g, ' ').toLowerCase();
+
   useEffect(() => {
     fetchEquipmentDetails();
   }, [equipmentName, laboratory]);
@@ -28,10 +31,14 @@ const fetchEquipmentDetails = async () => {
       }
     );
 
-    // Filter equipment by name and laboratory
-    const filtered = res.data.filter(item => 
-      item.equipmentName === decodeURIComponent(equipmentName) && 
-      item.laboratory === decodeURIComponent(laboratory)
+    const selectedName = decodeURIComponent(equipmentName || '');
+    const selectedLab = decodeURIComponent(laboratory || '');
+
+    // Filter equipment by normalized name and laboratory so same names are grouped reliably.
+    const filtered = res.data.filter(
+      (item) =>
+        normalizeValue(item.equipmentName) === normalizeValue(selectedName) &&
+        normalizeValue(item.laboratory) === normalizeValue(selectedLab)
     );
 
     setEquipmentList(filtered);
@@ -43,32 +50,6 @@ const fetchEquipmentDetails = async () => {
     setLoading(false);
   }
 };
-
-  const getStatusColor = (status) => {
-    switch (status?.toUpperCase()) {
-      case 'WORKING':
-        return 'bg-green-500';
-      case 'UNDER_REPAIR':
-        return 'bg-blue-500';
-      case 'BROKEN':
-        return 'bg-red-500';
-      default:
-        return 'bg-gray-500';
-    }
-  };
-
-  const getStatusTextColor = (status) => {
-    switch (status?.toUpperCase()) {
-      case 'WORKING':
-        return 'text-green-600';
-      case 'UNDER_REPAIR':
-        return 'text-blue-600';
-      case 'BROKEN':
-        return 'text-red-600';
-      default:
-        return 'text-gray-600';
-    }
-  };
 
   const formatStatus = (status) => {
     if (!status) return 'N/A';
@@ -90,11 +71,18 @@ const fetchEquipmentDetails = async () => {
     }
   };
 
+  const formatCost = (cost) => {
+    if (cost === null || cost === undefined || cost === '') return '-';
+    const numericCost = Number(cost);
+    if (Number.isNaN(numericCost)) return cost;
+    return `Rs. ${numericCost.toLocaleString()}`;
+  };
+
   // Calculate totals
   const totalQuantity = equipmentList.length;
-  const working = equipmentList.filter(item => item.status === 'WORKING').length;
-  const underRepair = equipmentList.filter(item => item.status === 'UNDER_REPAIR').length;
-  const broken = equipmentList.filter(item => item.status === 'BROKEN').length;
+  const working = equipmentList.filter(item => normalizeValue(item.status) === 'working').length;
+  const underRepair = equipmentList.filter(item => normalizeValue(item.status) === 'under_repair').length;
+  const broken = equipmentList.filter(item => normalizeValue(item.status) === 'broken').length;
   const displayEquipment = equipmentList[0] || {};
 
   if (loading) {
@@ -253,28 +241,34 @@ const fetchEquipmentDetails = async () => {
                     Equipment ID
                   </th>
                   <th className="px-3 py-3 text-left text-xs font-bold text-black uppercase tracking-wider">
+                    Equipment Name
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-bold text-black uppercase tracking-wider">
+                    Laboratory
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-bold text-black uppercase tracking-wider">
                     QR Code
                   </th>
                   <th className="px-3 py-3 text-left text-xs font-bold text-black uppercase tracking-wider">
-                    Date
+                    Date of Purchase
                   </th>
                   <th className="px-3 py-3 text-left text-xs font-bold text-black uppercase tracking-wider">
                     Supplier
                   </th>
                   <th className="px-3 py-3 text-left text-xs font-bold text-black uppercase tracking-wider">
+                    GRN
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-bold text-black uppercase tracking-wider">
                     Model
                   </th>
                   <th className="px-3 py-3 text-left text-xs font-bold text-black uppercase tracking-wider">
-                    Serial
+                    Serial Number
                   </th>
                   <th className="px-3 py-3 text-left text-xs font-bold text-black uppercase tracking-wider">
-                    Cost
+                    Cost (Rs.)
                   </th>
                   <th className="px-3 py-3 text-left text-xs font-bold text-black uppercase tracking-wider">
                     Status
-                  </th>
-                  <th className="px-3 py-3 text-left text-xs font-bold text-black uppercase tracking-wider">
-                    GRN
                   </th>
                 </tr>
               </thead>
@@ -285,7 +279,13 @@ const fetchEquipmentDetails = async () => {
                       {String(index + 1).padStart(2, '0')}
                     </td>
                     <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900 font-medium">
-                      {item.qrCode || item.serialNumber || `ID-${item.id}`}
+                      {item.id ? `EQ-${item.id}` : item.qrCode || item.serialNumber || '-'}
+                    </td>
+                    <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900">
+                      {item.equipmentName || '-'}
+                    </td>
+                    <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900">
+                      {item.laboratory || '-'}
                     </td>
                     <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900">
                       {item.qrCode || '-'}
@@ -297,13 +297,16 @@ const fetchEquipmentDetails = async () => {
                       {item.supplier || '-'}
                     </td>
                     <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900">
+                      {item.grnNumber || '-'}
+                    </td>
+                    <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900">
                       {item.model || '-'}
                     </td>
                     <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900">
                       {item.serialNumber || '-'}
                     </td>
                     <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900">
-                      ${item.cost ? Number(item.cost).toLocaleString() : '-'}
+                      {formatCost(item.cost)}
                     </td>
                     <td className="px-3 py-3 whitespace-nowrap">
                       <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
@@ -314,9 +317,6 @@ const fetchEquipmentDetails = async () => {
                       }`}>
                         {formatStatus(item.status)}
                       </span>
-                    </td>
-                    <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900">
-                      {item.grnNumber || '-'}
                     </td>
                   </tr>
                 ))}
