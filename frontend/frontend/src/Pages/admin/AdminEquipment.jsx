@@ -4,6 +4,8 @@ import axios from 'axios';
 import AdminLayout from '../../components/AdminLayout';
 
 export default function AdminEquipment() {
+  const CUSTOM_EQUIPMENT_OPTION = '__CUSTOM__';
+
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -13,6 +15,20 @@ export default function AdminEquipment() {
   const [photo, setPhoto] = useState(null);
   const [editMode, setEditMode] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [equipmentNameSelection, setEquipmentNameSelection] = useState('');
+
+  const sampleEquipmentNames = [
+    'Digital Oscilloscope',
+    'Function Generator',
+    'Digital Multimeter',
+    'Power Supply Unit',
+    'Clamp Meter',
+    'Spectrum Analyzer',
+    'Signal Generator',
+    'DC Motor Trainer',
+    'PLC Trainer',
+    'Soldering Station'
+  ];
 
   // Laboratories list under Electrical and Information Engineering
   const laboratoriesList = [
@@ -36,6 +52,22 @@ export default function AdminEquipment() {
     qrCode: '',
     grnNumber: ''
   });
+
+  const normalizeName = (value) =>
+    (value || '').trim().replace(/\s+/g, ' ').toLowerCase();
+
+  const equipmentNamesMap = [...sampleEquipmentNames, ...equipmentList.map((item) => item.equipmentName)]
+    .filter(Boolean)
+    .reduce((acc, name) => {
+      const cleanedName = name.trim().replace(/\s+/g, ' ');
+      const key = normalizeName(cleanedName);
+      if (key && !acc[key]) {
+        acc[key] = cleanedName;
+      }
+      return acc;
+    }, {});
+
+  const availableEquipmentNames = Object.values(equipmentNamesMap);
 
   // ================= FETCH EQUIPMENT =================
   useEffect(() => {
@@ -72,9 +104,16 @@ export default function AdminEquipment() {
 
     try {
       const token = localStorage.getItem('token');
+      const cleanedEquipmentName = formData.equipmentName.trim().replace(/\s+/g, ' ');
+
+      if (!cleanedEquipmentName) {
+        setError('Equipment name is required');
+        setLoading(false);
+        return;
+      }
 
       const data = new FormData();
-      data.append('equipmentName', formData.equipmentName);
+      data.append('equipmentName', cleanedEquipmentName);
       data.append('laboratory', formData.laboratory);
       data.append('model', formData.model);
       data.append('serialNumber', formData.serialNumber);
@@ -145,6 +184,20 @@ export default function AdminEquipment() {
     setSuccess('');
     setEditMode(false);
     setEditingId(null);
+    setEquipmentNameSelection('');
+  };
+
+  const handleEquipmentNameSelectionChange = (e) => {
+    const selectedValue = e.target.value;
+    setEquipmentNameSelection(selectedValue);
+
+    if (selectedValue === CUSTOM_EQUIPMENT_OPTION) {
+      setFormData((prev) => ({ ...prev, equipmentName: '' }));
+      return;
+    }
+
+    setFormData((prev) => ({ ...prev, equipmentName: selectedValue }));
+    setError('');
   };
 
   // ================= EDIT HANDLER =================
@@ -164,6 +217,12 @@ export default function AdminEquipment() {
     setEditMode(true);
     setEditingId(equipment.id);
     setShowForm(true);
+
+    const matchedOption = availableEquipmentNames.find(
+      (name) => normalizeName(name) === normalizeName(equipment.equipmentName)
+    );
+    setEquipmentNameSelection(matchedOption || CUSTOM_EQUIPMENT_OPTION);
+
     setError('');
     setSuccess('');
   };
@@ -270,15 +329,31 @@ export default function AdminEquipment() {
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Equipment Name <span className="text-red-500">*</span>
                       </label>
-                      <input
-                        type="text"
-                        name="equipmentName"
-                        placeholder="Enter equipment name"
-                        value={formData.equipmentName}
-                        onChange={handleChange}
+                      <select
+                        value={equipmentNameSelection}
+                        onChange={handleEquipmentNameSelectionChange}
                         required
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all outline-none"
-                      />
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all outline-none bg-white cursor-pointer"
+                      >
+                        <option value="">Select Equipment Name</option>
+                        {availableEquipmentNames.map((name) => (
+                          <option key={name} value={name}>
+                            {name}
+                          </option>
+                        ))}
+                        <option value={CUSTOM_EQUIPMENT_OPTION}>Other (Type custom name)</option>
+                      </select>
+                      {equipmentNameSelection === CUSTOM_EQUIPMENT_OPTION && (
+                        <input
+                          type="text"
+                          name="equipmentName"
+                          placeholder="Enter custom equipment name"
+                          value={formData.equipmentName}
+                          onChange={handleChange}
+                          required
+                          className="mt-3 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all outline-none"
+                        />
+                      )}
                     </div>
 
                     <div>

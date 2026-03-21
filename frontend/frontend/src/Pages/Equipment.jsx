@@ -15,6 +15,9 @@ const Equipment = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  const normalizeValue = (value) =>
+    (value || '').trim().replace(/\s+/g, ' ').toLowerCase();
+
   const departments = [
     'Department of Electrical and Information Engineering',
     'Department of Mechanical and Manufacturing Engineering',
@@ -58,70 +61,88 @@ const Equipment = () => {
   }
 };
 
-  // Group equipment by laboratory
-  const groupedByLaboratory = equipmentList.reduce((acc, equipment) => {
-    const labName = equipment.laboratory || 'Other';
-    if (!acc[labName]) {
-      acc[labName] = [];
+  // Get unique laboratories for filter - combine predefined list with dynamic ones
+  const dynamicLabMap = equipmentList.reduce((acc, item) => {
+    const labName = (item.laboratory || '').trim();
+    if (!labName) return acc;
+    const key = normalizeValue(labName);
+    if (!acc[key]) {
+      acc[key] = labName;
     }
-    acc[labName].push(equipment);
+    return acc;
+  }, {});
+  const dynamicLabs = Object.values(dynamicLabMap);
+  const laboratoriesList = [...new Set([...laboratoriesListOptions, ...dynamicLabs])];
+
+  // Filter equipment and group by normalized laboratory + equipment name
+  const filteredMap = equipmentList.reduce((acc, item) => {
+    const normalizedSearch = normalizeValue(searchQuery);
+    const matchesSearch =
+      normalizedSearch === '' ||
+      normalizeValue(item.equipmentName).includes(normalizedSearch) ||
+      normalizeValue(item.model).includes(normalizedSearch) ||
+      normalizeValue(item.serialNumber).includes(normalizedSearch) ||
+      normalizeValue(item.supplier).includes(normalizedSearch);
+
+    const matchesLab =
+      selectedLaboratory === '' ||
+      normalizeValue(item.laboratory) === normalizeValue(selectedLaboratory);
+
+    if (!matchesSearch || !matchesLab) {
+      return acc;
+    }
+
+    const labName = (item.laboratory || 'Other').trim() || 'Other';
+    const equipmentName = (item.equipmentName || 'Unknown').trim() || 'Unknown';
+    const labKey = normalizeValue(labName) || 'other';
+    const equipmentKey = normalizeValue(equipmentName) || 'unknown';
+
+    if (!acc[labKey]) {
+      acc[labKey] = {
+        name: labName,
+        equipmentByName: {}
+      };
+    }
+
+    if (!acc[labKey].equipmentByName[equipmentKey]) {
+      acc[labKey].equipmentByName[equipmentKey] = {
+        name: equipmentName,
+        items: []
+      };
+    }
+
+    acc[labKey].equipmentByName[equipmentKey].items.push(item);
     return acc;
   }, {});
 
-  // Get unique laboratories for filter - combine predefined list with dynamic ones
-  const dynamicLabs = [...new Set(equipmentList.map(eq => eq.laboratory).filter(Boolean))];
-  const laboratoriesList = [...new Set([...laboratoriesListOptions, ...dynamicLabs])];
-
-  // Filter equipment based on search and filters, then group by name
-  const filteredEquipment = Object.entries(groupedByLaboratory)
-    .map(([labName, equipment]) => {
-      // First filter the equipment
-      const filtered = equipment.filter(item => {
-        const matchesSearch = searchQuery === '' || 
-          item.equipmentName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          item.model?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          item.serialNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          item.supplier?.toLowerCase().includes(searchQuery.toLowerCase());
-        
-        const matchesLab = selectedLaboratory === '' || item.laboratory === selectedLaboratory;
-        
-        return matchesSearch && matchesLab;
-      });
-
-      // Group filtered equipment by name
-      const groupedByName = filtered.reduce((acc, item) => {
-        const name = item.equipmentName || 'Unknown';
-        if (!acc[name]) {
-          acc[name] = [];
-        }
-        acc[name].push(item);
-        return acc;
-      }, {});
-
-      // Convert to array with summary info
-      const equipmentGroups = Object.entries(groupedByName).map(([name, items]) => {
-        const working = items.filter(item => item.status === 'WORKING').length;
-        const underRepair = items.filter(item => item.status === 'UNDER_REPAIR').length;
-        const broken = items.filter(item => item.status === 'BROKEN').length;
-        
-        return {
-          name,
-          items,
-          totalQuantity: items.length,
-          working,
-          underRepair,
-          broken,
-          // Use first item for display image and other common properties
-          displayItem: items[0]
-        };
-      });
+  const filteredEquipment = Object.values(filteredMap).map((lab) => {
+    const equipment = Object.values(lab.equipmentByName).map((group) => {
+      const working = group.items.filter(
+        (item) => normalizeValue(item.status) === 'working'
+      ).length;
+      const underRepair = group.items.filter(
+        (item) => normalizeValue(item.status) === 'under_repair'
+      ).length;
+      const broken = group.items.filter(
+        (item) => normalizeValue(item.status) === 'broken'
+      ).length;
 
       return {
-        name: labName,
-        equipment: equipmentGroups
+        name: group.name,
+        items: group.items,
+        totalQuantity: group.items.length,
+        working,
+        underRepair,
+        broken,
+        displayItem: group.items[0]
       };
-    })
-    .filter(lab => lab.equipment.length > 0);
+    });
+
+    return {
+      name: lab.name,
+      equipment
+    };
+  });
 
   return (
     <div className="min-h-screen bg-gray-50">
