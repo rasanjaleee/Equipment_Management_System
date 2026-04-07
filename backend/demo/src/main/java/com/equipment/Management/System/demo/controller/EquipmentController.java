@@ -3,6 +3,9 @@ package com.equipment.Management.System.demo.controller;
 import com.equipment.Management.System.demo.model.Equipment;
 import com.equipment.Management.System.demo.model.EquipmentStatus;
 import com.equipment.Management.System.demo.service.EquipmentService;
+import com.equipment.Management.System.demo.service.EquipmentCsvService;
+import com.equipment.Management.System.demo.dto.BulkUploadResponse;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -19,12 +22,18 @@ import java.util.List;
 public class EquipmentController {
 
     private final EquipmentService equipmentService;
+    private final EquipmentCsvService equipmentCsvService;
+
     private static final String UPLOAD_DIR = "uploads/";
 
-    public EquipmentController(EquipmentService equipmentService) {
+    // ✅ UPDATED CONSTRUCTOR
+    public EquipmentController(EquipmentService equipmentService,
+                               EquipmentCsvService equipmentCsvService) {
         this.equipmentService = equipmentService;
+        this.equipmentCsvService = equipmentCsvService;
     }
 
+    // ================= SINGLE ADD =================
     @PostMapping("/add")
     public ResponseEntity<?> addEquipment(
             @RequestParam String equipmentName,
@@ -40,7 +49,6 @@ public class EquipmentController {
             @RequestParam MultipartFile photo
     ) {
         try {
-            // Create upload directory if not exists
             Files.createDirectories(Paths.get(UPLOAD_DIR));
 
             String fileName = System.currentTimeMillis() + "_" + photo.getOriginalFilename();
@@ -61,11 +69,24 @@ public class EquipmentController {
             equipment.setPhotoPath(filePath.toString());
 
             equipmentService.saveEquipment(equipment);
+
             return ResponseEntity.ok("Equipment added successfully");
+
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Error: " + e.getMessage());
         }
     }
+
+    // ================= BULK CSV UPLOAD =================
+    @PostMapping("/bulk-upload")
+    public ResponseEntity<BulkUploadResponse> bulkUpload(
+            @RequestParam("file") MultipartFile file) {
+
+        BulkUploadResponse response = equipmentCsvService.uploadCsv(file);
+        return ResponseEntity.ok(response);
+    }
+
+    // ================= UPDATE =================
     @PutMapping("/update/{id}")
     public ResponseEntity<?> updateEquipment(
             @PathVariable Long id,
@@ -98,7 +119,6 @@ public class EquipmentController {
                 equipment.setPurchaseDate(LocalDate.parse(purchaseDate));
             }
 
-            // Optional photo update
             if (photo != null && !photo.isEmpty()) {
                 Files.createDirectories(Paths.get(UPLOAD_DIR));
                 String fileName = System.currentTimeMillis() + "_" + photo.getOriginalFilename();
@@ -108,12 +128,15 @@ public class EquipmentController {
             }
 
             equipmentService.saveEquipment(equipment);
+
             return ResponseEntity.ok("Equipment updated successfully");
 
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Error: " + e.getMessage());
         }
     }
+
+    // ================= DELETE =================
     @DeleteMapping("/delete/{id}")
     public ResponseEntity<?> deleteEquipment(@PathVariable Long id) {
         try {
@@ -124,17 +147,18 @@ public class EquipmentController {
         }
     }
 
-    // Get all equipment
+    // ================= GET ALL =================
     @GetMapping
     public List<Equipment> getAllEquipment() {
         return equipmentService.getAllEquipment();
     }
 
-    // Keep the old endpoint for backwards compatibility
     @GetMapping("/all")
     public List<Equipment> getAllEquipmentAlt() {
         return equipmentService.getAllEquipment();
     }
+
+    // ================= GET BY ID =================
     @GetMapping("/{id}")
     public ResponseEntity<?> getEquipmentById(@PathVariable Long id) {
         try {
@@ -143,5 +167,14 @@ public class EquipmentController {
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Equipment not found");
         }
+    }
+
+    @GetMapping("/bulk-template")
+    public ResponseEntity<String> downloadBulkTemplate() {
+        String csvTemplate = "equipmentName,laboratory,model,serialNumber,cost,purchaseDate,supplier,status,grnNumber\n";
+        return ResponseEntity.ok()
+                .header("Content-Disposition", "attachment; filename=equipment_template.csv")
+                .header("Content-Type", "text/csv")
+                .body(csvTemplate);
     }
 }

@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Plus, Save, X, Package, Search, Filter, Edit, Trash2, Eye, ArrowLeft } from 'lucide-react';
+import { Plus, Save, X, Package, Edit, Trash2, ArrowLeft, Upload } from 'lucide-react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../../components/AdminLayout';
 
+
 export default function AdminEquipment() {
+  const navigate = useNavigate();
   const CUSTOM_EQUIPMENT_OPTION = '__CUSTOM__';
 
   const [showForm, setShowForm] = useState(false);
@@ -267,22 +270,36 @@ export default function AdminEquipment() {
         <div className="max-w-7xl mx-auto">
 
           {/* HEADER */}
-          <div className="flex justify-between mb-6">
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <Package /> Equipment Management
-            </h1>
-            {!showForm && (
-              <button
-                onClick={() => {
-                  resetForm();
-                  setShowForm(true);
-                }}
-                className="bg-yellow-500 text-white px-6 py-3 rounded-xl flex items-center gap-2 hover:bg-yellow-600 transition-colors"
-              >
-                <Plus size={18} /> Add Equipment
-              </button>
-            )}
-          </div>
+        <div className="flex justify-between items-center mb-6">
+  <h1 className="text-2xl font-bold flex items-center gap-2">
+    <Package /> Equipment Management
+  </h1>
+
+  {!showForm && (
+    <div className="flex gap-3">
+      
+      {/* NEW BULK UPLOAD BUTTON */}
+      <button
+        onClick={() => navigate('/admin/equipment/bulk-upload')}
+        className="bg-[#4b0000] text-white px-6 py-3 rounded-xl flex items-center gap-2 hover:bg-[#3b0000] transition-colors"
+      >
+        Bulk Upload
+      </button>
+
+      {/* EXISTING ADD BUTTON */}
+      <button
+        onClick={() => {
+          resetForm();
+          setShowForm(true);
+        }}
+        className="bg-[#4b0000] text-white px-6 py-3 rounded-xl flex items-center gap-2 hover:bg-[#3b0000] transition-colors"
+      >
+        <Plus size={18} /> Add Equipment
+      </button>
+
+    </div>
+  )}
+</div>
 
           {/* ================= FORM ================= */}
           {showForm && (
