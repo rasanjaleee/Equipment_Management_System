@@ -5,7 +5,7 @@ import LaboratoryPage from './Pages/Laboratory'; // adjust path if needed
 import ProfilePage from './Pages/Profile';
 import Login from './Pages/Login';    
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
-
+import BulkUploadEquipment from "./Pages/admin/BulkUploadEquipment";
 import Register from './Pages/Register';
 import Landing from './Pages/Landing';
 import Home from './Pages/Home';
@@ -14,7 +14,7 @@ import About from './Pages/About';
 import Navbar from './components/Navbar';
 import EquipmentDetails from './Pages/EquipmentDetails';
 import Footer from './components/Footer';
-import AdminDashboard from "./Pages/AdminDashboard";
+import AdminDashboard from "./Pages/admin/AdminDashboard";
 import AdminEquipment from "./Pages/admin/AdminEquipment";
 import AdminRoute from "./routes/AdminRoute";
 import MaintenancePage from "./Pages/admin/MaintenancePage";
@@ -73,6 +73,7 @@ const shouldShowFooter =
           <Route path="/admin" element={ <AdminRoute>   <AdminLayout /> </AdminRoute> }>
           <Route path="dashboard" element={<AdminDashboard />} />
           <Route path="equipment" element={<AdminEquipment />} />
+          <Route path="equipment/bulk-upload" element={<BulkUploadEquipment />} />
           <Route path="laboratories" element={<LaboratoryPage />} />
           <Route path="maintenance" element={<MaintenancePage />} />
           <Route path="issuance" element={<IssuancePage />} />
