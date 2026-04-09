@@ -57,7 +57,7 @@ export default function HomePage() {
                 placeholder="Search equipment..."
                 className="w-72 md:w-96 px-4 py-2 rounded-l-md text-black focus:outline-none"
               />
-              <button className="bg-yellow-500 px-5 py-2 rounded-r-md font-semibold">
+              <button className="btn btn-accent rounded-l-none px-5 py-2">
                 Search
               </button>
             </div>

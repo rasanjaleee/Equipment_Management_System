@@ -46,7 +46,7 @@ const shouldShowNavbar =
 
 // ✅ Footer always shown except login/landing pages
 const shouldShowFooter =
-  !hideNavbarOn.includes(location.pathname);
+  !hideNavbarOn.includes(location.pathname) && !isAdminRoute;
 
 
   return (
@@ -64,6 +64,7 @@ const shouldShowFooter =
           <Route path='/home' element={<Home />} />
           <Route path='/equipment' element={<Equipment />} />
           <Route path='/equipment/details/:equipmentName/:laboratory' element={<EquipmentDetails />} />
+          <Route path='/equipment/item/:id' element={<EquipmentDetails />} />
           <Route path='/about' element={<About />} />
           <Route path='/profile' element={<ProfilePage />} />
 

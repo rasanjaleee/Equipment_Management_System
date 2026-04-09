@@ -1,6 +1,7 @@
 // ✅ AdminLayout.jsx - Complete Updated Design with Golden Color Scheme
 import { Outlet, NavLink, useLocation, useNavigate } from "react-router-dom";
 import React, { useEffect, useRef, useState } from "react";
+import Footer from "../components/Footer";
 import {
   LayoutDashboard,
   Wrench,
@@ -85,33 +86,32 @@ export default function AdminLayout() {
   };
 
   return (
-    <div className="min-h-screen flex bg-gray-50 font-sans">
+    <div className="min-h-screen bg-gray-50 font-sans">
       {/* ✅ Sidebar */}
       <aside
-        className={`${
-          sidebarOpen ? "w-64" : "w-20"
-        } bg-white border-r border-gray-200 flex flex-col transition-all duration-300 shadow-sm`}
+        className={`fixed top-0 left-0 h-screen ${
+          sidebarOpen ? "w-56" : "w-20"
+        } bg-white border-r border-gray-200 flex flex-col transition-all duration-300 shadow-sm z-40`}
       >
         {/* Logo Section */}
-        <div className="p-4 border-b border-gray-200 h-24 flex items-center overflow-hidden" style={{ backgroundColor: '#E89B00' }}>
-          <div className="flex items-center gap-0">
+        <div className="px-3 border-b border-gray-200 h-20 flex items-center" style={{ backgroundColor: '#E89B00' }}>
+          <div className="flex items-center gap-1 min-w-0 w-full">
             <img 
               src="/images/home_logo.png" 
               alt="University Logo" 
-              className="w-28 h-28 object-contain flex-shrink-0"
+              className="w-14 h-14 object-contain flex-shrink-0"
             />
             {sidebarOpen && (
-              <div className="leading-tight -ml-6">
-                <h1 className="text-xs font-bold text-white whitespace-nowrap">Faculty of Engineering</h1>
-                <p className="text-xs text-orange-100 whitespace-nowrap">Equipment</p>
-                <p className="text-xs text-orange-100 whitespace-nowrap">Management System</p>
+              <div className="leading-tight min-w-0">
+                <h1 className="text-[11px] font-bold text-white break-words">Faculty of Engineering</h1>
+                <p className="text-[11px] text-orange-100 break-words">Equipment Management System</p>
               </div>
             )}
           </div>
         </div>
 
         {/* Main Menu */}
-        <nav className="flex-1 px-3 py-6 space-y-2">
+        <nav className="flex-1 px-3 py-5 space-y-2">
           {menu.map((item) => {
             const Icon = item.icon;
             return (
@@ -129,7 +129,7 @@ export default function AdminLayout() {
         </nav>
 
         {/* Bottom Menu */}
-        <div className="px-3 py-4 border-t border-gray-200 space-y-2">
+        <div className="px-3 py-3 border-t border-gray-200 space-y-2">
           {bottomMenu.map((item) => {
             const Icon = item.icon;
             return (
@@ -158,17 +158,21 @@ export default function AdminLayout() {
       </aside>
 
       {/* ✅ Right Side */}
-      <div className="flex-1 flex flex-col">
+      <div
+        className="min-h-screen flex flex-col transition-all duration-300"
+        style={{ marginLeft: sidebarOpen ? "14rem" : "5rem" }}
+      >
         {/* ✅ Topbar */}
-        <header className="px-6 py-4 flex justify-between items-center shadow-md" style={{ backgroundColor: '#E89B00' }}>
-          {/* Left Section */}
-          <div className="flex-1">
-            <h2 className="text-2xl font-bold text-white">{currentTitle}</h2>
+        <header
+          className="fixed top-0 right-0 px-5 h-20 flex justify-between items-center shadow-md gap-4 z-30"
+          style={{ backgroundColor: '#E89B00', left: sidebarOpen ? '14rem' : '5rem' }}
+        >
+          <div className="min-w-0 flex-1">
+            <h2 className="text-2xl font-bold text-white truncate">{currentTitle}</h2>
             <p className="text-sm text-gray-100 mt-1">Welcome back, Admin!</p>
           </div>
 
-          {/* Right Section */}
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-4 flex-shrink-0">
             {/* Notification Button */}
             <button className="relative p-2 text-white rounded-lg transition-colors" style={{ backgroundColor: 'rgba(232, 155, 0, 0.7)' }}>
               <Bell size={22} />
@@ -235,9 +239,13 @@ export default function AdminLayout() {
         </header>
 
         {/* ✅ Page Content */}
-        <main className="flex-1 p-6 overflow-y-auto">
-          <Outlet />
-        </main>
+        <div className="flex-1 flex flex-col overflow-y-auto pt-24">
+          <main className="flex-1 p-4 lg:p-5">
+            <Outlet />
+          </main>
+
+          <Footer />
+        </div>
       </div>
     </div>
   );

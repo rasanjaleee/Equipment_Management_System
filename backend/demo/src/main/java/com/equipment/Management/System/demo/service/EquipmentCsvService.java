@@ -4,13 +4,19 @@ import com.equipment.Management.System.demo.dto.BulkUploadResponse;
 import com.equipment.Management.System.demo.model.Equipment;
 import com.equipment.Management.System.demo.model.EquipmentStatus;
 import com.equipment.Management.System.demo.repository.EquipmentRepository;
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVParser;
+import org.apache.commons.csv.CSVRecord;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
-import java.util.*;
+import java.time.format.DateTimeFormatter;
+import java.util.HashSet;
+import java.util.Set;
 
 @Service
 public class EquipmentCsvService {
@@ -25,119 +31,103 @@ public class EquipmentCsvService {
     }
 
     public BulkUploadResponse uploadCsv(MultipartFile file) {
-
         BulkUploadResponse response = new BulkUploadResponse();
 
         if (file == null || file.isEmpty()) {
-            response.getErrors().add("File is empty.");
+            response.getErrors().add("Uploaded file is empty.");
             return response;
         }
 
-        int total = 0, success = 0, failed = 0;
-        Set<String> serialSet = new HashSet<>();
+        String fileName = file.getOriginalFilename();
+        if (fileName == null || !fileName.toLowerCase().endsWith(".csv")) {
+            response.getErrors().add("Please upload a valid CSV file.");
+            return response;
+        }
 
-        try (BufferedReader reader = new BufferedReader(
-                new InputStreamReader(file.getInputStream()))) {
+        int total = 0;
+        int success = 0;
+        int failed = 0;
 
-            String headerLine = reader.readLine();
-            if (headerLine == null) {
-                response.getErrors().add("Empty CSV file.");
-                return response;
-            }
+        // To detect duplicates inside the same uploaded CSV
+        Set<String> uploadedSerialNumbers = new HashSet<>();
 
-            String[] headers = headerLine.split(",");
-            Map<String, Integer> headerMap = mapHeaders(headers);
+        try (
+                BufferedReader reader = new BufferedReader(
+                        new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8)
+                );
+                CSVParser csvParser = new CSVParser(
+                        reader,
+                        CSVFormat.DEFAULT
+                                .builder()
+                                .setHeader()
+                                .setSkipHeaderRecord(true)
+                                .setIgnoreHeaderCase(true)
+                                .setTrim(true)
+                                .build()
+                )
+        ) {
+            validateRequiredHeaders(csvParser);
 
-            validateRequiredHeaders(headerMap);
-
-            String line;
-            int rowNumber = 1;
-
-            while ((line = reader.readLine()) != null) {
-                rowNumber++;
+            for (CSVRecord record : csvParser) {
                 total++;
+                long actualRowNumber = record.getRecordNumber() + 1; // +1 because header is row 1
 
                 try {
-                    String[] values = line.split(",");
+                    String equipmentName = getValue(record, "equipmentName");
+                    String laboratory = getValue(record, "laboratory");
+                    String model = getValue(record, "model");
+                    String serialNumber = getValue(record, "serialNumber");
+                    String costStr = getValue(record, "cost");
+                    String purchaseDateStr = getValue(record, "purchaseDate");
+                    String supplier = getValue(record, "supplier");
+                    String statusStr = getValue(record, "status");
+                    String grnNumber = getValue(record, "grnNumber");
 
-                    String name = getValue(values, headerMap, "equipmentName");
-                    String lab = getValue(values, headerMap, "laboratory");
-                    String model = getValue(values, headerMap, "model");
-                    String serial = getValue(values, headerMap, "serialNumber");
-                    String costStr = getValue(values, headerMap, "cost");
-                    String dateStr = getValue(values, headerMap, "purchaseDate");
-                    String supplier = getValue(values, headerMap, "supplier");
-                    String statusStr = getValue(values, headerMap, "status");
-                    String grn = getValue(values, headerMap, "grnNumber");
+                    // Required fields
+                    validateRequired(equipmentName, "equipmentName");
+                    validateRequired(laboratory, "laboratory");
+                    validateRequired(serialNumber, "serialNumber");
+                    validateRequired(statusStr, "status");
 
-                    // REQUIRED VALIDATION
-                    if (name == null || name.isBlank())
-                        throw new RuntimeException("equipmentName is required");
+                    // Duplicate serial checks
+                    if (equipmentRepository.existsBySerialNumber(serialNumber)) {
+                        throw new RuntimeException("serialNumber already exists in database: " + serialNumber);
+                    }
 
-                    if (lab == null || lab.isBlank())
-                        throw new RuntimeException("laboratory is required");
-
-                    if (serial == null || serial.isBlank())
-                        throw new RuntimeException("serialNumber is required");
-
-                    if (statusStr == null || statusStr.isBlank())
-                        throw new RuntimeException("status is required");
-
-                    // DUPLICATE CHECK
-                    if (equipmentRepository.existsBySerialNumber(serial))
-                        throw new RuntimeException("Duplicate serial in DB");
-
-                    if (serialSet.contains(serial))
-                        throw new RuntimeException("Duplicate serial in file");
-
-                    serialSet.add(serial);
+                    if (uploadedSerialNumbers.contains(serialNumber.toLowerCase())) {
+                        throw new RuntimeException("duplicate serialNumber inside uploaded file: " + serialNumber);
+                    }
+                    uploadedSerialNumbers.add(serialNumber.toLowerCase());
 
                     Equipment equipment = new Equipment();
-                    equipment.setEquipmentName(name);
-                    equipment.setLaboratory(lab);
-                    equipment.setModel(model);
-                    equipment.setSerialNumber(serial);
-                    equipment.setSupplier(supplier);
-                    equipment.setGrnNumber(grn);
+                    equipment.setEquipmentName(equipmentName);
+                    equipment.setLaboratory(laboratory);
+                    equipment.setModel(emptyToNull(model));
+                    equipment.setSerialNumber(serialNumber);
+                    equipment.setSupplier(emptyToNull(supplier));
+                    equipment.setGrnNumber(emptyToNull(grnNumber));
+                    equipment.setStatus(parseStatus(statusStr));
+                    equipment.setPhotoPath("uploads/default.png"); // default image for bulk upload
 
-                    if (costStr != null && !costStr.isBlank())
-                        equipment.setCost(Double.parseDouble(costStr));
-
-                    if (dateStr != null && !dateStr.isBlank())
-                        if (dateStr != null && !dateStr.isBlank()) {
-                            try {
-                                // Try ISO format first (YYYY-MM-DD)
-                                equipment.setPurchaseDate(LocalDate.parse(dateStr));
-                            } catch (Exception e) {
-                                // Try MM/DD/YYYY (Excel format)
-                                String[] parts = dateStr.split("/");
-                                if (parts.length == 3) {
-                                    int month = Integer.parseInt(parts[0]);
-                                    int day = Integer.parseInt(parts[1]);
-                                    int year = Integer.parseInt(parts[2]);
-
-                                    equipment.setPurchaseDate(LocalDate.of(year, month, day));
-                                } else {
-                                    throw new RuntimeException("Invalid date format: " + dateStr);
-                                }
-                            }
+                    if (costStr != null && !costStr.isBlank()) {
+                        double cost = Double.parseDouble(costStr);
+                        if (cost < 0) {
+                            throw new RuntimeException("cost cannot be negative");
                         }
-                    equipment.setStatus(
-                            EquipmentStatus.valueOf(statusStr.toUpperCase())
-                    );
+                        equipment.setCost(cost);
+                    }
 
-                    // AUTO GENERATE
-                    equipment.setQrCode("QR-" + serial);
-                    equipment.setPhotoPath("uploads/default.png");
+                    if (purchaseDateStr != null && !purchaseDateStr.isBlank()) {
+                        equipment.setPurchaseDate(parseDate(purchaseDateStr));
+                    }
 
-                    equipmentService.saveEquipment(equipment);
+                    // equipmentCode and qrCode will be generated automatically
+                    equipmentService.createEquipmentWithQr(equipment);
                     success++;
 
                 } catch (Exception e) {
                     failed++;
-                    response.getErrors().add(
-                            "Row " + rowNumber + ": " + e.getMessage()
-                    );
+                    response.getErrors().add("Row " + actualRowNumber + ": " + e.getMessage());
                 }
             }
 
@@ -146,7 +136,7 @@ public class EquipmentCsvService {
             response.setFailedCount(failed);
 
         } catch (Exception e) {
-            response.getErrors().add("Error reading CSV: " + e.getMessage());
+            response.getErrors().add("Failed to process CSV file: " + e.getMessage());
         }
 
         return response;
@@ -154,29 +144,77 @@ public class EquipmentCsvService {
 
     // ================= HELPER METHODS =================
 
-    private Map<String, Integer> mapHeaders(String[] headers) {
-        Map<String, Integer> map = new HashMap<>();
-        for (int i = 0; i < headers.length; i++) {
-            map.put(headers[i].trim(), i);
-        }
-        return map;
-    }
+    private void validateRequiredHeaders(CSVParser csvParser) {
+        Set<String> headers = csvParser.getHeaderMap().keySet();
 
-    private void validateRequiredHeaders(Map<String, Integer> map) {
-        List<String> required = List.of(
-                "equipmentName", "laboratory", "serialNumber", "status"
-        );
+        String[] requiredHeaders = {
+                "equipmentName",
+                "laboratory",
+                "serialNumber",
+                "status"
+        };
 
-        for (String key : required) {
-            if (!map.containsKey(key)) {
-                throw new RuntimeException("Missing column: " + key);
+        for (String header : requiredHeaders) {
+            boolean found = headers.stream()
+                    .anyMatch(h -> h.equalsIgnoreCase(header));
+
+            if (!found) {
+                throw new RuntimeException("Missing required column: " + header);
             }
         }
     }
 
-    private String getValue(String[] values, Map<String, Integer> map, String key) {
-        Integer index = map.get(key);
-        if (index == null || index >= values.length) return null;
-        return values[index].trim();
+    private String getValue(CSVRecord record, String columnName) {
+        try {
+            return record.get(columnName) != null ? record.get(columnName).trim() : null;
+        } catch (IllegalArgumentException e) {
+            return null; // optional column missing
+        }
+    }
+
+    private void validateRequired(String value, String fieldName) {
+        if (value == null || value.isBlank()) {
+            throw new RuntimeException(fieldName + " is required");
+        }
+    }
+
+    private String emptyToNull(String value) {
+        return (value == null || value.isBlank()) ? null : value.trim();
+    }
+
+    private EquipmentStatus parseStatus(String statusStr) {
+        try {
+            return EquipmentStatus.valueOf(statusStr.trim().toUpperCase());
+        } catch (Exception e) {
+            throw new RuntimeException(
+                    "invalid status: " + statusStr + ". Allowed values: WORKING, UNDER_REPAIR, BROKEN"
+            );
+        }
+    }
+
+    private LocalDate parseDate(String dateStr) {
+        String value = dateStr.trim();
+
+        // 1) yyyy-MM-dd
+        try {
+            return LocalDate.parse(value);
+        } catch (Exception ignored) {
+        }
+
+        // 2) M/d/yyyy or MM/dd/yyyy (common Excel CSV output)
+        try {
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("M/d/yyyy");
+            return LocalDate.parse(value, formatter);
+        } catch (Exception ignored) {
+        }
+
+        // 3) d/M/yyyy
+        try {
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("d/M/yyyy");
+            return LocalDate.parse(value, formatter);
+        } catch (Exception ignored) {
+        }
+
+        throw new RuntimeException("invalid purchaseDate format: " + value + ". Use yyyy-MM-dd");
     }
 }

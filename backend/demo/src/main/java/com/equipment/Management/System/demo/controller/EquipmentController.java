@@ -1,11 +1,10 @@
 package com.equipment.Management.System.demo.controller;
 
+import com.equipment.Management.System.demo.dto.BulkUploadResponse;
 import com.equipment.Management.System.demo.model.Equipment;
 import com.equipment.Management.System.demo.model.EquipmentStatus;
-import com.equipment.Management.System.demo.service.EquipmentService;
 import com.equipment.Management.System.demo.service.EquipmentCsvService;
-import com.equipment.Management.System.demo.dto.BulkUploadResponse;
-
+import com.equipment.Management.System.demo.service.EquipmentService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -26,7 +25,6 @@ public class EquipmentController {
 
     private static final String UPLOAD_DIR = "uploads/";
 
-    // ✅ UPDATED CONSTRUCTOR
     public EquipmentController(EquipmentService equipmentService,
                                EquipmentCsvService equipmentCsvService) {
         this.equipmentService = equipmentService;
@@ -38,14 +36,13 @@ public class EquipmentController {
     public ResponseEntity<?> addEquipment(
             @RequestParam String equipmentName,
             @RequestParam String laboratory,
-            @RequestParam String model,
-            @RequestParam String serialNumber,
-            @RequestParam Double cost,
-            @RequestParam String purchaseDate,
-            @RequestParam String supplier,
+            @RequestParam(required = false) String model,
+            @RequestParam(required = false) String serialNumber,
+            @RequestParam(required = false) Double cost,
+            @RequestParam(required = false) String purchaseDate,
+            @RequestParam(required = false) String supplier,
             @RequestParam EquipmentStatus status,
-            @RequestParam String qrCode,
-            @RequestParam String grnNumber,
+            @RequestParam(required = false) String grnNumber,
             @RequestParam MultipartFile photo
     ) {
         try {
@@ -61,14 +58,16 @@ public class EquipmentController {
             equipment.setModel(model);
             equipment.setSerialNumber(serialNumber);
             equipment.setCost(cost);
-            equipment.setPurchaseDate(LocalDate.parse(purchaseDate));
             equipment.setSupplier(supplier);
             equipment.setStatus(status);
-            equipment.setQrCode(qrCode);
             equipment.setGrnNumber(grnNumber);
             equipment.setPhotoPath(filePath.toString());
 
-            equipmentService.saveEquipment(equipment);
+            if (purchaseDate != null && !purchaseDate.isBlank()) {
+                equipment.setPurchaseDate(LocalDate.parse(purchaseDate));
+            }
+
+            equipmentService.createEquipmentWithQr(equipment);
 
             return ResponseEntity.ok("Equipment added successfully");
 
@@ -98,7 +97,6 @@ public class EquipmentController {
             @RequestParam(required = false) String purchaseDate,
             @RequestParam(required = false) String supplier,
             @RequestParam EquipmentStatus status,
-            @RequestParam(required = false) String qrCode,
             @RequestParam(required = false) String grnNumber,
             @RequestParam(required = false) MultipartFile photo
     ) {
@@ -112,7 +110,6 @@ public class EquipmentController {
             equipment.setCost(cost);
             equipment.setSupplier(supplier);
             equipment.setStatus(status);
-            equipment.setQrCode(qrCode);
             equipment.setGrnNumber(grnNumber);
 
             if (purchaseDate != null && !purchaseDate.isBlank()) {
@@ -127,6 +124,7 @@ public class EquipmentController {
                 equipment.setPhotoPath(filePath.toString());
             }
 
+            // keep existing qrCode and equipmentCode unchanged
             equipmentService.saveEquipment(equipment);
 
             return ResponseEntity.ok("Equipment updated successfully");
@@ -169,6 +167,7 @@ public class EquipmentController {
         }
     }
 
+    // ================= BULK CSV TEMPLATE =================
     @GetMapping("/bulk-template")
     public ResponseEntity<String> downloadBulkTemplate() {
         String csvTemplate = "equipmentName,laboratory,model,serialNumber,cost,purchaseDate,supplier,status,grnNumber\n";

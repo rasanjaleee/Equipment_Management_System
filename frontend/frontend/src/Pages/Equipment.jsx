@@ -14,6 +14,9 @@ const Equipment = () => {
   const [equipmentList, setEquipmentList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [labPages, setLabPages] = useState({});
+
+  const ITEMS_PER_PAGE = 5;
 
   const normalizeValue = (value) =>
     (value || '').trim().replace(/\s+/g, ' ').toLowerCase();
@@ -80,9 +83,7 @@ const Equipment = () => {
     const matchesSearch =
       normalizedSearch === '' ||
       normalizeValue(item.equipmentName).includes(normalizedSearch) ||
-      normalizeValue(item.model).includes(normalizedSearch) ||
-      normalizeValue(item.serialNumber).includes(normalizedSearch) ||
-      normalizeValue(item.supplier).includes(normalizedSearch);
+      normalizeValue(item.model).includes(normalizedSearch);
 
     const matchesLab =
       selectedLaboratory === '' ||
@@ -144,6 +145,26 @@ const Equipment = () => {
     };
   });
 
+  // Keep pagination local to each laboratory and reset when filters/search change.
+  useEffect(() => {
+    setLabPages({});
+  }, [searchQuery, selectedLaboratory, selectedDepartment]);
+
+  const getLabPage = (labName, totalItems) => {
+    const key = normalizeValue(labName) || 'other';
+    const totalPages = Math.max(1, Math.ceil(totalItems / ITEMS_PER_PAGE));
+    const currentPage = Math.min(labPages[key] || 1, totalPages);
+    return { key, currentPage, totalPages };
+  };
+
+  const updateLabPage = (labKey, page, totalPages) => {
+    const clampedPage = Math.min(Math.max(page, 1), totalPages);
+    setLabPages((prev) => ({
+      ...prev,
+      [labKey]: clampedPage
+    }));
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Hero Section */}
@@ -179,7 +200,7 @@ const Equipment = () => {
             <Search className="text-gray-400 mr-3" size={20} />
             <input
               type="text"
-              placeholder="Search by equipment name, model, serial number..."
+              placeholder="Search by equipment name or model..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="flex-1 border-none outline-none text-gray-700 placeholder-gray-400 text-sm"
@@ -345,6 +366,19 @@ const Equipment = () => {
         {/* Laboratory Sections */}
         {!loading && !error && filteredEquipment.map((lab, index) => (
           <div key={index} className="mb-12">
+            {(() => {
+              const { key: labKey, currentPage, totalPages } = getLabPage(
+                lab.name,
+                lab.equipment.length
+              );
+              const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+              const paginatedEquipment = lab.equipment.slice(
+                startIndex,
+                startIndex + ITEMS_PER_PAGE
+              );
+
+              return (
+                <>
             <div className="bg-white border-l-4 border-yellow-500 p-4 mb-6 shadow-sm">
               <h2 className="text-xl font-bold text-gray-900">{lab.name}</h2>
               <p className="text-gray-600 text-sm">
@@ -354,11 +388,11 @@ const Equipment = () => {
             </div>
 
             {/* Equipment Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {lab.equipment.map((group, groupIndex) => (
-                <div key={groupIndex} className="bg-white rounded-lg shadow-md overflow-hidden border-2 border-yellow-400 hover:shadow-xl transition-shadow">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+              {paginatedEquipment.map((group, groupIndex) => (
+                <div key={groupIndex} className="bg-white rounded-lg shadow-sm overflow-hidden border border-yellow-300 hover:shadow-md transition-shadow">
                   {/* Equipment Image */}
-                  <div className="aspect-video bg-gray-100 flex items-center justify-center overflow-hidden">
+                  <div className="aspect-[4/3] bg-gray-100 flex items-center justify-center overflow-hidden">
                     {group.displayItem.photoPath ? (
                       <img 
                         src={`http://localhost:8080/${group.displayItem.photoPath}?t=${Date.now()}`}
@@ -366,12 +400,12 @@ const Equipment = () => {
                         className="w-full h-full object-cover"
                         onError={(e) => {
                           e.target.onerror = null;
-                          e.target.src = '/images/1.webp';
+                          e.target.src = '/images/sample1.jpg';
                         }}
                       />
                     ) : (
                       <img 
-                        src="/images/1.webp"
+                        src="/images/sample1.jpg"
                         alt={group.name}
                         className="w-full h-full object-cover"
                       />
@@ -379,13 +413,13 @@ const Equipment = () => {
                   </div>
 
                   {/* Equipment Details */}
-                  <div className="p-4">
-                    <h3 className="font-bold text-gray-900 mb-2">{group.name}</h3>
-                    <div className="bg-gray-50 rounded p-2 mb-3">
-                      <p className="text-sm text-gray-700 mb-1">
+                  <div className="p-3">
+                    <h3 className="font-semibold text-sm text-gray-900 mb-2 line-clamp-2 min-h-[2.5rem]">{group.name}</h3>
+                    <div className="bg-gray-50 rounded p-2 mb-2">
+                      <p className="text-xs text-gray-700 mb-1">
                         <span className="font-semibold">Total Quantity:</span> {group.totalQuantity}
                       </p>
-                      <div className="flex items-center gap-2 text-xs">
+                      <div className="flex flex-wrap items-center gap-2 text-[11px]">
                         <span className="flex items-center gap-1">
                           <span className="w-2 h-2 rounded-full bg-green-500"></span>
                           Working: {group.working}
@@ -403,7 +437,7 @@ const Equipment = () => {
 
                     <button 
                       onClick={() => navigate(`/equipment/details/${encodeURIComponent(group.name)}/${encodeURIComponent(lab.name)}`)}
-                      className="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-semibold py-2 px-4 rounded transition-colors"
+                      className="w-full bg-yellow-500 hover:bg-yellow-400 text-black text-xs font-semibold py-2 px-3 rounded-md transition-colors"
                     >
                       View Details
                     </button>
@@ -411,6 +445,44 @@ const Equipment = () => {
                 </div>
               ))}
             </div>
+
+            {/* Local Pagination Per Laboratory */}
+            {totalPages > 1 && (
+              <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+                <button
+                  onClick={() => updateLabPage(labKey, currentPage - 1, totalPages)}
+                  disabled={currentPage === 1}
+                  className="px-3 py-1.5 text-sm rounded-md border border-gray-300 bg-white text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                >
+                  Previous
+                </button>
+
+                {Array.from({ length: totalPages }, (_, idx) => idx + 1).map((pageNumber) => (
+                  <button
+                    key={pageNumber}
+                    onClick={() => updateLabPage(labKey, pageNumber, totalPages)}
+                    className={`px-3 py-1.5 text-sm rounded-md border transition-colors ${
+                      currentPage === pageNumber
+                        ? 'bg-yellow-500 border-yellow-500 text-black font-semibold'
+                        : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    {pageNumber}
+                  </button>
+                ))}
+
+                <button
+                  onClick={() => updateLabPage(labKey, currentPage + 1, totalPages)}
+                  disabled={currentPage === totalPages}
+                  className="px-3 py-1.5 text-sm rounded-md border border-gray-300 bg-white text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                >
+                  Next
+                </button>
+              </div>
+            )}
+                </>
+              );
+            })()}
           </div>
         ))}
       </div>
