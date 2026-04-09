@@ -29,8 +29,11 @@ public class Equipment {
     @Enumerated(EnumType.STRING)
     private EquipmentStatus status;
 
+    // stores QR image path like uploads/qrcodes/equipment_1.png
     private String qrCode;
+
     private String grnNumber;
 
-    private String photoPath; // store image file path
+    // stores equipment image path
+    private String photoPath;
 }
