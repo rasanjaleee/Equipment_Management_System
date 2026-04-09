@@ -3,9 +3,12 @@ package com.equipment.Management.System.demo.controller;
 import com.equipment.Management.System.demo.dto.BulkUploadResponse;
 import com.equipment.Management.System.demo.model.Equipment;
 import com.equipment.Management.System.demo.model.EquipmentStatus;
+import com.equipment.Management.System.demo.service.ActivityLogService;
 import com.equipment.Management.System.demo.service.EquipmentCsvService;
 import com.equipment.Management.System.demo.service.EquipmentService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -22,13 +25,16 @@ public class EquipmentController {
 
     private final EquipmentService equipmentService;
     private final EquipmentCsvService equipmentCsvService;
+    private final ActivityLogService activityLogService;
 
     private static final String UPLOAD_DIR = "uploads/";
 
     public EquipmentController(EquipmentService equipmentService,
-                               EquipmentCsvService equipmentCsvService) {
+                               EquipmentCsvService equipmentCsvService,
+                               ActivityLogService activityLogService) {
         this.equipmentService = equipmentService;
         this.equipmentCsvService = equipmentCsvService;
+        this.activityLogService = activityLogService;
     }
 
     // ================= SINGLE ADD =================
@@ -67,7 +73,22 @@ public class EquipmentController {
                 equipment.setPurchaseDate(LocalDate.parse(purchaseDate));
             }
 
-            equipmentService.createEquipmentWithQr(equipment);
+            Equipment savedEquipment = equipmentService.createEquipmentWithQr(equipment);
+
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String username = authentication.getName();
+            String role = authentication.getAuthorities().stream()
+                    .findFirst()
+                    .map(auth -> auth.getAuthority())
+                    .orElse("ROLE_UNKNOWN");
+
+            activityLogService.logActivity(
+                    username,
+                    role,
+                    "CREATED_EQUIPMENT",
+                    savedEquipment.getId(),
+                    "Created equipment: " + savedEquipment.getEquipmentName()
+            );
 
             return ResponseEntity.ok("Equipment added successfully");
 
@@ -103,6 +124,10 @@ public class EquipmentController {
         try {
             Equipment equipment = equipmentService.getById(id);
 
+            String oldStatus = equipment.getStatus() != null
+                    ? equipment.getStatus().name()
+                    : "UNKNOWN";
+
             equipment.setEquipmentName(equipmentName);
             equipment.setLaboratory(laboratory);
             equipment.setModel(model);
@@ -124,8 +149,22 @@ public class EquipmentController {
                 equipment.setPhotoPath(filePath.toString());
             }
 
-            // keep existing qrCode and equipmentCode unchanged
             equipmentService.saveEquipment(equipment);
+
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String username = authentication.getName();
+            String role = authentication.getAuthorities().stream()
+                    .findFirst()
+                    .map(auth -> auth.getAuthority())
+                    .orElse("ROLE_UNKNOWN");
+
+            activityLogService.logActivity(
+                    username,
+                    role,
+                    "UPDATED_EQUIPMENT_STATUS",
+                    equipment.getId(),
+                    "Status changed from " + oldStatus + " to " + equipment.getStatus().name()
+            );
 
             return ResponseEntity.ok("Equipment updated successfully");
 
@@ -138,7 +177,25 @@ public class EquipmentController {
     @DeleteMapping("/delete/{id}")
     public ResponseEntity<?> deleteEquipment(@PathVariable Long id) {
         try {
+            Equipment equipment = equipmentService.getById(id);
+
             equipmentService.deleteEquipment(id);
+
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String username = authentication.getName();
+            String role = authentication.getAuthorities().stream()
+                    .findFirst()
+                    .map(auth -> auth.getAuthority())
+                    .orElse("ROLE_UNKNOWN");
+
+            activityLogService.logActivity(
+                    username,
+                    role,
+                    "DELETED_EQUIPMENT",
+                    id,
+                    "Deleted equipment: " + equipment.getEquipmentName()
+            );
+
             return ResponseEntity.ok("Equipment deleted successfully");
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Error: " + e.getMessage());

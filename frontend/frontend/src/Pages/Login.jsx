@@ -45,13 +45,13 @@ export default function Login() {
       localStorage.setItem("user", JSON.stringify({ id, username, email, role }));
 
       // Redirect to dashboard
-      if (role === "ADMIN") {
-        console.log("Redirecting to admin dashboard");
-        navigate("/admin/dashboard");
-      } else {
-        console.log("Redirecting to user home");
-        navigate("/home");
-      }
+if (role === "ADMIN") {
+  navigate("/admin/dashboard");
+} else if (role === "TECHNICIAN") {
+  navigate("/technician/dashboard");
+} else {
+  navigate("/home");
+}
    } catch (err) {
   const status = err.response?.status;
   const msg = err.response?.data?.message;
