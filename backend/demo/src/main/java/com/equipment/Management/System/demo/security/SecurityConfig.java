@@ -49,11 +49,13 @@ public class SecurityConfig {
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/error").permitAll()
-
                         .requestMatchers("/uploads/**").permitAll()
 
                         // ✅ allow preflight
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
+                        // ✅ ONLY ADMIN can manage users / roles
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
 
                         // ✅ Everyone logged in can VIEW equipment + maintenance
                         .requestMatchers(HttpMethod.GET, "/api/equipment/**").authenticated()
@@ -68,6 +70,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/maintenance/**").hasAnyRole("ADMIN", "TECHNICIAN")
                         .requestMatchers(HttpMethod.PUT, "/api/maintenance/**").hasAnyRole("ADMIN", "TECHNICIAN")
                         .requestMatchers(HttpMethod.DELETE, "/api/maintenance/**").hasAnyRole("ADMIN", "TECHNICIAN")
+                        .requestMatchers(HttpMethod.GET, "/api/activity-logs/**").hasAnyRole("ADMIN", "TECHNICIAN")
 
                         // everything else requires login
                         .anyRequest().authenticated())
@@ -87,11 +90,7 @@ public class SecurityConfig {
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
         configuration.setExposedHeaders(List.of("Authorization"));
-
-        // ✅ If you use JWT in Authorization header, you DO NOT need credentials
-        // (cookies)
         configuration.setAllowCredentials(false);
-
         configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

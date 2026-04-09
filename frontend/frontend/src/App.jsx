@@ -18,9 +18,15 @@ import AdminDashboard from "./Pages/admin/AdminDashboard";
 import AdminEquipment from "./Pages/admin/AdminEquipment";
 import AdminRoute from "./routes/AdminRoute";
 import MaintenancePage from "./Pages/admin/MaintenancePage";
-import AdminLayout from "./Pages/AdminLayout";
+import AdminLayout from "./components/AdminLayout";
 import IssuancePage from './Pages/admin/Issuance';
-
+import UserManagement from './Pages/admin/UserManagement';
+import ActivityLog from './Pages/admin/ActivityLog';
+import TechnicianRoute from "./routes/TechnicianRoute";
+import TechnicianLayout from "./components/TechnicianLayout";
+import TechnicianDashboard from "./Pages/technician/TechnicianDashboard";
+import TechnicianEquipment from "./Pages/technician/TechnicianEquipment";
+import TechnicianActivityLog from "./Pages/technician/TechnicianActivityLog";
 
 
 // Wrapper to provide Router context
@@ -39,14 +45,15 @@ function App() {
   const hideNavbarOn = ['/', '/login', '/register'];
 
   const isAdminRoute = location.pathname.startsWith('/admin');
+  const isTechnicianRoute = location.pathname.startsWith('/technician');
 
   // ✅ Navbar hidden for admin
 const shouldShowNavbar =
-  !hideNavbarOn.includes(location.pathname) && !isAdminRoute;
+  !hideNavbarOn.includes(location.pathname) && !isAdminRoute && !isTechnicianRoute;
 
 // ✅ Footer always shown except login/landing pages
 const shouldShowFooter =
-  !hideNavbarOn.includes(location.pathname) && !isAdminRoute;
+  !hideNavbarOn.includes(location.pathname) && !isAdminRoute && !isTechnicianRoute;
 
 
   return (
@@ -78,12 +85,27 @@ const shouldShowFooter =
           <Route path="laboratories" element={<LaboratoryPage />} />
           <Route path="maintenance" element={<MaintenancePage />} />
           <Route path="issuance" element={<IssuancePage />} />
-          {/* <Route path="/admin/profile" element={<Profile />} /> */}
+          <Route path="users" element={<UserManagement />} />
+          <Route path="activity-log" element={<ActivityLog />} />
           </Route>
           
 
           <Route path='/profile' element={<ProfilePage />} />
-          
+
+
+          <Route
+           path="/technician"
+           element={
+              <TechnicianRoute>
+                <TechnicianLayout />
+                </TechnicianRoute>
+  }
+>
+           <Route path="dashboard" element={<TechnicianDashboard />} />
+           <Route path="equipment" element={<TechnicianEquipment />} />
+           <Route path="maintenance" element={<MaintenancePage />} />
+             <Route path="activity-log" element={<TechnicianActivityLog />} />
+         </Route>
 
 
         </Routes>
