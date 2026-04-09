@@ -25,10 +25,6 @@ public class EquipmentController {
         this.equipmentService = equipmentService;
     }
 
-<<<<<<< HEAD
-    // Add equipment with photo
-=======
->>>>>>> c934fe99cf1d8f0211b0868148fcabf2c9af0ae4
     @PostMapping("/add")
     public ResponseEntity<?> addEquipment(
             @RequestParam String equipmentName,
@@ -65,15 +61,13 @@ public class EquipmentController {
             equipment.setPhotoPath(filePath.toString());
 
             equipmentService.saveEquipment(equipment);
-<<<<<<< HEAD
+            return ResponseEntity.ok("Equipment added successfully");
 
-            return ResponseEntity.ok("Equipment added successfully");
-=======
-            return ResponseEntity.ok("Equipment added successfully");
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Error: " + e.getMessage());
         }
     }
+
     @PutMapping("/update/{id}")
     public ResponseEntity<?> updateEquipment(
             @PathVariable Long id,
@@ -106,7 +100,6 @@ public class EquipmentController {
                 equipment.setPurchaseDate(LocalDate.parse(purchaseDate));
             }
 
-            // Optional photo update
             if (photo != null && !photo.isEmpty()) {
                 Files.createDirectories(Paths.get(UPLOAD_DIR));
                 String fileName = System.currentTimeMillis() + "_" + photo.getOriginalFilename();
@@ -117,21 +110,11 @@ public class EquipmentController {
 
             equipmentService.saveEquipment(equipment);
             return ResponseEntity.ok("Equipment updated successfully");
->>>>>>> c934fe99cf1d8f0211b0868148fcabf2c9af0ae4
-
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Error: " + e.getMessage());
         }
     }
-<<<<<<< HEAD
 
-    // Get all equipment (Admin table)
-    @GetMapping("/all")
-    public List<Equipment> getAllEquipment() {
-        return equipmentService.getAllEquipment();
-    }
-}
-=======
     @DeleteMapping("/delete/{id}")
     public ResponseEntity<?> deleteEquipment(@PathVariable Long id) {
         try {
@@ -163,4 +146,3 @@ public class EquipmentController {
         }
     }
 }
->>>>>>> c934fe99cf1d8f0211b0868148fcabf2c9af0ae4
