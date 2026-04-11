@@ -17,27 +17,28 @@ public class MaintenanceService {
 
     private final MaintenanceRepository repo;
     private final EquipmentRepository equipmentRepo;
+    private final NotificationService notificationService;
 
-    public MaintenanceService(MaintenanceRepository repo, EquipmentRepository equipmentRepo) {
+    public MaintenanceService(MaintenanceRepository repo,
+                              EquipmentRepository equipmentRepo,
+                              NotificationService notificationService) {
         this.repo = repo;
         this.equipmentRepo = equipmentRepo;
+        this.notificationService = notificationService;
     }
 
-    // ✅ CREATE (using DTO)
+    // ================= CREATE MAINTENANCE =================
     public Maintenance create(MaintenanceCreateDto dto) {
 
-        // Validate equipmentId
         if (dto == null || dto.equipmentId() == null) {
             throw new RuntimeException("equipmentId is required");
         }
 
-        // Find equipment from DB
         Equipment eq = equipmentRepo.findById(dto.equipmentId())
                 .orElseThrow(() -> new RuntimeException(
                         "Equipment not found with id: " + dto.equipmentId()
                 ));
 
-        // Build Maintenance entity
         Maintenance m = Maintenance.builder()
                 .equipment(eq)
                 .issueDescription(dto.issueDescription())
@@ -45,13 +46,23 @@ public class MaintenanceService {
                 .dueDate(dto.dueDate())
                 .build();
 
-        // status & reportedDate are automatically set by @PrePersist
-        // (PENDING + current date)
+        Maintenance saved = repo.save(m);
 
-        return repo.save(m);
+        // 🔔 NOTIFICATION (ADMIN / TECHNICIAN)
+        notificationService.createNotification(
+                null,
+                "New Maintenance Created",
+                "Maintenance added for equipment: " + eq.getEquipmentName(),
+                "MAINTENANCE",
+                saved.getId(),
+                "MAINTENANCE",
+                "HIGH"
+        );
+
+        return saved;
     }
 
-    // ✅ GET ALL (returns DTO list)
+    // ================= GET ALL =================
     public List<MaintenanceResponseDto> getAll() {
         return repo.findAllWithEquipment().stream()
                 .map(m -> new MaintenanceResponseDto(
@@ -74,13 +85,14 @@ public class MaintenanceService {
                 .toList();
     }
 
-    // ✅ UPDATE (using DTO to handle nested equipment object)
+    // ================= UPDATE MAINTENANCE =================
     public Maintenance update(Long id, MaintenanceUpdateDto dto) {
 
         Maintenance m = repo.findById(id)
                 .orElseThrow(() -> new RuntimeException("Maintenance not found with id: " + id));
 
-        // Update equipment if provided
+        String oldStatus = m.getStatus();
+
         if (dto.equipment() != null && dto.equipment().id() != null) {
             Equipment eq = equipmentRepo.findById(dto.equipment().id())
                     .orElseThrow(() -> new RuntimeException(
@@ -89,7 +101,6 @@ public class MaintenanceService {
             m.setEquipment(eq);
         }
 
-        // Update other fields
         if (dto.issueDescription() != null) {
             m.setIssueDescription(dto.issueDescription());
         }
@@ -109,16 +120,58 @@ public class MaintenanceService {
             m.setCost(dto.cost());
         }
 
-        // If completed → set completed date
+        // If completed → set date
         if ("COMPLETED".equalsIgnoreCase(dto.status())) {
             m.setCompletedDate(LocalDate.now());
         }
 
-        return repo.save(m);
+        Maintenance updated = repo.save(m);
+
+        // 🔔 STATUS CHANGE NOTIFICATION
+        if (dto.status() != null && !dto.status().equalsIgnoreCase(oldStatus)) {
+
+            String priority = "LOW";
+
+            if ("COMPLETED".equalsIgnoreCase(dto.status())) {
+                priority = "NORMAL";
+            }
+
+            if ("PENDING".equalsIgnoreCase(dto.status())) {
+                priority = "HIGH";
+            }
+
+            notificationService.createNotification(
+                    null,
+                    "Maintenance Status Updated",
+                    "Status changed from " + oldStatus + " to " + dto.status() +
+                            " for equipment: " + m.getEquipment().getEquipmentName(),
+                    "MAINTENANCE",
+                    updated.getId(),
+                    "MAINTENANCE",
+                    priority
+            );
+        }
+
+        return updated;
     }
 
-    // ✅ DELETE
+    // ================= DELETE =================
     public void delete(Long id) {
+
+        Maintenance m = repo.findById(id)
+                .orElseThrow(() -> new RuntimeException("Maintenance not found"));
+
         repo.deleteById(id);
+
+        // 🔔 DELETE NOTIFICATION
+        notificationService.createNotification(
+                null,
+                "Maintenance Deleted",
+                "Maintenance removed for equipment: " + m.getEquipment().getEquipmentName(),
+                "MAINTENANCE",
+                id,
+                "MAINTENANCE",
+                "HIGH"
+        );
     }
 }
