@@ -27,8 +27,13 @@ public class IssuanceService {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private NotificationService notificationService;
+
+    // ================= CREATE ISSUANCE =================
     @Transactional
     public IssuanceDTO createIssuance(IssuanceRequest request) {
+
         Equipment equipment = equipmentRepository.findById(request.getEquipmentId())
                 .orElseThrow(() -> new RuntimeException("Equipment not found with ID: " + request.getEquipmentId()));
 
@@ -55,71 +60,69 @@ public class IssuanceService {
         issuance.setRemarks(request.getRemarks());
 
         Issuance saved = issuanceRepository.save(issuance);
+
+        // 🔔 NOTIFICATION (USER)
+        notificationService.createNotification(
+                user.getId(),
+                "Equipment Issued",
+                "You have been issued: " + equipment.getEquipmentName(),
+                "ISSUE",
+                saved.getId(),
+                "ISSUANCE",
+                "NORMAL"
+        );
+
+        // 🔔 NOTIFICATION (ADMIN)
+        notificationService.createNotification(
+                null,
+                "New Equipment Issued",
+                equipment.getEquipmentName() + " issued to " + user.getUsername(),
+                "ISSUE",
+                saved.getId(),
+                "ISSUANCE",
+                "LOW"
+        );
+
         return convertToDTO(saved);
     }
 
+    // ================= GET ALL =================
     public List<IssuanceDTO> getAllIssuances() {
         return issuanceRepository.findAll().stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
     }
 
+    // ================= GET BY ID =================
     public IssuanceDTO getIssuanceById(Long id) {
         Issuance issuance = issuanceRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Issuance not found with ID: " + id));
         return convertToDTO(issuance);
     }
 
-    public IssuanceDTO getIssuanceByIssuanceId(String issuanceId) {
-        Issuance issuance = issuanceRepository.findByIssuanceId(issuanceId)
-                .orElseThrow(() -> new RuntimeException("Issuance not found with Issuance ID: " + issuanceId));
-        return convertToDTO(issuance);
-    }
-
-    public List<IssuanceDTO> getIssuancesByStatus(String status) {
-        return issuanceRepository.findByStatus(status).stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
-    }
-
-    public List<IssuanceDTO> getIssuancesByEquipmentId(Long equipmentId) {
-        return issuanceRepository.findByEquipmentId(equipmentId).stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
-    }
-
-    public List<IssuanceDTO> getIssuancesByUserId(Long userId) {
-        return issuanceRepository.findByUser_Id(userId).stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
-    }
-
+    // ================= UPDATE ISSUANCE =================
     @Transactional
     public IssuanceDTO updateIssuance(Long id, IssuanceRequest request) {
+
         Issuance issuance = issuanceRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Issuance not found with ID: " + id));
 
-        // Validate equipment if changed
-        if (!issuance.getEquipment().getId().equals(request.getEquipmentId())) {
-            Equipment equipment = equipmentRepository.findById(request.getEquipmentId())
-                    .orElseThrow(() -> new RuntimeException("Equipment not found with ID: " + request.getEquipmentId()));
-            issuance.setEquipment(equipment);
-        }
+        Equipment equipment = equipmentRepository.findById(request.getEquipmentId())
+                .orElseThrow(() -> new RuntimeException("Equipment not found"));
 
-        // Validate user if changed
-        if (!issuance.getUser().getId().equals(request.getUserId())) {
-            User user = userRepository.findById(request.getUserId())
-                    .orElseThrow(() -> new RuntimeException("User not found with ID: " + request.getUserId()));
-            issuance.setUser(user);
-        }
+        User user = userRepository.findById(request.getUserId())
+                .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // Update fields
+        String oldStatus = issuance.getStatus();
+
         issuance.setIssuanceId(request.getIssuanceId());
         issuance.setIssueDate(request.getIssueDate());
         issuance.setReturnDueDate(request.getReturnDueDate());
         issuance.setStatus(request.getStatus());
+        issuance.setEquipment(equipment);
         issuance.setQtyIssued(request.getQtyIssued());
         issuance.setConditionAtIssue(request.getConditionAtIssue());
+        issuance.setUser(user);
         issuance.setRoleDept(request.getRoleDept());
         issuance.setContact(request.getContact());
         issuance.setReturnDate(request.getReturnDate());
@@ -127,41 +130,101 @@ public class IssuanceService {
         issuance.setRemarks(request.getRemarks());
 
         Issuance updated = issuanceRepository.save(issuance);
+
+        // 🔔 STATUS CHANGE NOTIFICATION
+        if (!oldStatus.equalsIgnoreCase(request.getStatus())) {
+
+            notificationService.createNotification(
+                    user.getId(),
+                    "Issuance Status Updated",
+                    "Status changed from " + oldStatus + " to " + request.getStatus(),
+                    "ISSUANCE",
+                    updated.getId(),
+                    "ISSUANCE",
+                    "NORMAL"
+            );
+        }
+
         return convertToDTO(updated);
     }
 
+    // ================= DELETE =================
     @Transactional
     public void deleteIssuance(Long id) {
-        if (!issuanceRepository.existsById(id)) {
-            throw new RuntimeException("Issuance not found with ID: " + id);
-        }
+
+        Issuance issuance = issuanceRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Issuance not found"));
+
         issuanceRepository.deleteById(id);
+
+        // 🔔 DELETE NOTIFICATION
+        notificationService.createNotification(
+                null,
+                "Issuance Deleted",
+                "Issuance record removed for ID: " + issuance.getIssuanceId(),
+                "ISSUANCE",
+                id,
+                "ISSUANCE",
+                "HIGH"
+        );
     }
 
+    public IssuanceDTO getIssuanceByIssuanceId(String issuanceId) {
+
+        Issuance issuance = issuanceRepository.findByIssuanceId(issuanceId)
+                .orElseThrow(() -> new RuntimeException("Issuance not found with Issuance ID: " + issuanceId));
+
+        return convertToDTO(issuance);
+    }
+
+    public List<IssuanceDTO> getIssuancesByStatus(String status) {
+
+        return issuanceRepository.findByStatus(status)
+                .stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    public List<IssuanceDTO> getIssuancesByUserId(Long userId) {
+
+        return issuanceRepository.findByUser_Id(userId)
+                .stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    public List<IssuanceDTO> getIssuancesByEquipmentId(Long equipmentId) {
+
+        return issuanceRepository.findByEquipmentId(equipmentId)
+                .stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    // ================= DTO CONVERTER =================
     private IssuanceDTO convertToDTO(Issuance issuance) {
+
         IssuanceDTO dto = new IssuanceDTO();
+
         dto.setId(issuance.getId());
         dto.setIssuanceId(issuance.getIssuanceId());
         dto.setIssueDate(issuance.getIssueDate());
         dto.setReturnDueDate(issuance.getReturnDueDate());
         dto.setStatus(issuance.getStatus());
 
-        // Equipment details
         dto.setEquipmentId(issuance.getEquipment().getId());
         dto.setEquipmentName(issuance.getEquipment().getEquipmentName());
-        // Only add equipmentCode if you add the field to Equipment
-        // dto.setEquipmentCode(issuance.getEquipment().getEquipmentCode());
+
         dto.setQtyIssued(issuance.getQtyIssued());
         dto.setConditionAtIssue(issuance.getConditionAtIssue());
 
-        // User details
         dto.setUserId(issuance.getUser().getId());
         dto.setUserName(issuance.getUser().getUsername());
         dto.setUserEmail(issuance.getUser().getEmail());
+
         dto.setRoleDept(issuance.getRoleDept());
         dto.setContact(issuance.getContact());
 
-        // Return details
         dto.setReturnDate(issuance.getReturnDate());
         dto.setConditionOnReturn(issuance.getConditionOnReturn());
         dto.setRemarks(issuance.getRemarks());
