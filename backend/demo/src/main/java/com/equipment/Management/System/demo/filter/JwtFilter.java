@@ -14,8 +14,10 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.lang.NonNull;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 @Component
@@ -27,9 +29,9 @@ public class JwtFilter extends OncePerRequestFilter {
     private JwtUtil jwtUtil;
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request,
-                                    HttpServletResponse response,
-                                    FilterChain filterChain)
+    protected void doFilterInternal(@NonNull HttpServletRequest request,
+                                    @NonNull HttpServletResponse response,
+                                    @NonNull FilterChain filterChain)
             throws ServletException, IOException {
 
         if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
@@ -38,6 +40,12 @@ public class JwtFilter extends OncePerRequestFilter {
         }
 
         String authHeader = request.getHeader("Authorization");
+
+        if (authHeader == null) {
+            log.debug("No Authorization header present for {} {}", request.getMethod(), request.getRequestURI());
+        } else {
+            log.debug("Authorization header received for {} {}", request.getMethod(), request.getRequestURI());
+        }
 
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
@@ -65,16 +73,26 @@ public class JwtFilter extends OncePerRequestFilter {
 
             if (role != null && !role.isBlank()) {
 
-                // 🔑 MUST be ROLE_ADMIN for hasRole("ADMIN")
-                String authority = "ROLE_" + role.trim();
+                // Accept either ADMIN or ROLE_ADMIN from token claim.
+                String normalizedRole = role.trim().toUpperCase();
+                String authority = normalizedRole.startsWith("ROLE_")
+                        ? normalizedRole
+                        : "ROLE_" + normalizedRole;
+                String rawAuthority = authority.replaceFirst("^ROLE_", "");
 
-                log.info("Granting authority: {}", authority);
+                log.info("Granting authorities: {}, {}", authority, rawAuthority);
+
+                List<SimpleGrantedAuthority> authorities = new ArrayList<>();
+                authorities.add(new SimpleGrantedAuthority(authority));
+                if (!rawAuthority.equals(authority)) {
+                    authorities.add(new SimpleGrantedAuthority(rawAuthority));
+                }
 
                 UsernamePasswordAuthenticationToken authToken =
                         new UsernamePasswordAuthenticationToken(
                                 username,
                                 null,
-                                List.of(new SimpleGrantedAuthority(authority))
+                        authorities
                         );
 
                 authToken.setDetails(
