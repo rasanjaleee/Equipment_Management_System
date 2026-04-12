@@ -1,5 +1,6 @@
 package com.equipment.Management.System.demo.security;
 
+
 import com.equipment.Management.System.demo.filter.JwtFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -37,7 +38,6 @@ public class SecurityConfig {
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
     }
-
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
@@ -46,6 +46,7 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
 
+                        // ✅ allow BOTH styles (so login won't break)
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/error").permitAll()
@@ -71,6 +72,11 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PUT, "/api/maintenance/**").hasAnyRole("ADMIN", "TECHNICIAN")
                         .requestMatchers(HttpMethod.DELETE, "/api/maintenance/**").hasAnyRole("ADMIN", "TECHNICIAN")
                         .requestMatchers(HttpMethod.GET, "/api/activity-logs/**").hasAnyRole("ADMIN", "TECHNICIAN")
+
+                        .requestMatchers(HttpMethod.GET, "/api/issuances/**").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/issuances/**").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/issuances/**").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/issuances/**").hasAuthority("ROLE_ADMIN")
 
                         // everything else requires login
                         .anyRequest().authenticated())
