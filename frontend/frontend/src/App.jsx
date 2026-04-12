@@ -14,6 +14,7 @@ import About from './Pages/About';
 import Navbar from './components/Navbar';
 import EquipmentDetails from './Pages/EquipmentDetails';
 import Footer from './components/Footer';
+
 import AdminDashboard from "./Pages/admin/AdminDashboard";
 import AdminEquipment from "./Pages/admin/AdminEquipment";
 import AdminRoute from "./routes/AdminRoute";
@@ -87,6 +88,7 @@ const shouldShowFooter =
           <Route path="issuance" element={<IssuancePage />} />
           <Route path="users" element={<UserManagement />} />
           <Route path="activity-log" element={<ActivityLog />} />
+
           </Route>
           
 
