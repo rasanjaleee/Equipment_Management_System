@@ -242,13 +242,6 @@ const fetchEquipmentDetails = async () => {
             </div>
           </div>
         </div>
-
-        {/* Action Button */}
-        <div className="mt-6 flex justify-center">
-          <button className="bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-3 px-8 rounded-md transition-colors shadow-md">
-            Request to Borrow
-          </button>
-        </div>
       </div>
     </div>
   );

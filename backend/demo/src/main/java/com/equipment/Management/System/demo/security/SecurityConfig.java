@@ -54,15 +54,20 @@ public class SecurityConfig {
 
                         // ✅ Equipment APIs
                         .requestMatchers(HttpMethod.GET, "/api/equipment/**").authenticated()
-                        .requestMatchers(HttpMethod.POST, "/api/equipment/**").hasAuthority("ROLE_ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/api/equipment/**").hasAuthority("ROLE_ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/api/equipment/**").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/equipment/**").hasAnyAuthority("ROLE_ADMIN", "ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/equipment/**").hasAnyAuthority("ROLE_ADMIN", "ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/equipment/**").hasAnyAuthority("ROLE_ADMIN", "ADMIN")
 
                         // ✅ Issuance APIs
                         .requestMatchers(HttpMethod.GET, "/api/issuances/**").authenticated()
-                        .requestMatchers(HttpMethod.POST, "/api/issuances/**").hasAuthority("ROLE_ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/api/issuances/**").hasAuthority("ROLE_ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/api/issuances/**").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/issuances/**").hasAnyAuthority("ROLE_ADMIN", "ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/issuances/**").hasAnyAuthority("ROLE_ADMIN", "ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/issuances/**").hasAnyAuthority("ROLE_ADMIN", "ADMIN")
+
+                        // ✅ Borrow request APIs
+                        .requestMatchers(HttpMethod.GET, "/api/borrow-requests/**").hasAnyAuthority("ROLE_ADMIN", "ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/borrow-requests/**").authenticated()
+                        .requestMatchers(HttpMethod.PATCH, "/api/borrow-requests/**").hasAnyAuthority("ROLE_ADMIN", "ADMIN")
 
                         .anyRequest().authenticated()
                 )
@@ -76,8 +81,8 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList("http://localhost:5173"));
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedOriginPatterns(Arrays.asList("http://localhost:3000", "http://localhost:*"));
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);

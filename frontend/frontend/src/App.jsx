@@ -3,7 +3,7 @@
 import './App.css';
 
 import Login from './Pages/Login';    
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import Dashboard from './Pages/Dashboard';
 import Register from './Pages/Register';
 import Landing from './Pages/Landing';
@@ -13,9 +13,9 @@ import About from './Pages/About';
 import Navbar from './components/Navbar';
 import EquipmentDetails from './Pages/EquipmentDetails';
 import Footer from './components/Footer';
-import Issuance from "./Pages/admin/issuance";
-import AdminDashboard from "./Pages/AdminDashboard";
-import AdminEquipment from "./Pages/AdminEquipment";
+import Issuance from './Pages/admin/Issuance';
+import AdminDashboard from './Pages/admin/AdminDashboard';
+import AdminEquipment from './Pages/admin/AdminEquipment';
 import AdminRoute from "./routes/AdminRoute";
 import MaintenancePage from "./Pages/admin/MaintenancePage";
 import AdminLayout from "./Pages/AdminLayout";
@@ -30,9 +30,6 @@ function AppWrapper() {
     </Router>
   );
 }
-
-  const hideNavbarOn = ['/', '/login', '/register'];
-  const shouldShowNavbar = !hideNavbarOn.includes(location.pathname) && !location.pathname.startsWith('/admin');
 
 function App() {
   const location = useLocation();
@@ -66,6 +63,7 @@ const shouldShowFooter =
           <Route path='/home' element={<Home />} />
           <Route path='/equipment' element={<Equipment />} />
           <Route path='/equipment/:id' element={<EquipmentDetails />} />
+          <Route path='/issuance' element={<Navigate to='/admin/issuance' replace state={location.state} />} />
           <Route path='/about' element={<About />} />
           <Route path="/profile" element={<Profile />} />
           
@@ -73,6 +71,7 @@ const shouldShowFooter =
           <Route path="/admin" element={ <AdminRoute>   <AdminLayout /> </AdminRoute> }>
           <Route path="dashboard" element={<AdminDashboard />} />
           <Route path="equipment" element={<AdminEquipment />} />
+          <Route path="laboratories" element={<AdminEquipment />} />
           <Route path="maintenance" element={<MaintenancePage />} />
            <Route path="issuance" element={<Issuance />} /> 
           <Route path="/admin/profile" element={<Profile />} />

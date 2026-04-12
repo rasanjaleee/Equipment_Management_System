@@ -2,6 +2,7 @@ package com.equipment.Management.System.demo.controller;
 
 import com.equipment.Management.System.demo.model.Equipment;
 import com.equipment.Management.System.demo.model.EquipmentStatus;
+import com.equipment.Management.System.demo.service.BorrowRequestService;
 import com.equipment.Management.System.demo.service.EquipmentService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -12,6 +13,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/equipment")
@@ -19,10 +21,12 @@ import java.util.List;
 public class EquipmentController {
 
     private final EquipmentService equipmentService;
+    private final BorrowRequestService borrowRequestService;
     private static final String UPLOAD_DIR = "uploads/";
 
-    public EquipmentController(EquipmentService equipmentService) {
+    public EquipmentController(EquipmentService equipmentService, BorrowRequestService borrowRequestService) {
         this.equipmentService = equipmentService;
+        this.borrowRequestService = borrowRequestService;
     }
 
     @PostMapping("/add")
@@ -144,5 +148,23 @@ public class EquipmentController {
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Equipment not found");
         }
+    }
+
+    @GetMapping("/availability")
+    public ResponseEntity<?> checkAvailability(@RequestParam Long equipmentId,
+                                               @RequestParam LocalDate startDate,
+                                               @RequestParam LocalDate endDate) {
+        boolean available = borrowRequestService.isEquipmentAvailable(equipmentId, startDate, endDate);
+        if (available) {
+            return ResponseEntity.ok(Map.of(
+                    "available", true,
+                    "message", "Equipment is available for the selected date range."
+            ));
+        }
+
+        return ResponseEntity.status(409).body(Map.of(
+                "available", false,
+                "message", "Equipment is not available for the selected date range."
+        ));
     }
 }

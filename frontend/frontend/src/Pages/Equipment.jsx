@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import image from '/images/1.webp';
+import BorrowRequestForm from '../components/BorrowRequestForm';
 
 const Equipment = () => {
   const navigate = useNavigate();
@@ -14,6 +15,8 @@ const Equipment = () => {
   const [equipmentList, setEquipmentList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [isBorrowModalOpen, setIsBorrowModalOpen] = useState(false);
+  const [selectedEquipmentForBorrow, setSelectedEquipmentForBorrow] = useState(null);
 
   const departments = [
     'Department of Electrical and Information Engineering',
@@ -214,7 +217,7 @@ const Equipment = () => {
         </div>
 
         {/* Filter Buttons */}
-        <div className="flex gap-3 mb-4">
+        <div className="flex flex-wrap gap-3 mb-4">
           <button 
             onClick={() => {
               // Filters are applied automatically via filteredEquipment
@@ -233,6 +236,15 @@ const Equipment = () => {
             className="bg-yellow-500 hover:bg-yellow-400 text-black font-semibold px-6 py-2 rounded-full text-sm transition-colors"
           >
             Clear Filters
+          </button>
+          <button
+            onClick={() => {
+              setSelectedEquipmentForBorrow(null);
+              setIsBorrowModalOpen(true);
+            }}
+            className="bg-black hover:bg-gray-800 text-white font-semibold px-6 py-2 rounded-full text-sm transition-colors"
+          >
+            Request to Borrow
           </button>
         </div>
 
@@ -331,7 +343,7 @@ const Equipment = () => {
                       </span>
                     </p>
 
-                    <button 
+                    <button
                       onClick={() => navigate(`/equipment/${item.id}`)}
                       className="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-semibold py-2 px-4 rounded transition-colors"
                     >
@@ -344,6 +356,14 @@ const Equipment = () => {
           </div>
         ))}
       </div>
+
+      <BorrowRequestForm
+        isOpen={isBorrowModalOpen}
+        onClose={() => setIsBorrowModalOpen(false)}
+        equipmentList={equipmentList}
+        preselectedEquipment={selectedEquipmentForBorrow}
+        onSubmitted={() => setSelectedEquipmentForBorrow(null)}
+      />
     </div>
   );
 };
