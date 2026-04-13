@@ -1,6 +1,5 @@
 package com.equipment.Management.System.demo.security;
 
-
 import com.equipment.Management.System.demo.filter.JwtFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -38,6 +37,7 @@ public class SecurityConfig {
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
     }
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
@@ -46,40 +46,46 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
 
-                        // ✅ allow BOTH styles (so login won't break)
+                        // public auth endpoints
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/error").permitAll()
                         .requestMatchers("/uploads/**").permitAll()
 
-                        // ✅ allow preflight
+                        // preflight
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                        // ✅ ONLY ADMIN can manage users / roles
+                        // admin endpoints
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
 
-                        // ✅ Everyone logged in can VIEW equipment + maintenance
+                        // equipment
                         .requestMatchers(HttpMethod.GET, "/api/equipment/**").authenticated()
-                        .requestMatchers(HttpMethod.GET, "/api/maintenance/**").authenticated()
-
-                        // ✅ Only ADMIN or TECHNICIAN can CHANGE equipment
                         .requestMatchers(HttpMethod.POST, "/api/equipment/**").hasAnyRole("ADMIN", "TECHNICIAN")
                         .requestMatchers(HttpMethod.PUT, "/api/equipment/**").hasAnyRole("ADMIN", "TECHNICIAN")
                         .requestMatchers(HttpMethod.DELETE, "/api/equipment/**").hasAnyRole("ADMIN", "TECHNICIAN")
 
-                        // ✅ Only ADMIN or TECHNICIAN can CHANGE maintenance
+                        // maintenance
+                        .requestMatchers(HttpMethod.GET, "/api/maintenance/**").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/maintenance/**").hasAnyRole("ADMIN", "TECHNICIAN")
                         .requestMatchers(HttpMethod.PUT, "/api/maintenance/**").hasAnyRole("ADMIN", "TECHNICIAN")
                         .requestMatchers(HttpMethod.DELETE, "/api/maintenance/**").hasAnyRole("ADMIN", "TECHNICIAN")
+
+                        // activity logs
                         .requestMatchers(HttpMethod.GET, "/api/activity-logs/**").hasAnyRole("ADMIN", "TECHNICIAN")
 
+                        // issuances
                         .requestMatchers(HttpMethod.GET, "/api/issuances/**").authenticated()
-                        .requestMatchers(HttpMethod.POST, "/api/issuances/**").hasAuthority("ROLE_ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/api/issuances/**").hasAuthority("ROLE_ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/api/issuances/**").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/issuances/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/issuances/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/issuances/**").hasRole("ADMIN")
 
-                        // everything else requires login
-                        .anyRequest().authenticated())
+                        // borrow requests
+                        .requestMatchers(HttpMethod.GET, "/api/borrow-requests/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/borrow-requests/**").authenticated()
+                        .requestMatchers(HttpMethod.PATCH, "/api/borrow-requests/**").hasRole("ADMIN")
+
+                        .anyRequest().authenticated()
+                )
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
                 .formLogin(form -> form.disable());
 
@@ -92,8 +98,9 @@ public class SecurityConfig {
 
         configuration.setAllowedOrigins(List.of(
                 "http://localhost:5173",
-                "http://localhost:3000"));
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+                "http://localhost:3000"
+        ));
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
         configuration.setExposedHeaders(List.of("Authorization"));
         configuration.setAllowCredentials(false);

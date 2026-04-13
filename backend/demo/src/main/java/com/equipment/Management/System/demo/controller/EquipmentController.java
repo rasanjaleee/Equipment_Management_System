@@ -4,6 +4,7 @@ import com.equipment.Management.System.demo.dto.BulkUploadResponse;
 import com.equipment.Management.System.demo.model.Equipment;
 import com.equipment.Management.System.demo.model.EquipmentStatus;
 import com.equipment.Management.System.demo.service.ActivityLogService;
+import com.equipment.Management.System.demo.service.BorrowRequestService;
 import com.equipment.Management.System.demo.service.EquipmentCsvService;
 import com.equipment.Management.System.demo.service.EquipmentService;
 import org.springframework.http.ResponseEntity;
@@ -17,6 +18,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/equipment")
@@ -26,18 +28,20 @@ public class EquipmentController {
     private final EquipmentService equipmentService;
     private final EquipmentCsvService equipmentCsvService;
     private final ActivityLogService activityLogService;
+    private final BorrowRequestService borrowRequestService;
 
     private static final String UPLOAD_DIR = "uploads/";
 
     public EquipmentController(EquipmentService equipmentService,
                                EquipmentCsvService equipmentCsvService,
-                               ActivityLogService activityLogService) {
+                               ActivityLogService activityLogService,
+                               BorrowRequestService borrowRequestService) {
         this.equipmentService = equipmentService;
         this.equipmentCsvService = equipmentCsvService;
         this.activityLogService = activityLogService;
+        this.borrowRequestService = borrowRequestService;
     }
 
-    // ================= SINGLE ADD =================
     @PostMapping("/add")
     public ResponseEntity<?> addEquipment(
             @RequestParam String equipmentName,
@@ -97,16 +101,12 @@ public class EquipmentController {
         }
     }
 
-    // ================= BULK CSV UPLOAD =================
     @PostMapping("/bulk-upload")
-    public ResponseEntity<BulkUploadResponse> bulkUpload(
-            @RequestParam("file") MultipartFile file) {
-
+    public ResponseEntity<BulkUploadResponse> bulkUpload(@RequestParam("file") MultipartFile file) {
         BulkUploadResponse response = equipmentCsvService.uploadCsv(file);
         return ResponseEntity.ok(response);
     }
 
-    // ================= UPDATE =================
     @PutMapping("/update/{id}")
     public ResponseEntity<?> updateEquipment(
             @PathVariable Long id,
@@ -173,7 +173,6 @@ public class EquipmentController {
         }
     }
 
-    // ================= DELETE =================
     @DeleteMapping("/delete/{id}")
     public ResponseEntity<?> deleteEquipment(@PathVariable Long id) {
         try {
@@ -202,7 +201,6 @@ public class EquipmentController {
         }
     }
 
-    // ================= GET ALL =================
     @GetMapping
     public List<Equipment> getAllEquipment() {
         return equipmentService.getAllEquipment();
@@ -213,7 +211,6 @@ public class EquipmentController {
         return equipmentService.getAllEquipment();
     }
 
-    // ================= GET BY ID =================
     @GetMapping("/{id}")
     public ResponseEntity<?> getEquipmentById(@PathVariable Long id) {
         try {
@@ -224,7 +221,25 @@ public class EquipmentController {
         }
     }
 
-    // ================= BULK CSV TEMPLATE =================
+    @GetMapping("/availability")
+    public ResponseEntity<?> checkAvailability(@RequestParam Long equipmentId,
+                                               @RequestParam LocalDate startDate,
+                                               @RequestParam LocalDate endDate) {
+        boolean available = borrowRequestService.isEquipmentAvailable(equipmentId, startDate, endDate);
+
+        if (available) {
+            return ResponseEntity.ok(Map.of(
+                    "available", true,
+                    "message", "Equipment is available for the selected date range."
+            ));
+        }
+
+        return ResponseEntity.status(409).body(Map.of(
+                "available", false,
+                "message", "Equipment is not available for the selected date range."
+        ));
+    }
+
     @GetMapping("/bulk-template")
     public ResponseEntity<String> downloadBulkTemplate() {
         String csvTemplate = "equipmentName,laboratory,model,serialNumber,cost,purchaseDate,supplier,status,grnNumber\n";
