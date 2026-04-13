@@ -1,11 +1,15 @@
 // frontend/frontend/src/App.jsx
 
 import './App.css';
-import LaboratoryPage from './Pages/Laboratory'; // adjust path if needed
-import ProfilePage from './Pages/Profile';
+
 import Login from './Pages/Login';    
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+
+
 import BulkUploadEquipment from "./Pages/admin/BulkUploadEquipment";
+
+import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
+
+
 import Register from './Pages/Register';
 import Landing from './Pages/Landing';
 import Home from './Pages/Home';
@@ -15,12 +19,13 @@ import Navbar from './components/Navbar';
 import EquipmentDetails from './Pages/EquipmentDetails';
 import Footer from './components/Footer';
 
+
 import AdminDashboard from "./Pages/admin/AdminDashboard";
 import AdminEquipment from "./Pages/admin/AdminEquipment";
 import AdminRoute from "./routes/AdminRoute";
 import MaintenancePage from "./Pages/admin/MaintenancePage";
 import AdminLayout from "./components/AdminLayout";
-import IssuancePage from './Pages/admin/Issuance';
+import Issuance from './Pages/admin/Issuance';
 import UserManagement from './Pages/admin/UserManagement';
 import ActivityLog from './Pages/admin/ActivityLog';
 import TechnicianRoute from "./routes/TechnicianRoute";
@@ -28,6 +33,13 @@ import TechnicianLayout from "./components/TechnicianLayout";
 import TechnicianDashboard from "./Pages/technician/TechnicianDashboard";
 import TechnicianEquipment from "./Pages/technician/TechnicianEquipment";
 import TechnicianActivityLog from "./Pages/technician/TechnicianActivityLog";
+import ProfilePage from './Pages/Profile';
+import LaboratoryPage from './Pages/Laboratory';
+
+
+
+import Profile from "./Pages/Profile";
+
 
 
 // Wrapper to provide Router context
@@ -71,24 +83,27 @@ const shouldShowFooter =
           
           <Route path='/home' element={<Home />} />
           <Route path='/equipment' element={<Equipment />} />
+
           <Route path='/equipment/details/:equipmentName/:laboratory' element={<EquipmentDetails />} />
           <Route path='/equipment/item/:id' element={<EquipmentDetails />} />
+
+          
+          <Route path='/issuance' element={<Navigate to='/admin/issuance' replace state={location.state} />} />
+
           <Route path='/about' element={<About />} />
-          <Route path='/profile' element={<ProfilePage />} />
-
-
-
+          <Route path="/profile" element={<Profile />} />
+          
           {/* Admin routes */}
           <Route path="/admin" element={ <AdminRoute>   <AdminLayout /> </AdminRoute> }>
           <Route path="dashboard" element={<AdminDashboard />} />
           <Route path="equipment" element={<AdminEquipment />} />
+
           <Route path="equipment/bulk-upload" element={<BulkUploadEquipment />} />
           <Route path="laboratories" element={<LaboratoryPage />} />
           <Route path="maintenance" element={<MaintenancePage />} />
-          <Route path="issuance" element={<IssuancePage />} />
+          <Route path="issuance" element={<Issuance />} />
           <Route path="users" element={<UserManagement />} />
           <Route path="activity-log" element={<ActivityLog />} />
-
           </Route>
           
 

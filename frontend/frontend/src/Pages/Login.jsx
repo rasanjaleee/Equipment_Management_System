@@ -43,6 +43,9 @@ export default function Login() {
       const { token, id, username, email, role } = res.data;
       localStorage.setItem("token", token);
       localStorage.setItem("user", JSON.stringify({ id, username, email, role }));
+      axios.defaults.headers.common.Authorization = `Bearer ${token}`;
+
+      const normalizedRole = String(role || "").replace(/^ROLE_/i, "").toUpperCase();
 
       // Redirect to dashboard
 if (role === "ADMIN") {

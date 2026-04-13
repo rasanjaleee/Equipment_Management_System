@@ -3,8 +3,20 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import image from '/images/1.webp';
+import BorrowRequestForm from '../components/BorrowRequestForm';
+
+
 
 const Equipment = () => {
+  // Normalize values for comparison (lowercase and trim)
+  const normalizeValue = (value) => {
+    if (!value) return '';
+    return String(value).toLowerCase().trim();
+  };
+
+  // Pagination constant
+  const ITEMS_PER_PAGE = 6;
+
   const navigate = useNavigate();
   const [selectedDepartment, setSelectedDepartment] = useState('');
   const [selectedLaboratory, setSelectedLaboratory] = useState('');
@@ -14,12 +26,9 @@ const Equipment = () => {
   const [equipmentList, setEquipmentList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [isBorrowModalOpen, setIsBorrowModalOpen] = useState(false);
+  const [selectedEquipmentForBorrow, setSelectedEquipmentForBorrow] = useState(null);
   const [labPages, setLabPages] = useState({});
-
-  const ITEMS_PER_PAGE = 5;
-
-  const normalizeValue = (value) =>
-    (value || '').trim().replace(/\s+/g, ' ').toLowerCase();
 
   const departments = [
     'Department of Electrical and Information Engineering',
@@ -289,7 +298,7 @@ const Equipment = () => {
         </div>
 
         {/* Filter Buttons */}
-        <div className="flex gap-3 mb-4">
+        <div className="flex flex-wrap gap-3 mb-4">
           <button 
             onClick={() => {
               // Filters are applied automatically via filteredEquipment
@@ -308,6 +317,15 @@ const Equipment = () => {
             className="bg-yellow-500 hover:bg-yellow-400 text-black font-semibold px-6 py-2 rounded-full text-sm transition-colors"
           >
             Clear Filters
+          </button>
+          <button
+            onClick={() => {
+              setSelectedEquipmentForBorrow(null);
+              setIsBorrowModalOpen(true);
+            }}
+            className="bg-black hover:bg-gray-800 text-white font-semibold px-6 py-2 rounded-full text-sm transition-colors"
+          >
+            Request to Borrow
           </button>
         </div>
 
@@ -435,9 +453,9 @@ const Equipment = () => {
                       </div>
                     </div>
 
-                    <button 
-                      onClick={() => navigate(`/equipment/details/${encodeURIComponent(group.name)}/${encodeURIComponent(lab.name)}`)}
-                      className="w-full bg-yellow-500 hover:bg-yellow-400 text-black text-xs font-semibold py-2 px-3 rounded-md transition-colors"
+                    <button
+                      onClick={() => navigate(`/equipment/${item.id}`)}
+                      className="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-semibold py-2 px-4 rounded transition-colors"
                     >
                       View Details
                     </button>
@@ -486,6 +504,14 @@ const Equipment = () => {
           </div>
         ))}
       </div>
+
+      <BorrowRequestForm
+        isOpen={isBorrowModalOpen}
+        onClose={() => setIsBorrowModalOpen(false)}
+        equipmentList={equipmentList}
+        preselectedEquipment={selectedEquipmentForBorrow}
+        onSubmitted={() => setSelectedEquipmentForBorrow(null)}
+      />
     </div>
   );
 };

@@ -28,9 +28,7 @@ public class EquipmentService {
         this.qrCodeService = qrCodeService;
     }
 
-    // ================= ADD / UPDATE =================
     public Equipment saveEquipment(Equipment equipment) {
-
         boolean isNew = (equipment.getId() == null);
 
         Equipment saved = equipmentRepository.save(equipment);
@@ -60,9 +58,7 @@ public class EquipmentService {
         return saved;
     }
 
-    // ================= STATUS UPDATE =================
     public Equipment updateStatus(Long id, String newStatus) {
-
         Equipment equipment = equipmentRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Equipment not found with id: " + id));
 
@@ -80,7 +76,6 @@ public class EquipmentService {
         Equipment updated = equipmentRepository.save(equipment);
 
         if (!oldStatus.equals(statusEnum)) {
-
             String priority = "LOW";
 
             if (statusEnum == EquipmentStatus.BROKEN) {
@@ -102,9 +97,7 @@ public class EquipmentService {
         return updated;
     }
 
-    // ================= CREATE WITH QR =================
     public Equipment createEquipmentWithQr(Equipment equipment) throws IOException, WriterException {
-
         Equipment savedEquipment = equipmentRepository.save(equipment);
 
         if (savedEquipment.getEquipmentCode() == null || savedEquipment.getEquipmentCode().isBlank()) {
@@ -119,12 +112,10 @@ public class EquipmentService {
         return equipmentRepository.save(savedEquipment);
     }
 
-    // ================= GET ALL =================
     public List<Equipment> getAllEquipment() {
         return equipmentRepository.findAll();
     }
 
-    // ================= GET BY ID =================
     public Equipment getById(Long id) {
         return equipmentRepository.findById(id)
                 .orElseThrow(() ->
@@ -132,9 +123,7 @@ public class EquipmentService {
                 );
     }
 
-    // ================= DELETE =================
     public void deleteEquipment(Long id) {
-
         Equipment equipment = equipmentRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Equipment not found"));
 
