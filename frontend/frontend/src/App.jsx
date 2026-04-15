@@ -27,7 +27,8 @@ import TechnicianLayout from "./components/TechnicianLayout";
 import TechnicianDashboard from "./Pages/technician/TechnicianDashboard";
 import TechnicianEquipment from "./Pages/technician/TechnicianEquipment";
 import TechnicianActivityLog from "./Pages/technician/TechnicianActivityLog";
-
+import SuperAdminRoute from "./routes/SuperAdminRoute";
+import ChangePassword from "./Pages/ChangePassword";
 
 // Wrapper to provide Router context
 function AppWrapper() {
@@ -62,12 +63,12 @@ const shouldShowFooter =
       {/* Show Navbar only on allowed pages */}
       {shouldShowNavbar && <Navbar />}
 
-      <main className="flex-grow">
+      <main className={`flex-grow ${shouldShowNavbar ? 'pt-24' : ''}`}>
         <Routes>
           <Route path='/' element={<Landing />} />
           <Route path='/login' element={<Login />} />
           <Route path='/register' element={<Register />} />
-          
+          <Route path="/change-password" element={<ChangePassword />} />
           <Route path='/home' element={<Home />} />
           <Route path='/equipment' element={<Equipment />} />
           <Route path='/equipment/details/:equipmentName/:laboratory' element={<EquipmentDetails />} />
@@ -85,7 +86,14 @@ const shouldShowFooter =
           <Route path="laboratories" element={<LaboratoryPage />} />
           <Route path="maintenance" element={<MaintenancePage />} />
           <Route path="issuance" element={<IssuancePage />} />
-          <Route path="users" element={<UserManagement />} />
+          <Route path="profile" element={<ProfilePage />} />
+          <Route
+  path="users"element={
+    <SuperAdminRoute>
+      <UserManagement />
+    </SuperAdminRoute>
+  }
+/>
           <Route path="activity-log" element={<ActivityLog />} />
           </Route>
           
@@ -105,6 +113,7 @@ const shouldShowFooter =
            <Route path="equipment" element={<TechnicianEquipment />} />
            <Route path="maintenance" element={<MaintenancePage />} />
              <Route path="activity-log" element={<TechnicianActivityLog />} />
+             <Route path="profile" element={<ProfilePage />} />
          </Route>
 
 

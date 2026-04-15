@@ -1,7 +1,6 @@
-// src/pages/admin/Dashboard.jsx
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
+import axios from "axios";
 import {
-  TrendingUp,
   AlertCircle,
   CheckCircle2,
   Wrench,
@@ -9,33 +8,146 @@ import {
   Users,
   Zap,
   Building2,
-  ArrowUp,
-  ArrowDown,
 } from "lucide-react";
 
 const Dashboard = () => {
   const [stats, setStats] = useState({
-    totalEquipment: 247,
-    working: 198,
-    underRepair: 28,
-    broken: 21,
-    borrowedItems: 8,
-    laboratories: 5,
-    overdueReturns: 3,
-    pendingRequests: 12,
-    completedThisMonth: 34,
+    totalEquipment: 0,
+    working: 0,
+    underRepair: 0,
+    broken: 0,
+    borrowedItems: 0,
+    laboratories: 0,
+    overdueReturns: 0,
+    pendingRequests: 0,
+    completedThisMonth: 0,
   });
+
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const fetchDashboardData = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const headers = {
+        Authorization: `Bearer ${token}`,
+      };
+
+      const [
+        equipmentRes,
+        maintenanceRes,
+        issuanceRes,
+        laboratoriesRes,
+      ] = await Promise.allSettled([
+        axios.get("http://localhost:8080/api/equipment/all", { headers }),
+        axios.get("http://localhost:8080/api/maintenance", { headers }),
+        axios.get("http://localhost:8080/api/issuance", { headers }),
+        axios.get("http://localhost:8080/api/laboratories", { headers }),
+      ]);
+
+      const equipment =
+        equipmentRes.status === "fulfilled" ? equipmentRes.value.data : [];
+      const maintenance =
+        maintenanceRes.status === "fulfilled" ? maintenanceRes.value.data : [];
+      const issuance =
+        issuanceRes.status === "fulfilled" ? issuanceRes.value.data : [];
+      const laboratories =
+        laboratoriesRes.status === "fulfilled" ? laboratoriesRes.value.data : [];
+
+      const totalEquipment = equipment.length;
+      const working = equipment.filter((item) => item.status === "WORKING").length;
+      const underRepair = equipment.filter(
+        (item) => item.status === "UNDER_REPAIR"
+      ).length;
+      const broken = equipment.filter((item) => item.status === "BROKEN").length;
+
+      const borrowedItems = Array.isArray(issuance)
+        ? issuance.filter(
+            (item) =>
+              item.status === "BORROWED" ||
+              item.status === "ISSUED" ||
+              item.returned === false
+          ).length
+        : 0;
+
+      const overdueReturns = Array.isArray(issuance)
+        ? issuance.filter((item) => {
+            if (!item.dueDate) return false;
+            if (item.returned === true) return false;
+            return new Date(item.dueDate) < new Date();
+          }).length
+        : 0;
+
+      const pendingRequests = Array.isArray(maintenance)
+        ? maintenance.filter(
+            (item) =>
+              item.status === "PENDING" ||
+              item.status === "OPEN"
+          ).length
+        : 0;
+
+      const completedThisMonth = Array.isArray(maintenance)
+        ? maintenance.filter((item) => {
+            if (
+              item.status !== "COMPLETED" &&
+              item.status !== "DONE"
+            ) {
+              return false;
+            }
+
+            const completedDate = item.completedDate || item.updatedAt || item.date;
+            if (!completedDate) return false;
+
+            const d = new Date(completedDate);
+            const now = new Date();
+
+            return (
+              d.getMonth() === now.getMonth() &&
+              d.getFullYear() === now.getFullYear()
+            );
+          }).length
+        : 0;
+
+      const laboratoryCount = Array.isArray(laboratories)
+        ? laboratories.length
+        : 0;
+
+      setStats({
+        totalEquipment,
+        working,
+        underRepair,
+        broken,
+        borrowedItems,
+        laboratories: laboratoryCount,
+        overdueReturns,
+        pendingRequests,
+        completedThisMonth,
+      });
+
+      setError("");
+    } catch (err) {
+      console.error("Failed to load dashboard data:", err);
+      setError("Failed to load dashboard data");
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
           <p className="text-gray-600 mt-2">Equipment Management System</p>
         </div>
 
-        {/* Stats Grid - 4 Columns */}
+        {error && (
+          <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded mb-6">
+            <p className="text-red-700 font-medium">{error}</p>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <StatCard
             icon={Zap}
@@ -63,7 +175,6 @@ const Dashboard = () => {
           />
         </div>
 
-        {/* Secondary Stats - 3 Columns */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <SecondaryCard
             icon={Users}
@@ -82,7 +193,6 @@ const Dashboard = () => {
           />
         </div>
 
-        {/* Alerts Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           <AlertCard
             type="warning"
@@ -98,7 +208,6 @@ const Dashboard = () => {
           />
         </div>
 
-        {/* Data Tables */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <TableCard
             title="Equipment Status"
@@ -122,7 +231,6 @@ const Dashboard = () => {
   );
 };
 
-// ✅ Main Stat Card
 const StatCard = ({ icon: Icon, label, value, color }) => {
   const colorMap = {
     blue: "border-l-4 border-blue-500 bg-blue-50",
@@ -151,7 +259,6 @@ const StatCard = ({ icon: Icon, label, value, color }) => {
   );
 };
 
-// ✅ Secondary Card
 const SecondaryCard = ({ icon: Icon, label, value }) => {
   return (
     <div className="bg-white rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow border border-gray-200">
@@ -166,7 +273,6 @@ const SecondaryCard = ({ icon: Icon, label, value }) => {
   );
 };
 
-// ✅ Alert Card
 const AlertCard = ({ type, title, message, icon: Icon }) => {
   const typeMap = {
     warning: "bg-yellow-50 border-l-4 border-yellow-500",
@@ -191,7 +297,6 @@ const AlertCard = ({ type, title, message, icon: Icon }) => {
   );
 };
 
-// ✅ Table Card
 const TableCard = ({ title, data }) => {
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
