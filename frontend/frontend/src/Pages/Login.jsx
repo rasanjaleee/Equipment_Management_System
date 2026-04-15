@@ -40,18 +40,23 @@ export default function Login() {
       const res = await axios.post("http://localhost:8080/auth/login", sanitized);
       
       // Store JWT token and user info
-      const { token, id, username, email, role } = res.data;
-      localStorage.setItem("token", token);
-      localStorage.setItem("user", JSON.stringify({ id, username, email, role }));
+const { token, id, username, email, role, mustChangePassword } = res.data;
+localStorage.setItem("token", token);
+localStorage.setItem(
+  "user",
+  JSON.stringify({ id, username, email, role, mustChangePassword })
+);
 
-      // Redirect to dashboard
-if (role === "ADMIN") {
+if (mustChangePassword) {
+  navigate("/change-password");
+} else if (role === "SUPER_ADMIN" || role === "ADMIN") {
   navigate("/admin/dashboard");
 } else if (role === "TECHNICIAN") {
   navigate("/technician/dashboard");
 } else {
   navigate("/home");
 }
+
    } catch (err) {
   const status = err.response?.status;
   const msg = err.response?.data?.message;

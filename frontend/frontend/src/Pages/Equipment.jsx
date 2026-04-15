@@ -145,7 +145,6 @@ const Equipment = () => {
     };
   });
 
-  // Keep pagination local to each laboratory and reset when filters/search change.
   useEffect(() => {
     setLabPages({});
   }, [searchQuery, selectedLaboratory, selectedDepartment]);
@@ -388,11 +387,11 @@ const Equipment = () => {
             </div>
 
             {/* Equipment Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-5 gap-3">
               {paginatedEquipment.map((group, groupIndex) => (
-                <div key={groupIndex} className="bg-white rounded-lg shadow-sm overflow-hidden border border-yellow-300 hover:shadow-md transition-shadow">
+                <div key={groupIndex} className="bg-white rounded-md shadow-sm overflow-hidden border border-yellow-200 hover:shadow-md transition-shadow">
                   {/* Equipment Image */}
-                  <div className="aspect-[4/3] bg-gray-100 flex items-center justify-center overflow-hidden">
+                  <div className="h-24 bg-gray-100 flex items-center justify-center overflow-hidden">
                     {group.displayItem.photoPath ? (
                       <img 
                         src={`http://localhost:8080/${group.displayItem.photoPath}?t=${Date.now()}`}
@@ -413,13 +412,13 @@ const Equipment = () => {
                   </div>
 
                   {/* Equipment Details */}
-                  <div className="p-3">
-                    <h3 className="font-semibold text-sm text-gray-900 mb-2 line-clamp-2 min-h-[2.5rem]">{group.name}</h3>
-                    <div className="bg-gray-50 rounded p-2 mb-2">
-                      <p className="text-xs text-gray-700 mb-1">
+                  <div className="p-2">
+                    <h3 className="font-semibold text-[11px] text-gray-900 mb-1 line-clamp-2 min-h-[1.8rem]">{group.name}</h3>
+                    <div className="bg-gray-50 rounded p-1.5 mb-2">
+                      <p className="text-[10px] text-gray-700 mb-1">
                         <span className="font-semibold">Total Quantity:</span> {group.totalQuantity}
                       </p>
-                      <div className="flex flex-wrap items-center gap-2 text-[11px]">
+                      <div className="flex flex-wrap items-center gap-1 text-[9px]">
                         <span className="flex items-center gap-1">
                           <span className="w-2 h-2 rounded-full bg-green-500"></span>
                           Working: {group.working}
@@ -437,7 +436,7 @@ const Equipment = () => {
 
                     <button 
                       onClick={() => navigate(`/equipment/details/${encodeURIComponent(group.name)}/${encodeURIComponent(lab.name)}`)}
-                      className="w-full bg-yellow-500 hover:bg-yellow-400 text-black text-xs font-semibold py-2 px-3 rounded-md transition-colors"
+                      className="w-full bg-yellow-500 hover:bg-yellow-400 text-black text-[10px] font-semibold py-1 px-2 rounded transition-colors"
                     >
                       View Details
                     </button>
