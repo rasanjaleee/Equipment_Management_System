@@ -71,6 +71,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PUT, "/api/maintenance/**").hasAnyRole("SUPER_ADMIN", "ADMIN", "TECHNICIAN")
                         .requestMatchers(HttpMethod.DELETE, "/api/maintenance/**").hasAnyRole("SUPER_ADMIN", "ADMIN", "TECHNICIAN")
                         .requestMatchers(HttpMethod.GET, "/api/activity-logs/**").hasAnyRole("SUPER_ADMIN", "ADMIN", "TECHNICIAN")
+
+                        .requestMatchers(HttpMethod.GET, "/api/reports/**").hasAnyRole("SUPER_ADMIN", "ADMIN")
                         // everything else requires login
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
