@@ -29,6 +29,7 @@ import TechnicianEquipment from "./Pages/technician/TechnicianEquipment";
 import TechnicianActivityLog from "./Pages/technician/TechnicianActivityLog";
 import SuperAdminRoute from "./routes/SuperAdminRoute";
 import ChangePassword from "./Pages/ChangePassword";
+import ReportsPage from "./Pages/admin/ReportsPage";
 
 // Wrapper to provide Router context
 function AppWrapper() {
@@ -87,6 +88,7 @@ const shouldShowFooter =
           <Route path="maintenance" element={<MaintenancePage />} />
           <Route path="issuance" element={<IssuancePage />} />
           <Route path="profile" element={<ProfilePage />} />
+          <Route path="reports" element={<ReportsPage />} />
           <Route
   path="users"element={
     <SuperAdminRoute>
