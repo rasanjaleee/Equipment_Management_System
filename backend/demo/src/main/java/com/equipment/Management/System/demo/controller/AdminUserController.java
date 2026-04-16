@@ -24,7 +24,6 @@ public class AdminUserController {
         this.passwordEncoder = passwordEncoder;
     }
 
-    // ================= CREATE USER =================
     @PostMapping("/create-user")
     public ResponseEntity<?> createUser(@RequestBody User user) {
         try {
@@ -42,14 +41,13 @@ public class AdminUserController {
             }
 
             if (password.isBlank()) {
-                return ResponseEntity.badRequest().body(Map.of("message", "Password is required"));
+                return ResponseEntity.badRequest().body(Map.of("message", "Temporary password is required"));
             }
 
             if (role.isBlank()) {
                 return ResponseEntity.badRequest().body(Map.of("message", "Role is required"));
             }
 
-            // Allow only valid roles used in your system
             if (!(role.equals("ADMIN") || role.equals("TECHNICIAN") || role.equals("STUDENT"))) {
                 return ResponseEntity.badRequest().body(Map.of(
                         "message", "Invalid role. Allowed roles: ADMIN, TECHNICIAN, STUDENT"
@@ -57,15 +55,13 @@ public class AdminUserController {
             }
 
             if (userRepository.existsByUsername(username)) {
-                return ResponseEntity.status(HttpStatus.CONFLICT).body(
-                        Map.of("message", "Username already exists")
-                );
+                return ResponseEntity.status(HttpStatus.CONFLICT)
+                        .body(Map.of("message", "Username already exists"));
             }
 
             if (userRepository.existsByEmail(email)) {
-                return ResponseEntity.status(HttpStatus.CONFLICT).body(
-                        Map.of("message", "Email already exists")
-                );
+                return ResponseEntity.status(HttpStatus.CONFLICT)
+                        .body(Map.of("message", "Email already exists"));
             }
 
             User newUser = new User();
@@ -73,15 +69,17 @@ public class AdminUserController {
             newUser.setEmail(email);
             newUser.setPassword(passwordEncoder.encode(password));
             newUser.setRole(role);
+            newUser.setMustChangePassword(true);
 
             User savedUser = userRepository.save(newUser);
 
             return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
-                    "message", "User created successfully",
+                    "message", "User created successfully with temporary password",
                     "id", savedUser.getId(),
                     "username", savedUser.getUsername(),
                     "email", savedUser.getEmail(),
-                    "role", savedUser.getRole()
+                    "role", savedUser.getRole(),
+                    "mustChangePassword", savedUser.isMustChangePassword()
             ));
 
         } catch (Exception e) {
@@ -91,7 +89,6 @@ public class AdminUserController {
         }
     }
 
-    // ================= GET ALL USERS =================
     @GetMapping("/users")
     public ResponseEntity<?> getAllUsers() {
         try {

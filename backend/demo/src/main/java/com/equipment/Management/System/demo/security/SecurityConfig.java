@@ -55,23 +55,22 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
                         // ✅ ONLY ADMIN can manage users / roles
-                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/admin/**").hasRole("SUPER_ADMIN")
 
                         // ✅ Everyone logged in can VIEW equipment + maintenance
                         .requestMatchers(HttpMethod.GET, "/api/equipment/**").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/maintenance/**").authenticated()
 
-                        // ✅ Only ADMIN or TECHNICIAN can CHANGE equipment
-                        .requestMatchers(HttpMethod.POST, "/api/equipment/**").hasAnyRole("ADMIN", "TECHNICIAN")
-                        .requestMatchers(HttpMethod.PUT, "/api/equipment/**").hasAnyRole("ADMIN", "TECHNICIAN")
-                        .requestMatchers(HttpMethod.DELETE, "/api/equipment/**").hasAnyRole("ADMIN", "TECHNICIAN")
+                        // ✅ Only ADMIN ,superadmin or TECHNICIAN can CHANGE equipment
+                        .requestMatchers(HttpMethod.POST, "/api/equipment/**").hasAnyRole("SUPER_ADMIN", "ADMIN", "TECHNICIAN")
+                        .requestMatchers(HttpMethod.PUT, "/api/equipment/**").hasAnyRole("SUPER_ADMIN", "ADMIN", "TECHNICIAN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/equipment/**").hasAnyRole("SUPER_ADMIN", "ADMIN", "TECHNICIAN")
 
                         // ✅ Only ADMIN or TECHNICIAN can CHANGE maintenance
-                        .requestMatchers(HttpMethod.POST, "/api/maintenance/**").hasAnyRole("ADMIN", "TECHNICIAN")
-                        .requestMatchers(HttpMethod.PUT, "/api/maintenance/**").hasAnyRole("ADMIN", "TECHNICIAN")
-                        .requestMatchers(HttpMethod.DELETE, "/api/maintenance/**").hasAnyRole("ADMIN", "TECHNICIAN")
-                        .requestMatchers(HttpMethod.GET, "/api/activity-logs/**").hasAnyRole("ADMIN", "TECHNICIAN")
-
+                        .requestMatchers(HttpMethod.POST, "/api/maintenance/**").hasAnyRole("SUPER_ADMIN", "ADMIN", "TECHNICIAN")
+                        .requestMatchers(HttpMethod.PUT, "/api/maintenance/**").hasAnyRole("SUPER_ADMIN", "ADMIN", "TECHNICIAN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/maintenance/**").hasAnyRole("SUPER_ADMIN", "ADMIN", "TECHNICIAN")
+                        .requestMatchers(HttpMethod.GET, "/api/activity-logs/**").hasAnyRole("SUPER_ADMIN", "ADMIN", "TECHNICIAN")
                         // everything else requires login
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)

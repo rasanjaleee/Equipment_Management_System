@@ -1,12 +1,10 @@
 package com.equipment.Management.System.demo.model;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import com.fasterxml.jackson.annotation.JsonProperty;
-
 
 @Entity
 @Table(name = "users")
@@ -32,30 +30,6 @@ public class User {
     @Column(nullable = false)
     private String role;
 
-    // Normal getters and setters
-    public String getEmail() { return email; }
-    public void setEmail(String email) { this.email = email; }
-
-    public String getUsername() { return username; }
-    public void setUsername(String username) { this.username = username; }  // ✅ Fix
-
-    public String getRole() { return role; }
-    public void setRole(String role) { this.role = role; }
-
-    public String getPassword() { return password; }
-    public void setPassword(String password) { this.password = password; }
-
-    public Long getId() { return id; }
-
-    public void setDepartment(Object department) {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    public void setContact(Object contact) {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    public void setProfileImage(Object profileImage) {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
+    @Column(nullable = false)
+    private boolean mustChangePassword = false;
 }

@@ -133,8 +133,40 @@ public class AuthController {
                 "id", user.getId(),
                 "username", user.getUsername(),
                 "email", user.getEmail(),
-                "role", user.getRole()
+                "role", user.getRole(),
+                "mustChangePassword", user.isMustChangePassword()
         ));
+    }
+    @PostMapping("/change-password")
+    public ResponseEntity<?> changePassword(@RequestBody Map<String, String> request) {
+        try {
+            String username = request.get("username") != null ? request.get("username").trim().toLowerCase() : "";
+            String oldPassword = request.get("oldPassword") != null ? request.get("oldPassword").trim() : "";
+            String newPassword = request.get("newPassword") != null ? request.get("newPassword").trim() : "";
+
+            if (username.isBlank() || oldPassword.isBlank() || newPassword.isBlank()) {
+                return ResponseEntity.badRequest().body(Map.of("message", "All fields are required"));
+            }
+
+            User user = userService.getUserByUsername(username)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            if (!userService.verifyUser(username, oldPassword)) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("message", "Current password is incorrect"));
+            }
+
+            user.setPassword(userService.encodePassword(newPassword));
+            user.setMustChangePassword(false);
+            userService.saveUser(user);
+
+            return ResponseEntity.ok(Map.of("message", "Password changed successfully"));
+
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "message", "Failed to change password: " + e.getMessage()
+            ));
+        }
     }
 
 }
