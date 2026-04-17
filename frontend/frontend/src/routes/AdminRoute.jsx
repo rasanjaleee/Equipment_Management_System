@@ -11,10 +11,8 @@ export default function AdminRoute({ children }) {
     user = null;
   }
 
-  if (!token || !user || user.role !== "ADMIN") {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    return <Navigate to="/login" replace />;
+  if (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN") {
+    return <Navigate to="/home" replace />;
   }
 
   return children;

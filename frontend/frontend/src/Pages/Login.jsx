@@ -40,21 +40,35 @@ export default function Login() {
       const res = await axios.post("http://localhost:8080/auth/login", sanitized);
       
       // Store JWT token and user info
-      const { token, id, username, email, role } = res.data;
-      localStorage.setItem("token", token);
-      localStorage.setItem("user", JSON.stringify({ id, username, email, role }));
-      axios.defaults.headers.common.Authorization = `Bearer ${token}`;
 
-      const normalizedRole = String(role || "").replace(/^ROLE_/i, "").toUpperCase();
+// Store JWT token and user info
+const { token, id, username, email, role, mustChangePassword } = res.data;
 
-      // Redirect to dashboard
-if (role === "ADMIN") {
+localStorage.setItem("token", token);
+localStorage.setItem(
+  "user",
+  JSON.stringify({ id, username, email, role, mustChangePassword })
+);
+
+// ✅ Keep axios auth header (important)
+axios.defaults.headers.common.Authorization = `Bearer ${token}`;
+
+// ✅ Keep role normalization
+const normalizedRole = String(role || "")
+  .replace(/^ROLE_/i, "")
+  .toUpperCase();
+
+
+if (mustChangePassword) {
+  navigate("/change-password");
+} else if (role === "SUPER_ADMIN" || role === "ADMIN") {
   navigate("/admin/dashboard");
 } else if (role === "TECHNICIAN") {
   navigate("/technician/dashboard");
 } else {
   navigate("/home");
 }
+
    } catch (err) {
   const status = err.response?.status;
   const msg = err.response?.data?.message;
