@@ -1,8 +1,9 @@
 package com.equipment.Management.System.demo.service;
 
 import com.equipment.Management.System.demo.model.Notification;
+import com.equipment.Management.System.demo.model.NotificationMessage;
 import com.equipment.Management.System.demo.repository.NotificationRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -11,14 +12,21 @@ import java.util.List;
 @Service
 public class NotificationService {
 
-    @Autowired
-    private NotificationRepository notificationRepository;
+    private final NotificationRepository notificationRepository;
+    private final SimpMessagingTemplate messagingTemplate;
 
-    // 🔔 CREATE NOTIFICATION
+    public NotificationService(NotificationRepository notificationRepository,
+                               SimpMessagingTemplate messagingTemplate) {
+        this.notificationRepository = notificationRepository;
+        this.messagingTemplate = messagingTemplate;
+    }
+
+    // 🔔 CREATE NOTIFICATION (DB + REAL-TIME)
     public Notification createNotification(Long userId, String title, String message,
                                            String type, Long relatedId, String relatedType,
                                            String priority) {
 
+        // ✅ 1. SAVE TO DATABASE
         Notification notification = new Notification();
 
         notification.setUserId(userId);
@@ -31,7 +39,17 @@ public class NotificationService {
         notification.setRead(false);
         notification.setCreatedAt(LocalDateTime.now());
 
-        return notificationRepository.save(notification);
+        Notification saved = notificationRepository.save(notification);
+
+        // ✅ 2. SEND REAL-TIME MESSAGE
+        NotificationMessage msg = new NotificationMessage();
+        msg.setTitle(title);
+        msg.setMessage(message);
+        msg.setType(type);
+
+        messagingTemplate.convertAndSend("/topic/notifications", msg);
+
+        return saved;
     }
 
     // 📥 GET USER NOTIFICATIONS
