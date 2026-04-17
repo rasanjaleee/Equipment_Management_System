@@ -5,6 +5,9 @@ export default function ActivityLog() {
   const [logs, setLogs] = useState([]);
   const [error, setError] = useState("");
 
+  const adminLogs = logs.filter((log) => log.role === "ROLE_ADMIN");
+  const technicianLogs = logs.filter((log) => log.role === "ROLE_TECHNICIAN");
+
   useEffect(() => {
     fetchLogs();
   }, []);
@@ -46,6 +49,46 @@ export default function ActivityLog() {
     }
   };
 
+  const renderLogTable = (tableLogs, emptyMessage) => (
+    <div className="bg-white shadow-2xl overflow-x-auto rounded-lg">
+      <table className="w-full text-sm">
+        <thead className="bg-yellow-500 text-white">
+          <tr>
+            <th className="px-4 py-2 text-center">ID</th>
+            <th className="px-4 py-2 text-center">Time</th>
+            <th className="px-4 py-2 text-center">Username</th>
+            <th className="px-4 py-2 text-center">Role</th>
+            <th className="px-4 py-2 text-center">Action</th>
+            <th className="px-4 py-2 text-center">Equipment ID</th>
+            <th className="px-4 py-2 text-center">Details</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {tableLogs.length > 0 ? (
+            tableLogs.map((log) => (
+              <tr key={log.id} className="border-b text-center hover:bg-gray-50">
+                <td className="px-4 py-3">{log.id}</td>
+                <td className="px-4 py-3">{formatTimestamp(log.timestamp)}</td>
+                <td className="px-4 py-3">{log.username || "-"}</td>
+                <td className="px-4 py-3">{formatRole(log.role)}</td>
+                <td className="px-4 py-3">{formatAction(log.action)}</td>
+                <td className="px-4 py-3">{log.equipmentId ?? "-"}</td>
+                <td className="px-4 py-3">{log.details || "-"}</td>
+              </tr>
+            ))
+          ) : (
+            <tr>
+              <td colSpan="7" className="px-4 py-8 text-center text-gray-500">
+                {emptyMessage}
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+
   return (
     <div className="bg-gradient-to-br from-gray-50 via-gray-100 to-gray-200 p-8 min-h-full">
       <div className="max-w-7xl mx-auto">
@@ -57,42 +100,16 @@ export default function ActivityLog() {
           </div>
         )}
 
-        <div className="bg-white shadow-2xl overflow-x-auto rounded-lg">
-          <table className="w-full text-sm">
-            <thead className="bg-yellow-500 text-white">
-              <tr>
-                <th className="px-4 py-3 text-center">ID</th>
-                <th className="px-4 py-3 text-center">Time</th>
-                <th className="px-4 py-3 text-center">Username</th>
-                <th className="px-4 py-3 text-center">Role</th>
-                <th className="px-4 py-3 text-center">Action</th>
-                <th className="px-4 py-3 text-center">Equipment ID</th>
-                <th className="px-4 py-3 text-center">Details</th>
-              </tr>
-            </thead>
+        <div className="space-y-8">
+          <section>
+            <h2 className="text-xl font-semibold mb-3">Admin Activity Logs</h2>
+            {renderLogTable(adminLogs, "No admin activity logs found")}
+          </section>
 
-            <tbody>
-              {logs.length > 0 ? (
-                logs.map((log) => (
-                  <tr key={log.id} className="border-b text-center hover:bg-gray-50">
-                    <td className="px-4 py-3">{log.id}</td>
-                    <td className="px-4 py-3">{formatTimestamp(log.timestamp)}</td>
-                    <td className="px-4 py-3">{log.username || "-"}</td>
-                    <td className="px-4 py-3">{formatRole(log.role)}</td>
-                    <td className="px-4 py-3">{formatAction(log.action)}</td>
-                    <td className="px-4 py-3">{log.equipmentId ?? "-"}</td>
-                    <td className="px-4 py-3">{log.details || "-"}</td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan="7" className="px-4 py-8 text-center text-gray-500">
-                    No activity logs found
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+          <section>
+            <h2 className="text-xl font-semibold mb-3">Technician Activity Logs</h2>
+            {renderLogTable(technicianLogs, "No technician activity logs found")}
+          </section>
         </div>
       </div>
     </div>

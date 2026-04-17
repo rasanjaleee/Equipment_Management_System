@@ -1,46 +1,40 @@
 // frontend/frontend/src/App.jsx
 
 import './App.css';
-
-import Login from './Pages/Login';    
-
-
-import BulkUploadEquipment from "./Pages/admin/BulkUploadEquipment";
-
 import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 
-
+import Login from './Pages/Login';
 import Register from './Pages/Register';
 import Landing from './Pages/Landing';
 import Home from './Pages/Home';
 import Equipment from './Pages/Equipment';
 import About from './Pages/About';
-import Navbar from './components/Navbar';
 import EquipmentDetails from './Pages/EquipmentDetails';
+import ProfilePage from './Pages/Profile';
+import LaboratoryPage from './Pages/Laboratory';
+import ChangePassword from './Pages/ChangePassword';
+
+import Navbar from './components/Navbar';
 import Footer from './components/Footer';
+import AdminLayout from './components/AdminLayout';
+import TechnicianLayout from './components/TechnicianLayout';
 
+import AdminRoute from './routes/AdminRoute';
+import TechnicianRoute from './routes/TechnicianRoute';
+import SuperAdminRoute from './routes/SuperAdminRoute';
 
-import AdminDashboard from "./Pages/admin/AdminDashboard";
-import AdminEquipment from "./Pages/admin/AdminEquipment";
-import AdminRoute from "./routes/AdminRoute";
-import MaintenancePage from "./Pages/admin/MaintenancePage";
-import AdminLayout from "./components/AdminLayout";
+import AdminDashboard from './Pages/admin/AdminDashboard';
+import AdminEquipment from './Pages/admin/AdminEquipment';
+import BulkUploadEquipment from './Pages/admin/BulkUploadEquipment';
+import MaintenancePage from './Pages/admin/MaintenancePage';
 import Issuance from './Pages/admin/Issuance';
 import UserManagement from './Pages/admin/UserManagement';
 import ActivityLog from './Pages/admin/ActivityLog';
-import TechnicianRoute from "./routes/TechnicianRoute";
-import TechnicianLayout from "./components/TechnicianLayout";
-import TechnicianDashboard from "./Pages/technician/TechnicianDashboard";
-import TechnicianEquipment from "./Pages/technician/TechnicianEquipment";
-import TechnicianActivityLog from "./Pages/technician/TechnicianActivityLog";
-import ProfilePage from './Pages/Profile';
-import LaboratoryPage from './Pages/Laboratory';
+import ReportsPage from './Pages/admin/ReportsPage';
 
-
-
-import Profile from "./Pages/Profile";
-
-
+import TechnicianDashboard from './Pages/technician/TechnicianDashboard';
+import TechnicianEquipment from './Pages/technician/TechnicianEquipment';
+import TechnicianActivityLog from './Pages/technician/TechnicianActivityLog';
 
 // Wrapper to provide Router context
 function AppWrapper() {
@@ -54,85 +48,67 @@ function AppWrapper() {
 function App() {
   const location = useLocation();
 
-  // Pages where Navbar should NOT appear
+  // Pages where Navbar/Footer should NOT appear
   const hideNavbarOn = ['/', '/login', '/register'];
 
   const isAdminRoute = location.pathname.startsWith('/admin');
   const isTechnicianRoute = location.pathname.startsWith('/technician');
 
-  // ✅ Navbar hidden for admin
-const shouldShowNavbar =
-  !hideNavbarOn.includes(location.pathname) && !isAdminRoute && !isTechnicianRoute;
+  const shouldShowNavbar =
+    !hideNavbarOn.includes(location.pathname) &&
+    !isAdminRoute &&
+    !isTechnicianRoute;
 
-// ✅ Footer always shown except login/landing pages
-const shouldShowFooter =
-  !hideNavbarOn.includes(location.pathname) && !isAdminRoute && !isTechnicianRoute;
-
+  const shouldShowFooter =
+    !hideNavbarOn.includes(location.pathname) &&
+    !isAdminRoute &&
+    !isTechnicianRoute;
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      
-      {/* Show Navbar only on allowed pages */}
       {shouldShowNavbar && <Navbar />}
 
-      <main className="flex-grow">
+      <main className={`flex-grow ${shouldShowNavbar ? 'pt-24' : ''}`}>
         <Routes>
-          <Route path='/' element={<Landing />} />
-          <Route path='/login' element={<Login />} />
-          <Route path='/register' element={<Register />} />
-          
-          <Route path='/home' element={<Home />} />
-          <Route path='/equipment' element={<Equipment />} />
+          {/* Public routes */}
+          <Route path="/" element={<Landing />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/change-password" element={<ChangePassword />} />
+          <Route path="/home" element={<Home />} />
+          <Route path="/equipment" element={<Equipment />} />
+          <Route path="/equipment/details/:equipmentName/:laboratory" element={<EquipmentDetails />}/>
+          <Route path="/equipment/item/:id" element={<EquipmentDetails />} />
+          <Route path="/issuance" element={<Navigate to="/admin/issuance" replace state={location.state} />}/>
+          <Route path="/about" element={<About />} />
+          <Route path="/profile" element={<ProfilePage />} />
 
-          <Route path='/equipment/details/:equipmentName/:laboratory' element={<EquipmentDetails />} />
-          <Route path='/equipment/item/:id' element={<EquipmentDetails />} />
-
-          
-          <Route path='/issuance' element={<Navigate to='/admin/issuance' replace state={location.state} />} />
-
-          <Route path='/about' element={<About />} />
-          <Route path="/profile" element={<Profile />} />
-          
           {/* Admin routes */}
-          <Route path="/admin" element={ <AdminRoute>   <AdminLayout /> </AdminRoute> }>
-          <Route path="dashboard" element={<AdminDashboard />} />
-          <Route path="equipment" element={<AdminEquipment />} />
+          <Route path="/admin" element={ <AdminRoute> <AdminLayout /> </AdminRoute> }>
+            <Route path="dashboard" element={<AdminDashboard />} />
+            <Route path="equipment" element={<AdminEquipment />} />
+            <Route path="equipment/bulk-upload" element={<BulkUploadEquipment />} />
+            <Route path="laboratories" element={<LaboratoryPage />} />
+            <Route path="maintenance" element={<MaintenancePage />} />
+            <Route path="issuance" element={<Issuance />} />
+            <Route path="profile" element={<ProfilePage />} />
+            <Route path="reports" element={<ReportsPage />} />
+            <Route path="users" element={ <SuperAdminRoute> <UserManagement /></SuperAdminRoute>} /> <Route path="activity-log" element={<ActivityLog />} /></Route>
 
-          <Route path="equipment/bulk-upload" element={<BulkUploadEquipment />} />
-          <Route path="laboratories" element={<LaboratoryPage />} />
-          <Route path="maintenance" element={<MaintenancePage />} />
-          <Route path="issuance" element={<Issuance />} />
-          <Route path="users" element={<UserManagement />} />
-          <Route path="activity-log" element={<ActivityLog />} />
+          {/* Technician routes */}
+          <Route path="/technician" element={ <TechnicianRoute> <TechnicianLayout /> </TechnicianRoute>}>
+            <Route path="dashboard" element={<TechnicianDashboard />} />
+            <Route path="equipment" element={<TechnicianEquipment />} />
+            <Route path="maintenance" element={<MaintenancePage />} />
+            <Route path="activity-log" element={<TechnicianActivityLog />} />
+            <Route path="profile" element={<ProfilePage />} />
           </Route>
-          
-
-          <Route path='/profile' element={<ProfilePage />} />
-
-
-          <Route
-           path="/technician"
-           element={
-              <TechnicianRoute>
-                <TechnicianLayout />
-                </TechnicianRoute>
-  }
->
-           <Route path="dashboard" element={<TechnicianDashboard />} />
-           <Route path="equipment" element={<TechnicianEquipment />} />
-           <Route path="maintenance" element={<MaintenancePage />} />
-             <Route path="activity-log" element={<TechnicianActivityLog />} />
-         </Route>
-
-
         </Routes>
       </main>
 
-      {/* Show Footer only on allowed pages */}
       {shouldShowFooter && <Footer />}
     </div>
   );
 }
 
-// Export the wrapper so Router context is available
 export default AppWrapper;

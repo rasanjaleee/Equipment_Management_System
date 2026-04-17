@@ -32,26 +32,25 @@ export default function AdminLayout() {
   const username = loggedInUser?.username || "User";
 
   const displayRole =
-    role === "ADMIN"
-      ? "Administrator"
-      : role === "TECHNICIAN"
-      ? "Technician"
-      : "User";
+  role === "SUPER_ADMIN"
+    ? "Super Admin"
+    : role === "ADMIN"
+    ? "Administrator"
+    : role === "TECHNICIAN"
+    ? "Technician"
+    : "User";
 
-  const welcomeText =
-    role === "ADMIN"
-      ? "Welcome back, Admin!"
-      : role === "TECHNICIAN"
-      ? "Welcome back, Technician!"
-      : "Welcome back!";
+const welcomeText =
+  role === "SUPER_ADMIN"
+    ? "Welcome back, Super Admin!"
+    : role === "ADMIN"
+    ? "Welcome back, Admin!"
+    : role === "TECHNICIAN"
+    ? "Welcome back, Technician!"
+    : "Welcome back!";
 
-  const displayName =
-    role === "ADMIN"
-      ? "Admin User"
-      : role === "TECHNICIAN"
-      ? username
-      : username;
-
+const displayName = username;
+    
   const avatarLetter = username ? username.charAt(0).toUpperCase() : "U";
 
   useEffect(() => {
@@ -64,16 +63,24 @@ export default function AdminLayout() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const menu = [
-    { to: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { to: "/admin/equipment", label: "Equipment", icon: Wrench },
-    { to: "/admin/laboratories", label: "Laboratories", icon: FlaskConical },
-    { to: "/admin/issuance", label: "Issuance", icon: ClipboardList },
-    { to: "/admin/maintenance", label: "Maintenance", icon: History },
-    { to: "/admin/reports", label: "Reports", icon: FileBarChart },
-    { to: "/admin/users", label: "User Management", icon: Users },
-    { to: "/admin/activity-log", label: "Activity Log", icon: ClipboardList },
-  ];
+ const baseMenu = [
+  { to: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { to: "/admin/equipment", label: "Equipment", icon: Wrench },
+  { to: "/admin/laboratories", label: "Laboratories", icon: FlaskConical },
+  { to: "/admin/issuance", label: "Issuance", icon: ClipboardList },
+  { to: "/admin/maintenance", label: "Maintenance", icon: History },
+  { to: "/admin/reports", label: "Reports", icon: FileBarChart },
+  { to: "/admin/activity-log", label: "Activity Log", icon: ClipboardList },
+];
+
+const superAdminOnlyMenu = [
+  { to: "/admin/users", label: "User Management", icon: Users },
+];
+
+const menu =
+  role === "SUPER_ADMIN"
+    ? [...baseMenu, ...superAdminOnlyMenu]
+    : baseMenu;
 
   const bottomMenu = [
     { to: "/admin/notifications", label: "Notifications", icon: Bell },
