@@ -1,6 +1,7 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Bell, MessageSquare, LogOut, User } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import useNotificationSocket from "../services/useNotificationSocket";
 
 // 👉 Notification APIs
 import {
@@ -10,7 +11,6 @@ import {
 } from "../services/notificationService";
 
 const Navbar = () => {
-
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
@@ -21,6 +21,14 @@ const Navbar = () => {
   const navigate = useNavigate();
 
   const userId = 1; // 👉 replace with logged-in user id later
+
+  // ================= REAL-TIME NOTIFICATION HANDLER =================
+  const handleRealtimeNotification = useCallback((newNotif) => {
+    setNotifications((prev) => [newNotif, ...prev]);
+    setUnreadCount((prev) => prev + 1);
+  }, []);
+
+  useNotificationSocket(handleRealtimeNotification);
 
   // ================= LOAD NOTIFICATIONS =================
   const loadNotifications = async () => {
@@ -42,7 +50,6 @@ const Navbar = () => {
   // ================= CLOSE OUTSIDE CLICK =================
   useEffect(() => {
     const handleClickOutside = (event) => {
-
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setIsDropdownOpen(false);
       }
@@ -71,7 +78,6 @@ const Navbar = () => {
 
   return (
     <nav className="bg-gradient-to-r from-yellow-500 to-orange-400 px-6 py-1 shadow-md">
-
       <div className="max-w-7xl mx-auto flex items-center justify-between">
 
         {/* ================= LEFT LOGO ================= */}
@@ -104,7 +110,6 @@ const Navbar = () => {
 
           {/* ================= NOTIFICATION BELL ================= */}
           <div className="relative" ref={notifRef}>
-
             <button
               onClick={() => setNotifOpen(!notifOpen)}
               className="text-white hover:text-gray-100 relative"
@@ -122,7 +127,6 @@ const Navbar = () => {
             {/* ================= DROPDOWN ================= */}
             {notifOpen && (
               <div className="absolute right-0 mt-2 w-80 bg-white shadow-lg rounded-lg z-50 max-h-96 overflow-y-auto">
-
                 <div className="p-2 border-b font-semibold">
                   Notifications
                 </div>
@@ -143,7 +147,6 @@ const Navbar = () => {
                     </div>
                   ))
                 )}
-
               </div>
             )}
           </div>
@@ -164,7 +167,6 @@ const Navbar = () => {
 
             {isDropdownOpen && (
               <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-1 z-50">
-
                 <Link
                   to="/profile"
                   className="flex items-center gap-3 px-4 py-2 hover:bg-gray-100"
@@ -183,7 +185,6 @@ const Navbar = () => {
                   <LogOut size={18} />
                   Logout
                 </button>
-
               </div>
             )}
           </div>
