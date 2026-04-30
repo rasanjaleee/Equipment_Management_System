@@ -39,16 +39,16 @@ public class MaintenanceService {
                         "Equipment not found with id: " + dto.equipmentId()
                 ));
 
-        Maintenance m = Maintenance.builder()
-                .equipment(eq)
-                .issueDescription(dto.issueDescription())
-                .priority(dto.priority())
-                .dueDate(dto.dueDate())
-                .build();
+        // ✅ FIXED: removed builder()
+        Maintenance m = new Maintenance();
+        m.setEquipment(eq);
+        m.setIssueDescription(dto.issueDescription());
+        m.setPriority(dto.priority());
+        m.setDueDate(dto.dueDate());
 
         Maintenance saved = repo.save(m);
 
-        // 🔔 NOTIFICATION (ADMIN / TECHNICIAN)
+        // 🔔 NOTIFICATION
         notificationService.createNotification(
                 null,
                 "New Maintenance Created",
@@ -104,18 +104,23 @@ public class MaintenanceService {
         if (dto.issueDescription() != null) {
             m.setIssueDescription(dto.issueDescription());
         }
+
         if (dto.priority() != null) {
             m.setPriority(dto.priority());
         }
+
         if (dto.dueDate() != null) {
             m.setDueDate(dto.dueDate());
         }
+
         if (dto.status() != null) {
             m.setStatus(dto.status());
         }
+
         if (dto.repairNote() != null) {
             m.setRepairNote(dto.repairNote());
         }
+
         if (dto.cost() != null) {
             m.setCost(dto.cost());
         }

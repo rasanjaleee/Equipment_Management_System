@@ -35,7 +35,7 @@ import TechnicianEquipment from "./Pages/technician/TechnicianEquipment";
 import TechnicianActivityLog from "./Pages/technician/TechnicianActivityLog";
 import ProfilePage from './Pages/Profile';
 import LaboratoryPage from './Pages/Laboratory';
-
+import AdminProfile from "./pages/admin/AdminProfile";
 
 
 import Profile from "./Pages/Profile";
@@ -97,7 +97,7 @@ const shouldShowFooter =
           <Route path="/admin" element={ <AdminRoute>   <AdminLayout /> </AdminRoute> }>
           <Route path="dashboard" element={<AdminDashboard />} />
           <Route path="equipment" element={<AdminEquipment />} />
-
+          <Route path="profile" element={<AdminProfile />} />
           <Route path="equipment/bulk-upload" element={<BulkUploadEquipment />} />
           <Route path="laboratories" element={<LaboratoryPage />} />
           <Route path="maintenance" element={<MaintenancePage />} />
