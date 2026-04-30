@@ -1,86 +1,41 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import axios from "axios";
 
 export default function LaboratoryPage() {
-  const [labs, setLabs] = useState([
-    {
-      id: 1,
-      name: "Electrical Machines & Power Electronics Lab",
-      department: "EIE Dept",
-      categoryDepartment: "Electrical & Electronic",
-      location: "Block A - Room 201",
-      inCharge: "Mr. Silva",
-      totalEquipment: 50,
-      workingEquipment: 45,
-    },
-    {
-      id: 2,
-      name: "Power System & High Voltage Lab",
-      department: "EIE Dept",
-      categoryDepartment: "Electrical & Electronic",
-      location: "Block A - Room 202",
-      inCharge: "Ms. Fernando",
-      totalEquipment: 40,
-      workingEquipment: 38,
-    },
-    {
-      id: 3,
-      name: "Electronics & Measurements Lab",
-      department: "EIE Dept",
-      categoryDepartment: "Electrical & Electronic",
-      location: "Block B - Room 101",
-      inCharge: "Mr. Perera",
-      totalEquipment: 55,
-      workingEquipment: 50,
-    },
-    {
-      id: 4,
-      name: "Communication & Systems Engineering Lab",
-      department: "EIE Dept",
-      categoryDepartment: "Electrical & Electronic",
-      location: "Block B - Room 102",
-      inCharge: "Ms. Jayawardena",
-      totalEquipment: 45,
-      workingEquipment: 42,
-    },
-    {
-      id: 5,
-      name: "Undergraduate Project Development Lab",
-      department: "EIE Dept",
-      categoryDepartment: "Electrical & Electronic",
-      location: "Block C - Room 301",
-      inCharge: "Mr. Kumara",
-      totalEquipment: 30,
-      workingEquipment: 28,
-    },
-    {
-      id: 6,
-      name: "Information Engineering Lab",
-      department: "CS Dept",
-      categoryDepartment: "Electrical & Electronic",
-      location: "Block C - Room 302",
-      inCharge: "Ms. Silva",
-      totalEquipment: 35,
-      workingEquipment: 33,
-    },
-  ]);
+  const [labs, setLabs] = useState([]);
+
+  useEffect(() => {
+    axios
+      .get("http://localhost:8080/api/lab")
+      .then((res) => setLabs(Array.isArray(res.data) ? res.data : []))
+      .catch((err) =>
+        console.log("GET ERROR:", err.response?.data || err.message)
+      );
+  }, []);
 
   const [selectedLab, setSelectedLab] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState("");
+
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editLab, setEditLab] = useState(null);
+
   const [newLab, setNewLab] = useState({
     name: "",
     department: "",
     categoryDepartment: "",
     location: "",
     inCharge: "",
-    totalEquipment: 0,
-    workingEquipment: 0,
+    totalEquipment: "",
+    workingEquipment: "",
+    underRepairEquipment: "",
   });
 
   const filteredLabs = labs
     .filter((lab) =>
-      Object.values(lab)
+      Object.values(lab || {})
+        .filter(Boolean)
         .join(" ")
         .toLowerCase()
         .includes(searchTerm.toLowerCase())
@@ -89,301 +44,357 @@ export default function LaboratoryPage() {
       departmentFilter ? lab.categoryDepartment === departmentFilter : true
     );
 
-  const handleAddLab = (e) => {
+  const handleAddLab = async (e) => {
     e.preventDefault();
-    const labToAdd = { ...newLab, id: labs.length + 1 };
-    setLabs([...labs, labToAdd]);
-    setNewLab({
-      name: "",
-      department: "",
-      categoryDepartment: "",
-      location: "",
-      inCharge: "",
-      totalEquipment: 0,
-      workingEquipment: 0,
-    });
-    setIsAddModalOpen(false);
+
+    try {
+      const payload = {
+        ...newLab,
+        totalEquipment: Number(newLab.totalEquipment || 0),
+        workingEquipment: Number(newLab.workingEquipment || 0),
+        underRepairEquipment: Number(newLab.underRepairEquipment || 0),
+      };
+
+      const res = await axios.post("http://localhost:8080/api/lab", payload);
+
+      setLabs((prev) => [...prev, res.data]);
+
+      setNewLab({
+        name: "",
+        department: "",
+        categoryDepartment: "",
+        location: "",
+        inCharge: "",
+        totalEquipment: "",
+        workingEquipment: "",
+        underRepairEquipment: "",
+      });
+
+      setIsAddModalOpen(false);
+    } catch (err) {
+      console.log("ADD ERROR:", err.response?.data || err.message);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    try {
+      await axios.delete(`http://localhost:8080/api/lab/${id}`);
+      setLabs(labs.filter((lab) => lab.id !== id));
+    } catch (err) {
+      console.log("DELETE ERROR:", err.response?.data || err.message);
+    }
+  };
+
+  const handleEditSave = async (e) => {
+    e.preventDefault();
+
+    try {
+      const payload = {
+        ...editLab,
+        totalEquipment: Number(editLab.totalEquipment || 0),
+        workingEquipment: Number(editLab.workingEquipment || 0),
+        underRepairEquipment: Number(editLab.underRepairEquipment || 0),
+      };
+
+      const res = await axios.put(
+        `http://localhost:8080/api/lab/${editLab.id}`,
+        payload
+      );
+
+      setLabs(labs.map((lab) => (lab.id === editLab.id ? res.data : lab)));
+
+      setIsEditModalOpen(false);
+      setEditLab(null);
+    } catch (err) {
+      console.log("UPDATE ERROR:", err.response?.data || err.message);
+    }
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-100 font-sans">
-      {/* Header */}
-      <div className="bg-amber-500 text-white font-bold text-xl p-4">
+    <div className="min-h-screen bg-gray-100">
+
+      {/* HEADER */}
+      <div className="bg-amber-500 text-white p-4 font-bold text-xl">
         Laboratory Management
       </div>
 
-      {/* Controls */}
-      <div className="flex justify-between p-6">
+      {/* CONTROLS */}
+      <div className="flex justify-between p-4">
         <button
-          className="bg-amber-500 text-white px-4 py-2 rounded hover:bg-amber-600"
           onClick={() => setIsAddModalOpen(true)}
+          className="bg-amber-500 text-white px-4 py-2 rounded"
         >
-          Add Laboratory
+          Add Lab
         </button>
 
         <input
-          type="text"
-          placeholder="Search Labs..."
-          className="border border-gray-300 px-2 py-1 rounded"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
+          placeholder="Search..."
+          className="border px-3 py-2 rounded w-64"
         />
       </div>
 
-      {/* Department Filter */}
-      <div className="ml-5 mb-4 text-base">
-        <label>
-          Filter by Department:{" "}
-          <select
-            value={departmentFilter}
-            onChange={(e) => setDepartmentFilter(e.target.value)}
-            className="ml-2 px-2 py-1 border border-gray-300 rounded"
-          >
-            <option value="">All Departments</option>
-            <option value="Electrical & Electronic">Electrical & Electronic</option>
-            <option value="Mechanical & Manufacturing">Mechanical & Manufacturing</option>
-            <option value="Civil & Environmental">Civil & Environmental</option>
-            <option value="Marine & Naval Architecture">Marine & Naval Architecture</option>
-          </select>
-        </label>
+      {/* FILTER */}
+      <div className="p-4">
+        <select
+          value={departmentFilter}
+          onChange={(e) => setDepartmentFilter(e.target.value)}
+          className="border px-3 py-2 rounded"
+        >
+          <option value="">All Departments</option>
+          <option value="Electrical & Electronic">Electrical & Electronic</option>
+          <option value="Mechanical & Manufacturing">Mechanical & Manufacturing</option>
+          <option value="Civil & Environmental">Civil & Environmental</option>
+          <option value="Marine & Naval Architecture">Marine & Naval Architecture</option>
+        </select>
       </div>
 
-      {/* Lab Table */}
-      <div className="overflow-x-auto mx-6 mb-8 bg-white rounded shadow">
-        <table className="w-full border-collapse">
-          <thead>
-            <tr className="bg-gray-200">
-              <th className="px-4 py-2 text-left">Lab Name</th>
-              <th className="px-4 py-2 text-left">Department</th>
-              <th className="px-4 py-2 text-left">Location</th>
-              <th className="px-4 py-2 text-left">Lab In-Charge</th>
-              <th className="px-4 py-2 text-left">Total Equipment</th>
-              <th className="px-4 py-2 text-left">Working</th>
-              <th className="px-4 py-2 text-left">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredLabs.length > 0 ? (
-              filteredLabs.map((lab) => (
-                <tr key={lab.id} className="border-b">
-                  <td className="px-4 py-2">{lab.name}</td>
-                  <td className="px-4 py-2">{lab.department}</td>
-                  <td className="px-4 py-2">{lab.location}</td>
-                  <td className="px-4 py-2">{lab.inCharge}</td>
-                  <td className="px-4 py-2">{lab.totalEquipment}</td>
-                  <td className="px-4 py-2">{lab.workingEquipment}</td>
-                  <td className="px-4 py-2 space-x-2">
-                    <button
-                      className="text-blue-500 hover:underline"
-                      onClick={() => setSelectedLab(lab)}
-                    >
-                      View
-                    </button>
-                    <button className="text-green-500 hover:underline">Edit</button>
-                    <button className="text-red-500 hover:underline">Delete</button>
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan="7" className="text-center py-4">
-                  No labs found
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {/* View Lab Modal */}
+      {/* VIEW CARD */}
       {selectedLab && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
-          <div className="bg-white p-6 rounded w-3/4 max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between mb-4">
-              <h2 className="text-xl font-bold">{selectedLab.name}</h2>
-              <button
-                className="text-red-500 font-bold"
-                onClick={() => setSelectedLab(null)}
-              >
-                X
-              </button>
+        <div className="mx-4 mb-4 p-4 bg-white shadow rounded-lg">
+          <h2 className="text-xl font-bold mb-4">
+            {selectedLab.name} - Overview
+          </h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+
+            <div className="bg-gray-100 p-4 rounded-lg text-center">
+              <p>Total</p>
+              <p className="text-2xl font-bold">{selectedLab.totalEquipment}</p>
             </div>
 
-            <div className="grid grid-cols-4 gap-4 mb-4 text-white font-bold text-center">
-              <div className="bg-amber-500 p-4 rounded">Total: {selectedLab.totalEquipment}</div>
-              <div className="bg-green-500 p-4 rounded">Working: {selectedLab.workingEquipment}</div>
-              <div className="bg-red-500 p-4 rounded">
-                Broken: {selectedLab.totalEquipment - selectedLab.workingEquipment}
-              </div>
-              <div className="bg-blue-500 p-4 rounded">Issued: 5</div>
+            <div className="bg-green-100 p-4 rounded-lg text-center">
+              <p>Working</p>
+              <p className="text-2xl font-bold text-green-600">
+                {selectedLab.workingEquipment}
+              </p>
             </div>
 
-            <div className="mb-4">
-              <h3 className="font-semibold mb-2">Equipment in this Lab</h3>
-              <table className="w-full border-collapse bg-gray-50">
-                <thead>
-                  <tr className="bg-gray-200">
-                    <th className="px-4 py-2 text-left">Equipment Name</th>
-                    <th className="px-4 py-2 text-left">Model / Serial</th>
-                    <th className="px-4 py-2 text-left">Status</th>
-                    <th className="px-4 py-2 text-left">Availability</th>
-                    <th className="px-4 py-2 text-left">Last Maintenance</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr className="border-b">
-                    <td className="px-4 py-2">Multimeter</td>
-                    <td className="px-4 py-2">MT-101</td>
-                    <td className="px-4 py-2">Working</td>
-                    <td className="px-4 py-2">Available</td>
-                    <td className="px-4 py-2">2026-02-15</td>
-                  </tr>
-                  <tr className="border-b">
-                    <td className="px-4 py-2">Oscilloscope</td>
-                    <td className="px-4 py-2">OS-500</td>
-                    <td className="px-4 py-2">Repair</td>
-                    <td className="px-4 py-2">Issued</td>
-                    <td className="px-4 py-2">2026-02-10</td>
-                  </tr>
-                </tbody>
-              </table>
+            <div className="bg-blue-100 p-4 rounded-lg text-center">
+              <p>Under Repair</p>
+              <p className="text-2xl font-bold text-blue-600">
+                {selectedLab.underRepairEquipment || 0}
+              </p>
             </div>
 
-            <div className="flex justify-end">
-              <button
-                className="bg-amber-500 text-white px-4 py-2 rounded hover:bg-amber-600"
-                onClick={() => setSelectedLab(null)}
-              >
-                Close
-              </button>
+            <div className="bg-red-100 p-4 rounded-lg text-center">
+              <p>Broken</p>
+              <p className="text-2xl font-bold text-red-600">
+                {selectedLab.totalEquipment -
+                  (selectedLab.workingEquipment +
+                    (selectedLab.underRepairEquipment || 0))}
+              </p>
             </div>
+
           </div>
+
+          <button
+            onClick={() => setSelectedLab(null)}
+            className="mt-4 text-sm text-blue-600 hover:underline"
+          >
+            Close
+          </button>
         </div>
       )}
 
-      {/* Add Lab Modal */}
+      {/* TABLE */}
+      <div className="p-4">
+        <div className="bg-white rounded-lg shadow overflow-x-auto">
+          <table className="w-full border border-gray-200">
+
+            <thead className="bg-gray-100 text-gray-700 text-sm uppercase">
+              <tr>
+                <th className="p-3 border">Name</th>
+                <th className="p-3 border">Dept</th>
+                <th className="p-3 border">Location</th>
+                <th className="p-3 border">InCharge</th>
+                <th className="p-3 border text-center">Total</th>
+                <th className="p-3 border text-center">Working</th>
+                <th className="p-3 border text-center">Actions</th>
+              </tr>
+            </thead>
+
+            <tbody className="text-gray-700 text-sm">
+              {filteredLabs.length === 0 ? (
+                <tr>
+                  <td colSpan="7" className="p-4 text-center text-gray-500">
+                    No labs found.
+                  </td>
+                </tr>
+              ) : (
+                filteredLabs.map((lab, index) => (
+                  <tr
+                    key={lab.id}
+                    className={`border hover:bg-gray-50 transition ${
+                      index % 2 === 0 ? "bg-white" : "bg-gray-50"
+                    }`}
+                  >
+                    <td className="p-3 border font-medium">{lab.name}</td>
+                    <td className="p-3 border">{lab.department}</td>
+                    <td className="p-3 border">{lab.location}</td>
+                    <td className="p-3 border">{lab.inCharge}</td>
+                    <td className="p-3 border text-center">{lab.totalEquipment}</td>
+                    <td className="p-3 border text-center text-green-600 font-semibold">
+                      {lab.workingEquipment}
+                    </td>
+
+                    <td className="p-3 border text-center space-x-2">
+                      <button
+                        onClick={() => setSelectedLab(lab)}
+                        className="text-blue-600 hover:underline"
+                      >
+                        View
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setEditLab(lab);
+                          setIsEditModalOpen(true);
+                        }}
+                        className="text-green-600 hover:underline"
+                      >
+                        Edit
+                      </button>
+
+                      <button
+                        onClick={() => handleDelete(lab.id)}
+                        className="text-red-600 hover:underline"
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+
+          </table>
+        </div>
+      </div>
+
+      {/* ADD MODAL */}
       {isAddModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
-          <div className="bg-white p-6 rounded w-1/2 max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between mb-4">
-              <h2 className="text-xl font-bold">Add New Laboratory</h2>
-              <button
-                className="text-red-500 font-bold"
-                onClick={() => setIsAddModalOpen(false)}
-              >
-                X
-              </button>
-            </div>
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center">
+          <div className="bg-white p-6 rounded-lg w-[400px]">
+            <h2 className="text-xl font-bold mb-4">Add Lab</h2>
 
-            <form className="flex flex-col gap-4" onSubmit={handleAddLab}>
-              <label className="flex flex-col text-sm font-medium">
-                Lab Name:
-                <input
-                  type="text"
-                  value={newLab.name}
-                  onChange={(e) =>
-                    setNewLab({ ...newLab, name: e.target.value })
-                  }
-                  className="border border-gray-300 px-2 py-1 rounded"
-                  required
-                />
-              </label>
+            <form onSubmit={handleAddLab} className="space-y-3">
+              <input className="w-full border p-2" placeholder="Name"
+                value={newLab.name}
+                onChange={(e) => setNewLab({ ...newLab, name: e.target.value })}
+              />
+              <input className="w-full border p-2" placeholder="Department"
+                value={newLab.department}
+                onChange={(e) => setNewLab({ ...newLab, department: e.target.value })}
+              />
+              <input className="w-full border p-2" placeholder="Category Department"
+                value={newLab.categoryDepartment}
+                onChange={(e) => setNewLab({ ...newLab, categoryDepartment: e.target.value })}
+              />
+              <input className="w-full border p-2" placeholder="Location"
+                value={newLab.location}
+                onChange={(e) => setNewLab({ ...newLab, location: e.target.value })}
+              />
+              <input className="w-full border p-2" placeholder="InCharge"
+                value={newLab.inCharge}
+                onChange={(e) => setNewLab({ ...newLab, inCharge: e.target.value })}
+              />
+              <input className="w-full border p-2" type="number" placeholder="Total Equipment"
+                value={newLab.totalEquipment}
+                onChange={(e) => setNewLab({ ...newLab, totalEquipment: e.target.value })}
+              />
+              <input className="w-full border p-2" type="number" placeholder="Working Equipment"
+                value={newLab.workingEquipment}
+                onChange={(e) => setNewLab({ ...newLab, workingEquipment: e.target.value })}
+              />
 
-              <label className="flex flex-col text-sm font-medium">
-                Department:
-                <select
-                  value={newLab.categoryDepartment}
-                  onChange={(e) =>
-                    setNewLab({ ...newLab, categoryDepartment: e.target.value })
-                  }
-                  className="border border-gray-300 px-2 py-1 rounded"
-                  required
-                >
-                  <option value="">Select Department</option>
-                  <option value="Electrical & Electronic">Electrical & Electronic</option>
-                  <option value="Mechanical & Manufacturing">Mechanical & Manufacturing</option>
-                  <option value="Civil & Environmental">Civil & Environmental</option>
-                  <option value="Marine & Naval Architecture">Marine & Naval Architecture</option>
-                </select>
-              </label>
-
-              <label className="flex flex-col text-sm font-medium">
-                Location:
-                <input
-                  type="text"
-                  value={newLab.location}
-                  onChange={(e) =>
-                    setNewLab({ ...newLab, location: e.target.value })
-                  }
-                  className="border border-gray-300 px-2 py-1 rounded"
-                  required
-                />
-              </label>
-
-              <label className="flex flex-col text-sm font-medium">
-                Lab In-Charge:
-                <input
-                  type="text"
-                  value={newLab.inCharge}
-                  onChange={(e) =>
-                    setNewLab({ ...newLab, inCharge: e.target.value })
-                  }
-                  className="border border-gray-300 px-2 py-1 rounded"
-                  required
-                />
-              </label>
-
-              <label className="flex flex-col text-sm font-medium">
-                Total Equipment:
-                <input
-                  type="number"
-                  value={newLab.totalEquipment}
-                  onChange={(e) =>
-                    setNewLab({
-                      ...newLab,
-                      totalEquipment: Number(e.target.value),
-                    })
-                  }
-                  className="border border-gray-300 px-2 py-1 rounded"
-                  required
-                />
-              </label>
-
-              <label className="flex flex-col text-sm font-medium">
-                Working Equipment:
-                <input
-                  type="number"
-                  value={newLab.workingEquipment}
-                  onChange={(e) =>
-                    setNewLab({
-                      ...newLab,
-                      workingEquipment: Number(e.target.value),
-                    })
-                  }
-                  className="border border-gray-300 px-2 py-1 rounded"
-                  required
-                />
-              </label>
-
-              <div className="flex justify-end gap-2 mt-2">
-                <button
-                  type="submit"
-                  className="bg-amber-500 text-white px-4 py-2 rounded hover:bg-amber-600"
-                >
-                  Add Lab
-                </button>
-                <button
-                  type="button"
-                  className="text-red-500 font-bold px-4 py-2 rounded border border-red-500 hover:bg-red-50"
+              <div className="flex justify-between pt-3">
+                <button type="button"
                   onClick={() => setIsAddModalOpen(false)}
+                  className="bg-gray-400 text-white px-3 py-1 rounded"
                 >
                   Cancel
+                </button>
+
+                <button type="submit"
+                  className="bg-amber-500 text-white px-3 py-1 rounded"
+                >
+                  Save
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
+
+      {/* ✅ EDIT MODAL (ONLY ADDED PART) */}
+      {isEditModalOpen && editLab && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center">
+          <div className="bg-white p-6 rounded-lg w-[400px]">
+
+            <h2 className="text-xl font-bold mb-4">Edit Lab</h2>
+
+            <form onSubmit={handleEditSave} className="space-y-3">
+
+              <input className="w-full border p-2"
+                value={editLab.name}
+                onChange={(e) => setEditLab({ ...editLab, name: e.target.value })}
+              />
+
+              <input className="w-full border p-2"
+                value={editLab.department}
+                onChange={(e) => setEditLab({ ...editLab, department: e.target.value })}
+              />
+
+              <input className="w-full border p-2"
+                value={editLab.categoryDepartment}
+                onChange={(e) => setEditLab({ ...editLab, categoryDepartment: e.target.value })}
+              />
+
+              <input className="w-full border p-2"
+                value={editLab.location}
+                onChange={(e) => setEditLab({ ...editLab, location: e.target.value })}
+              />
+
+              <input className="w-full border p-2"
+                value={editLab.inCharge}
+                onChange={(e) => setEditLab({ ...editLab, inCharge: e.target.value })}
+              />
+
+              <input className="w-full border p-2" type="number"
+                value={editLab.totalEquipment}
+                onChange={(e) => setEditLab({ ...editLab, totalEquipment: e.target.value })}
+              />
+
+              <input className="w-full border p-2" type="number"
+                value={editLab.workingEquipment}
+                onChange={(e) => setEditLab({ ...editLab, workingEquipment: e.target.value })}
+              />
+
+              <div className="flex justify-between pt-3">
+                <button type="button"
+                  onClick={() => {
+                    setIsEditModalOpen(false);
+                    setEditLab(null);
+                  }}
+                  className="bg-gray-400 text-white px-3 py-1 rounded"
+                >
+                  Cancel
+                </button>
+
+                <button type="submit"
+                  className="bg-green-600 text-white px-3 py-1 rounded"
+                >
+                  Update
+                </button>
+              </div>
+
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

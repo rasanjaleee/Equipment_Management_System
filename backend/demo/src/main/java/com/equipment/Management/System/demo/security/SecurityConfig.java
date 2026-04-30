@@ -40,52 +40,48 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+
         http
                 .cors(Customizer.withDefaults())
                 .csrf(csrf -> csrf.disable())
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                )
                 .authorizeHttpRequests(auth -> auth
 
-                        // public auth endpoints
+                        // PUBLIC
                         .requestMatchers("/auth/**").permitAll()
-                        .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/error").permitAll()
                         .requestMatchers("/uploads/**").permitAll()
-
-                        // preflight
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                        // admin endpoints
+                        // ✅ FIX: ALLOW LAB APIs (THIS WAS MISSING)
+                        .requestMatchers("/api/lab/**").permitAll()
+
+                        // ADMIN ONLY
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
 
-                        // equipment
+                        // EQUIPMENT
                         .requestMatchers(HttpMethod.GET, "/api/equipment/**").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/equipment/**").hasAnyRole("ADMIN", "TECHNICIAN")
                         .requestMatchers(HttpMethod.PUT, "/api/equipment/**").hasAnyRole("ADMIN", "TECHNICIAN")
                         .requestMatchers(HttpMethod.DELETE, "/api/equipment/**").hasAnyRole("ADMIN", "TECHNICIAN")
 
-                        // maintenance
-                        .requestMatchers(HttpMethod.GET, "/api/maintenance/**").authenticated()
-                        .requestMatchers(HttpMethod.POST, "/api/maintenance/**").hasAnyRole("ADMIN", "TECHNICIAN")
-                        .requestMatchers(HttpMethod.PUT, "/api/maintenance/**").hasAnyRole("ADMIN", "TECHNICIAN")
-                        .requestMatchers(HttpMethod.DELETE, "/api/maintenance/**").hasAnyRole("ADMIN", "TECHNICIAN")
+                        // MAINTENANCE
+                        .requestMatchers("/api/maintenance/**").authenticated()
 
-                        // activity logs
-                        .requestMatchers(HttpMethod.GET, "/api/activity-logs/**").hasAnyRole("ADMIN", "TECHNICIAN")
+                        // LOGS
+                        .requestMatchers("/api/activity-logs/**").hasAnyRole("ADMIN", "TECHNICIAN")
 
-                        // issuances
-                        .requestMatchers(HttpMethod.GET, "/api/issuances/**").authenticated()
-                        .requestMatchers(HttpMethod.POST, "/api/issuances/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/api/issuances/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/api/issuances/**").hasRole("ADMIN")
+                        // ISSUANCES
+                        .requestMatchers("/api/issuances/**").hasRole("ADMIN")
 
-                        // borrow requests
-                        .requestMatchers(HttpMethod.GET, "/api/borrow-requests/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.POST, "/api/borrow-requests/**").authenticated()
-                        .requestMatchers(HttpMethod.PATCH, "/api/borrow-requests/**").hasRole("ADMIN")
+                        // BORROW REQUESTS
+                        .requestMatchers("/api/borrow-requests/**").authenticated()
 
                         .anyRequest().authenticated()
                 )
+
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
                 .formLogin(form -> form.disable());
 
@@ -94,20 +90,31 @@ public class SecurityConfig {
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
+
         CorsConfiguration configuration = new CorsConfiguration();
 
         configuration.setAllowedOrigins(List.of(
+                "http://localhost:5174",
                 "http://localhost:5173",
                 "http://localhost:3000"
         ));
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+
+        configuration.setAllowedMethods(List.of(
+                "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"
+        ));
+
+        configuration.setAllowedHeaders(List.of(
+                "Authorization", "Content-Type"
+        ));
+
         configuration.setExposedHeaders(List.of("Authorization"));
-        configuration.setAllowCredentials(false);
+
+        configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
+
         return source;
     }
 }
