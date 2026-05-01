@@ -40,62 +40,65 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+
         http
                 .cors(Customizer.withDefaults())
                 .csrf(csrf -> csrf.disable())
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                )
                 .authorizeHttpRequests(auth -> auth
 
-                        // Public endpoints
+                        // PUBLIC
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/error").permitAll()
                         .requestMatchers("/uploads/**").permitAll()
                         .requestMatchers("/ws/**").permitAll()
-
-                        // Preflight requests
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                        // Admin management
-                        .requestMatchers("/api/admin/**").hasRole("SUPER_ADMIN")
+                        // LAB APIs
+                        .requestMatchers("/api/lab/**").permitAll()
 
-                        // Equipment
+                        // ADMIN
+                        .requestMatchers("/api/admin/**").hasAnyRole("SUPER_ADMIN", "ADMIN")
+
+                        // EQUIPMENT
                         .requestMatchers(HttpMethod.GET, "/api/equipment/**").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/equipment/**").hasAnyRole("SUPER_ADMIN", "ADMIN", "TECHNICIAN")
                         .requestMatchers(HttpMethod.PUT, "/api/equipment/**").hasAnyRole("SUPER_ADMIN", "ADMIN", "TECHNICIAN")
                         .requestMatchers(HttpMethod.DELETE, "/api/equipment/**").hasAnyRole("SUPER_ADMIN", "ADMIN", "TECHNICIAN")
 
-                        // Activity logs
-                        .requestMatchers(HttpMethod.GET, "/api/activity-logs/**").hasAnyRole("SUPER_ADMIN", "ADMIN", "TECHNICIAN")
-
-                        // Issuances
-                        .requestMatchers(HttpMethod.GET, "/api/issuances/**").authenticated()
-                        .requestMatchers(HttpMethod.POST, "/api/issuances/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/api/issuances/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/api/issuances/**").hasRole("ADMIN")
-
-                        // Borrow requests
-                        .requestMatchers(HttpMethod.GET, "/api/borrow-requests/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.POST, "/api/borrow-requests/**").authenticated()
-                        .requestMatchers(HttpMethod.PATCH, "/api/borrow-requests/**").hasRole("ADMIN")
-
-                        // Maintenance
+                        // MAINTENANCE
                         .requestMatchers(HttpMethod.GET, "/api/maintenance/**").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/maintenance/**").hasAnyRole("SUPER_ADMIN", "ADMIN", "TECHNICIAN")
                         .requestMatchers(HttpMethod.PUT, "/api/maintenance/**").hasAnyRole("SUPER_ADMIN", "ADMIN", "TECHNICIAN")
                         .requestMatchers(HttpMethod.DELETE, "/api/maintenance/**").hasAnyRole("SUPER_ADMIN", "ADMIN", "TECHNICIAN")
 
-                        // Reports
+                        // ACTIVITY LOGS
+                        .requestMatchers(HttpMethod.GET, "/api/activity-logs/**").hasAnyRole("SUPER_ADMIN", "ADMIN", "TECHNICIAN")
+
+                        // ISSUANCES
+                        .requestMatchers(HttpMethod.GET, "/api/issuances/**").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/issuances/**").hasAnyRole("SUPER_ADMIN", "ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/issuances/**").hasAnyRole("SUPER_ADMIN", "ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/issuances/**").hasAnyRole("SUPER_ADMIN", "ADMIN")
+
+                        // BORROW REQUESTS
+                        .requestMatchers(HttpMethod.GET, "/api/borrow-requests/**").hasAnyRole("SUPER_ADMIN", "ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/borrow-requests/**").authenticated()
+                        .requestMatchers(HttpMethod.PATCH, "/api/borrow-requests/**").hasAnyRole("SUPER_ADMIN", "ADMIN")
+
+                        // REPORTS
                         .requestMatchers(HttpMethod.GET, "/api/reports/**").hasAnyRole("SUPER_ADMIN", "ADMIN")
 
+                        // NOTIFICATIONS
                         .requestMatchers(HttpMethod.GET, "/api/notifications/**").authenticated()
                         .requestMatchers(HttpMethod.PUT, "/api/notifications/**").authenticated()
 
-                        // Everything else
                         .anyRequest().authenticated()
-
-
                 )
+
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
                 .formLogin(form -> form.disable());
 
@@ -104,20 +107,30 @@ public class SecurityConfig {
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
+
         CorsConfiguration configuration = new CorsConfiguration();
 
         configuration.setAllowedOrigins(List.of(
+                "http://localhost:5174",
                 "http://localhost:5173",
                 "http://localhost:3000"
         ));
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+
+        configuration.setAllowedMethods(List.of(
+                "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"
+        ));
+
+        configuration.setAllowedHeaders(List.of(
+                "Authorization", "Content-Type"
+        ));
+
         configuration.setExposedHeaders(List.of("Authorization"));
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
+
         return source;
     }
 }

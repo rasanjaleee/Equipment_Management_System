@@ -42,6 +42,22 @@ public class EquipmentController {
         this.borrowRequestService = borrowRequestService;
     }
 
+    // ✅ NEW METHOD ADDED (LAB FILTER)
+    @GetMapping("/lab/{labName}")
+    public ResponseEntity<List<Equipment>> getEquipmentByLab(@PathVariable String labName) {
+        try {
+            List<Equipment> equipments = equipmentService.getAllEquipment()
+                    .stream()
+                    .filter(e -> e.getLaboratory().equalsIgnoreCase(labName))
+                    .toList();
+
+            return ResponseEntity.ok(equipments);
+
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
     @PostMapping("/add")
     public ResponseEntity<?> addEquipment(
             @RequestParam String equipmentName,

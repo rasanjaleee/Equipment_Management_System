@@ -51,13 +51,16 @@ const Equipment = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
+
       const res = await axios.get('http://localhost:8080/api/equipment/all', {
         headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
-      setEquipmentList(res.data);
+
+      setEquipmentList(Array.isArray(res.data) ? res.data : []);
       setError('');
     } catch (err) {
       console.error('Failed to fetch equipment:', err);
+      setEquipmentList([]);
       setError('Failed to load equipment. Please try again later.');
     } finally {
       setLoading(false);
@@ -77,6 +80,7 @@ const Equipment = () => {
 
   const filteredMap = equipmentList.reduce((acc, item) => {
     const normalizedSearch = normalizeValue(searchQuery);
+
     const matchesSearch =
       normalizedSearch === '' ||
       normalizeValue(item.equipmentName).includes(normalizedSearch) ||
@@ -94,6 +98,7 @@ const Equipment = () => {
     const equipmentKey = normalizeValue(equipmentName) || 'unknown';
 
     if (!acc[labKey]) acc[labKey] = { name: labName, equipmentByName: {} };
+
     if (!acc[labKey].equipmentByName[equipmentKey]) {
       acc[labKey].equipmentByName[equipmentKey] = { name: equipmentName, items: [] };
     }
@@ -211,14 +216,17 @@ const Equipment = () => {
               <span className="w-2 h-2 rounded-full bg-green-400"></span>
               {equipmentList.filter((e) => normalizeValue(e.status) === 'working').length} Working
             </div>
+
             <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-4 py-1.5 text-white text-xs font-medium">
               <span className="w-2 h-2 rounded-full bg-blue-400"></span>
               {equipmentList.filter((e) => normalizeValue(e.status) === 'under_repair').length} Under Repair
             </div>
+
             <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-4 py-1.5 text-white text-xs font-medium">
               <span className="w-2 h-2 rounded-full bg-red-400"></span>
               {equipmentList.filter((e) => normalizeValue(e.status) === 'broken').length} Broken
             </div>
+
             <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-4 py-1.5 text-yellow-300 text-xs font-medium">
               <span className="w-2 h-2 rounded-full bg-yellow-400"></span>
               {equipmentList.length} Total Items
@@ -351,12 +359,15 @@ const Equipment = () => {
                   Searching: <strong>"{searchQuery}"</strong>
                 </span>
               )}
+
               {searchQuery && selectedLaboratory && <span className="mx-2">·</span>}
+
               {selectedLaboratory && (
                 <span>
                   Lab: <strong>{selectedLaboratory}</strong>
                 </span>
               )}
+
               <span className="ml-2 text-gray-500">
                 —{' '}
                 <strong>
@@ -412,6 +423,7 @@ const Equipment = () => {
               lab.name,
               lab.equipment.length
             );
+
             const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
             const paginatedEquipment = lab.equipment.slice(
               startIndex,
@@ -420,7 +432,6 @@ const Equipment = () => {
 
             return (
               <div key={index} className="mb-12">
-                {/* Lab Header */}
                 <div className="flex items-center gap-4 mb-6 bg-white rounded-xl p-4 shadow-sm border-l-4 border-yellow-500">
                   <div className="flex-1">
                     <h2 className="text-lg font-bold text-gray-900">{lab.name}</h2>
@@ -449,7 +460,6 @@ const Equipment = () => {
                   </div>
                 </div>
 
-                {/* Equipment Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
                   {paginatedEquipment.map((group, groupIndex) => (
                     <div
@@ -515,7 +525,6 @@ const Equipment = () => {
                   ))}
                 </div>
 
-                {/* Pagination */}
                 {totalPages > 1 && (
                   <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
                     <button

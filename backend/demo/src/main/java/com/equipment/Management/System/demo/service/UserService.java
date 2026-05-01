@@ -18,7 +18,9 @@ public class UserService {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    // ✅ Registration with normalized username and email
     public User registerUser(UserRegistrationRequest request) {
+
         String normalizedUsername = request.getUsername().trim().toLowerCase();
         String normalizedEmail = request.getEmail().trim().toLowerCase();
 
@@ -40,7 +42,9 @@ public class UserService {
         return userRepository.save(user);
     }
 
+    // ✅ Login verification with normalized username
     public boolean verifyUser(String username, String password) {
+
         String normalizedUsername = username.trim().toLowerCase();
 
         Optional<User> userOptional = userRepository.findByUsername(normalizedUsername);
