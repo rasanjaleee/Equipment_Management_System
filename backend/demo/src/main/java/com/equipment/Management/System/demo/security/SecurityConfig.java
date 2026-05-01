@@ -51,6 +51,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/error").permitAll()
                         .requestMatchers("/uploads/**").permitAll()
+                        .requestMatchers("/ws/**").permitAll()
 
                         // Preflight requests
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
@@ -87,8 +88,13 @@ public class SecurityConfig {
                         // Reports
                         .requestMatchers(HttpMethod.GET, "/api/reports/**").hasAnyRole("SUPER_ADMIN", "ADMIN")
 
+                        .requestMatchers(HttpMethod.GET, "/api/notifications/**").authenticated()
+                        .requestMatchers(HttpMethod.PUT, "/api/notifications/**").authenticated()
+
                         // Everything else
                         .anyRequest().authenticated()
+
+
                 )
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
                 .formLogin(form -> form.disable());
@@ -107,7 +113,7 @@ public class SecurityConfig {
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
         configuration.setExposedHeaders(List.of("Authorization"));
-        configuration.setAllowCredentials(false);
+        configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

@@ -31,6 +31,8 @@ import Issuance from './Pages/admin/Issuance';
 import UserManagement from './Pages/admin/UserManagement';
 import ActivityLog from './Pages/admin/ActivityLog';
 import ReportsPage from './Pages/admin/ReportsPage';
+import AdminSettings from './Pages/admin/AdminSettings';
+import NotificationPage from './Pages/admin/NotificationPage';
 
 import TechnicianDashboard from './Pages/technician/TechnicianDashboard';
 import TechnicianEquipment from './Pages/technician/TechnicianEquipment';
@@ -93,6 +95,8 @@ function App() {
             <Route path="issuance" element={<Issuance />} />
             <Route path="profile" element={<ProfilePage />} />
             <Route path="reports" element={<ReportsPage />} />
+            <Route path="settings" element={<AdminSettings />} />
+            <Route path="notifications" element={<NotificationPage />} />
             <Route path="users" element={ <SuperAdminRoute> <UserManagement /></SuperAdminRoute>} /> <Route path="activity-log" element={<ActivityLog />} /></Route>
 
           {/* Technician routes */}

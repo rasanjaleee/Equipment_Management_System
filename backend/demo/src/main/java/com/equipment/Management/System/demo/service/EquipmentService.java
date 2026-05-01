@@ -2,13 +2,16 @@ package com.equipment.Management.System.demo.service;
 
 import com.equipment.Management.System.demo.model.Equipment;
 import com.equipment.Management.System.demo.model.EquipmentStatus;
+import com.equipment.Management.System.demo.model.User;
 import com.equipment.Management.System.demo.repository.EquipmentRepository;
+import com.equipment.Management.System.demo.repository.UserRepository;
 import com.google.zxing.WriterException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class EquipmentService {
@@ -16,16 +19,46 @@ public class EquipmentService {
     private final EquipmentRepository equipmentRepository;
     private final NotificationService notificationService;
     private final QrCodeService qrCodeService;
+    private final UserRepository userRepository;
 
     @Value("${app.frontend-base-url:http://localhost:5173}")
     private String frontendBaseUrl;
 
     public EquipmentService(EquipmentRepository equipmentRepository,
                             NotificationService notificationService,
-                            QrCodeService qrCodeService) {
+                            QrCodeService qrCodeService,
+                            UserRepository userRepository) {
         this.equipmentRepository = equipmentRepository;
         this.notificationService = notificationService;
         this.qrCodeService = qrCodeService;
+        this.userRepository = userRepository;
+    }
+
+    private List<Long> getEquipmentManagers() {
+        return userRepository.findAll().stream()
+                .filter(user -> user.getRole() != null &&
+                        (user.getRole().equalsIgnoreCase("ADMIN")
+                                || user.getRole().equalsIgnoreCase("TECHNICIAN")))
+                .map(User::getId)
+                .collect(Collectors.toList());
+    }
+
+    private void notifyEquipmentManagers(String title, String message,
+                                         String type, Long relatedId,
+                                         String relatedType, String priority) {
+        List<Long> managerIds = getEquipmentManagers();
+
+        for (Long userId : managerIds) {
+            notificationService.createNotificationForUser(
+                    userId,
+                    title,
+                    message,
+                    type,
+                    relatedId,
+                    relatedType,
+                    priority
+            );
+        }
     }
 
     public Equipment saveEquipment(Equipment equipment) {
@@ -34,8 +67,7 @@ public class EquipmentService {
         Equipment saved = equipmentRepository.save(equipment);
 
         if (isNew) {
-            notificationService.createNotification(
-                    null,
+            notifyEquipmentManagers(
                     "New Equipment Added",
                     "Equipment added: " + saved.getEquipmentName(),
                     "EQUIPMENT",
@@ -44,8 +76,7 @@ public class EquipmentService {
                     "LOW"
             );
         } else {
-            notificationService.createNotification(
-                    null,
+            notifyEquipmentManagers(
                     "Equipment Updated",
                     "Equipment updated: " + saved.getEquipmentName(),
                     "EQUIPMENT",
@@ -78,12 +109,12 @@ public class EquipmentService {
         if (!oldStatus.equals(statusEnum)) {
             String priority = "LOW";
 
-            if (statusEnum == EquipmentStatus.BROKEN) {
+            if (statusEnum == EquipmentStatus.BROKEN
+                    || statusEnum == EquipmentStatus.UNDER_REPAIR) {
                 priority = "HIGH";
             }
 
-            notificationService.createNotification(
-                    null,
+            notifyEquipmentManagers(
                     "Equipment Status Changed",
                     "Status changed from " + oldStatus + " to " + statusEnum +
                             " for " + updated.getEquipmentName(),
@@ -109,7 +140,18 @@ public class EquipmentService {
 
         savedEquipment.setQrCode(qrImagePath);
 
-        return equipmentRepository.save(savedEquipment);
+        Equipment finalSaved = equipmentRepository.save(savedEquipment);
+
+        notifyEquipmentManagers(
+                "New Equipment Added",
+                "Equipment added: " + finalSaved.getEquipmentName(),
+                "EQUIPMENT",
+                finalSaved.getId(),
+                "EQUIPMENT",
+                "LOW"
+        );
+
+        return finalSaved;
     }
 
     public List<Equipment> getAllEquipment() {
@@ -129,8 +171,7 @@ public class EquipmentService {
 
         equipmentRepository.deleteById(id);
 
-        notificationService.createNotification(
-                null,
+        notifyEquipmentManagers(
                 "Equipment Deleted",
                 "Equipment removed: " + equipment.getEquipmentName(),
                 "EQUIPMENT",

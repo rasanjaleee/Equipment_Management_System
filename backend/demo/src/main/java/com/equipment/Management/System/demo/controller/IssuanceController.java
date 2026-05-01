@@ -12,7 +12,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/issuances")
-@CrossOrigin(origins = "*", allowedHeaders = "*")
+
 public class IssuanceController {
 
     @Autowired
