@@ -30,6 +30,15 @@ public class IssuanceService {
     @Autowired
     private NotificationService notificationService;
 
+    private List<User> getAdminUsers() {
+        return userRepository.findAll().stream()
+                .filter(user -> user.getRole() != null &&
+                        (user.getRole().equalsIgnoreCase("ADMIN")
+                                || user.getRole().equalsIgnoreCase("SUPER_ADMIN")
+                                || user.getRole().equalsIgnoreCase("TECHNICIAN")))
+                .collect(Collectors.toList());
+    }
+
     // ================= CREATE =================
     @Transactional
     public IssuanceDTO createIssuance(IssuanceRequest request) {
@@ -61,27 +70,30 @@ public class IssuanceService {
 
         Issuance saved = issuanceRepository.save(issuance);
 
-        // 🔔 USER NOTIFICATION
-        notificationService.createNotification(
+        // Notify issued user
+        notificationService.createNotificationForUser(
                 user.getId(),
                 "Equipment Issued",
                 "You have been issued: " + equipment.getEquipmentName(),
-                "ISSUE",
+                "ISSUANCE",
                 saved.getId(),
                 "ISSUANCE",
-                "NORMAL"
+                "MEDIUM"
         );
 
-        // 🔔 ADMIN NOTIFICATION
-        notificationService.createNotification(
-                null,
-                "New Equipment Issued",
-                equipment.getEquipmentName() + " issued to " + user.getUsername(),
-                "ISSUE",
-                saved.getId(),
-                "ISSUANCE",
-                "LOW"
-        );
+        // Notify admins
+        List<User> admins = getAdminUsers();
+        for (User admin : admins) {
+            notificationService.createNotificationForUser(
+                    admin.getId(),
+                    "New Equipment Issued",
+                    equipment.getEquipmentName() + " issued to " + user.getUsername(),
+                    "ISSUANCE",
+                    saved.getId(),
+                    "ISSUANCE",
+                    "LOW"
+            );
+        }
 
         return convertToDTO(saved);
     }
@@ -114,14 +126,14 @@ public class IssuanceService {
     }
 
     public List<IssuanceDTO> getIssuancesByUserId(Long userId) {
-        return issuanceRepository.findByUser_Id(userId) // ✅ FIXED
+        return issuanceRepository.findByUser_Id(userId)
                 .stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
     }
 
     public List<IssuanceDTO> getIssuancesByEquipmentId(Long equipmentId) {
-        return issuanceRepository.findByEquipment_Id(equipmentId) // ✅ FIXED
+        return issuanceRepository.findByEquipment_Id(equipmentId)
                 .stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
@@ -136,14 +148,12 @@ public class IssuanceService {
 
         String oldStatus = issuance.getStatus();
 
-        // Update Equipment only if changed
         if (!issuance.getEquipment().getId().equals(request.getEquipmentId())) {
             Equipment equipment = equipmentRepository.findById(request.getEquipmentId())
                     .orElseThrow(() -> new RuntimeException("Equipment not found"));
             issuance.setEquipment(equipment);
         }
 
-        // Update User only if changed
         if (!issuance.getUser().getId().equals(request.getUserId())) {
             User user = userRepository.findById(request.getUserId())
                     .orElseThrow(() -> new RuntimeException("User not found"));
@@ -164,16 +174,15 @@ public class IssuanceService {
 
         Issuance updated = issuanceRepository.save(issuance);
 
-        // 🔔 STATUS CHANGE NOTIFICATION
         if (!oldStatus.equalsIgnoreCase(request.getStatus())) {
-            notificationService.createNotification(
-                    issuance.getUser().getId(),
+            notificationService.createNotificationForUser(
+                    updated.getUser().getId(),
                     "Issuance Status Updated",
                     "Status changed from " + oldStatus + " to " + request.getStatus(),
                     "ISSUANCE",
                     updated.getId(),
                     "ISSUANCE",
-                    "NORMAL"
+                    "MEDIUM"
             );
         }
 
@@ -189,16 +198,18 @@ public class IssuanceService {
 
         issuanceRepository.deleteById(id);
 
-        // 🔔 DELETE NOTIFICATION
-        notificationService.createNotification(
-                null,
-                "Issuance Deleted",
-                "Issuance removed: " + issuance.getIssuanceId(),
-                "ISSUANCE",
-                id,
-                "ISSUANCE",
-                "HIGH"
-        );
+        List<User> admins = getAdminUsers();
+        for (User admin : admins) {
+            notificationService.createNotificationForUser(
+                    admin.getId(),
+                    "Issuance Deleted",
+                    "Issuance removed: " + issuance.getIssuanceId(),
+                    "ISSUANCE",
+                    id,
+                    "ISSUANCE",
+                    "HIGH"
+            );
+        }
     }
 
     // ================= DTO =================

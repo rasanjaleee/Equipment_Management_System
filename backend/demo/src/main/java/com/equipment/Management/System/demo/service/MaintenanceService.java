@@ -5,12 +5,15 @@ import com.equipment.Management.System.demo.model.Maintenance;
 import com.equipment.Management.System.demo.model.MaintenanceCreateDto;
 import com.equipment.Management.System.demo.model.MaintenanceResponseDto;
 import com.equipment.Management.System.demo.model.MaintenanceUpdateDto;
+import com.equipment.Management.System.demo.model.User;
 import com.equipment.Management.System.demo.repository.EquipmentRepository;
 import com.equipment.Management.System.demo.repository.MaintenanceRepository;
+import com.equipment.Management.System.demo.repository.UserRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class MaintenanceService {
@@ -18,13 +21,43 @@ public class MaintenanceService {
     private final MaintenanceRepository repo;
     private final EquipmentRepository equipmentRepo;
     private final NotificationService notificationService;
+    private final UserRepository userRepository;
 
     public MaintenanceService(MaintenanceRepository repo,
                               EquipmentRepository equipmentRepo,
-                              NotificationService notificationService) {
+                              NotificationService notificationService,
+                              UserRepository userRepository) {
         this.repo = repo;
         this.equipmentRepo = equipmentRepo;
         this.notificationService = notificationService;
+        this.userRepository = userRepository;
+    }
+
+    private List<User> getMaintenanceManagers() {
+        return userRepository.findAll().stream()
+                .filter(user -> user.getRole() != null &&
+                        (user.getRole().equalsIgnoreCase("ADMIN")
+                                || user.getRole().equalsIgnoreCase("TECHNICIAN")
+                                || user.getRole().equalsIgnoreCase("SUPER_ADMIN")))
+                .collect(Collectors.toList());
+    }
+
+    private void notifyMaintenanceManagers(String title, String message,
+                                           String type, Long relatedId,
+                                           String relatedType, String priority) {
+        List<User> managers = getMaintenanceManagers();
+
+        for (User manager : managers) {
+            notificationService.createNotificationForUser(
+                    manager.getId(),
+                    title,
+                    message,
+                    type,
+                    relatedId,
+                    relatedType,
+                    priority
+            );
+        }
     }
 
     // ================= CREATE MAINTENANCE =================
@@ -48,9 +81,7 @@ public class MaintenanceService {
 
         Maintenance saved = repo.save(m);
 
-        // 🔔 NOTIFICATION (ADMIN / TECHNICIAN)
-        notificationService.createNotification(
-                null,
+        notifyMaintenanceManagers(
                 "New Maintenance Created",
                 "Maintenance added for equipment: " + eq.getEquipmentName(),
                 "MAINTENANCE",
@@ -120,28 +151,25 @@ public class MaintenanceService {
             m.setCost(dto.cost());
         }
 
-        // If completed → set date
         if ("COMPLETED".equalsIgnoreCase(dto.status())) {
             m.setCompletedDate(LocalDate.now());
         }
 
         Maintenance updated = repo.save(m);
 
-        // 🔔 STATUS CHANGE NOTIFICATION
         if (dto.status() != null && !dto.status().equalsIgnoreCase(oldStatus)) {
 
             String priority = "LOW";
 
             if ("COMPLETED".equalsIgnoreCase(dto.status())) {
-                priority = "NORMAL";
+                priority = "MEDIUM";
             }
 
             if ("PENDING".equalsIgnoreCase(dto.status())) {
                 priority = "HIGH";
             }
 
-            notificationService.createNotification(
-                    null,
+            notifyMaintenanceManagers(
                     "Maintenance Status Updated",
                     "Status changed from " + oldStatus + " to " + dto.status() +
                             " for equipment: " + m.getEquipment().getEquipmentName(),
@@ -163,9 +191,7 @@ public class MaintenanceService {
 
         repo.deleteById(id);
 
-        // 🔔 DELETE NOTIFICATION
-        notificationService.createNotification(
-                null,
+        notifyMaintenanceManagers(
                 "Maintenance Deleted",
                 "Maintenance removed for equipment: " + m.getEquipment().getEquipmentName(),
                 "MAINTENANCE",

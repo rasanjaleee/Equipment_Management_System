@@ -12,15 +12,15 @@
     "dev:all": "npm run build:css & npm run dev"
   },
   "dependencies": {
+    "@stomp/stompjs": "^7.3.0",
     "axios": "^1.13.2",
     "lucide-react": "^0.562.0",
     "qrcode.react": "^4.2.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-router-dom": "^7.9.5",
-    "sockjs-client": "^1.6.1",
-    "stompjs": "^2.3.3",
     "recharts": "^3.8.1",
+    "sockjs-client": "^1.6.1",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {

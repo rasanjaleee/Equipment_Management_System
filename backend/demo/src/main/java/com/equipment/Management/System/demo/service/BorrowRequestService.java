@@ -1,4 +1,6 @@
 package com.equipment.Management.System.demo.service;
+import com.equipment.Management.System.demo.model.User;
+import com.equipment.Management.System.demo.repository.UserRepository;
 
 import com.equipment.Management.System.demo.dto.BorrowRequestCreateRequest;
 import com.equipment.Management.System.demo.dto.BorrowRequestResponse;
@@ -20,11 +22,15 @@ public class BorrowRequestService {
 
     private final BorrowRequestRepository borrowRequestRepository;
     private final EquipmentRepository equipmentRepository;
+    private final NotificationService notificationService;
+    private final UserRepository userRepository;
 
     public BorrowRequestService(BorrowRequestRepository borrowRequestRepository,
-                                EquipmentRepository equipmentRepository) {
+                                EquipmentRepository equipmentRepository,NotificationService notificationService,UserRepository userRepository) {
         this.borrowRequestRepository = borrowRequestRepository;
         this.equipmentRepository = equipmentRepository;
+        this.notificationService = notificationService;
+        this.userRepository = userRepository;
     }
 
     public List<BorrowRequestResponse> getAllBorrowRequests() {
@@ -55,6 +61,21 @@ public class BorrowRequestService {
         entity.setStatus(normalizeStatus(request.getStatus()));
 
         BorrowRequest saved = borrowRequestRepository.save(entity);
+
+        List<User> admins = userRepository.findByRole("ADMIN");
+
+        for (User admin : admins) {
+            notificationService.createNotificationForUser(
+                    admin.getId(),
+                    "New Equipment Request",
+                    saved.getApplicantName() + " requested " + saved.getEquipment().getEquipmentName(),
+                    "BORROW_REQUEST",
+                    saved.getId(),
+                    "BorrowRequest",
+                    "HIGH"
+            );
+        }
+
         return toResponse(saved);
     }
 

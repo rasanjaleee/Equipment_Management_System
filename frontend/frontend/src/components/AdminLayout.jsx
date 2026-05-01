@@ -1,6 +1,8 @@
 import { Outlet, NavLink, useLocation, useNavigate } from "react-router-dom";
 import React, { useEffect, useRef, useState } from "react";
 import Footer from "../components/Footer";
+import SockJS from "sockjs-client";
+import { Client } from "@stomp/stompjs";
 import {
   LayoutDashboard,
   Wrench,
@@ -23,34 +25,38 @@ export default function AdminLayout() {
   const navigate = useNavigate();
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [notificationOpen, setNotificationOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [notifications, setNotifications] = useState([]);
+
   const dropdownRef = useRef(null);
+  const notificationRef = useRef(null);
 
   const loggedInUser = JSON.parse(localStorage.getItem("user"));
 
   const role = loggedInUser?.role || "";
   const username = loggedInUser?.username || "User";
+  const userId = loggedInUser?.id;
 
   const displayRole =
-  role === "SUPER_ADMIN"
-    ? "Super Admin"
-    : role === "ADMIN"
-    ? "Administrator"
-    : role === "TECHNICIAN"
-    ? "Technician"
-    : "User";
+    role === "SUPER_ADMIN"
+      ? "Super Admin"
+      : role === "ADMIN"
+      ? "Administrator"
+      : role === "TECHNICIAN"
+      ? "Technician"
+      : "User";
 
-const welcomeText =
-  role === "SUPER_ADMIN"
-    ? "Welcome back, Super Admin!"
-    : role === "ADMIN"
-    ? "Welcome back, Admin!"
-    : role === "TECHNICIAN"
-    ? "Welcome back, Technician!"
-    : "Welcome back!";
+  const welcomeText =
+    role === "SUPER_ADMIN"
+      ? "Welcome back, Super Admin!"
+      : role === "ADMIN"
+      ? "Welcome back, Admin!"
+      : role === "TECHNICIAN"
+      ? "Welcome back, Technician!"
+      : "Welcome back!";
 
-const displayName = username;
-    
+  const displayName = username;
   const avatarLetter = username ? username.charAt(0).toUpperCase() : "U";
 
   useEffect(() => {
@@ -58,29 +64,123 @@ const displayName = username;
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
         setDropdownOpen(false);
       }
+
+      if (notificationRef.current && !notificationRef.current.contains(e.target)) {
+        setNotificationOpen(false);
+      }
     };
+
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
- const baseMenu = [
-  { to: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/admin/equipment", label: "Equipment", icon: Wrench },
-  { to: "/admin/laboratories", label: "Laboratories", icon: FlaskConical },
-  { to: "/admin/issuance", label: "Issuance", icon: ClipboardList },
-  { to: "/admin/maintenance", label: "Maintenance", icon: History },
-  { to: "/admin/reports", label: "Reports", icon: FileBarChart },
-  { to: "/admin/activity-log", label: "Activity Log", icon: ClipboardList },
-];
+  useEffect(() => {
+    const socket = new SockJS("http://localhost:8080/ws");
 
-const superAdminOnlyMenu = [
-  { to: "/admin/users", label: "User Management", icon: Users },
-];
+    const client = new Client({
+      webSocketFactory: () => socket,
+      reconnectDelay: 5000,
 
-const menu =
-  role === "SUPER_ADMIN"
-    ? [...baseMenu, ...superAdminOnlyMenu]
-    : baseMenu;
+      onConnect: () => {
+        console.log("Connected to WebSocket");
+
+        // Global topic (matches your current backend)
+        client.subscribe("/topic/notifications", (message) => {
+          try {
+            const newNotification = JSON.parse(message.body);
+            console.log("Received notification:", newNotification);
+
+            setNotifications((prev) => [
+              {
+                ...newNotification,
+                id: Date.now() + Math.random(),
+                read: false,
+                receivedAt: new Date().toLocaleString(),
+              },
+              ...prev,
+            ]);
+          } catch (error) {
+            console.error("Error parsing notification:", error);
+          }
+        });
+
+        // Optional user-specific topic
+        if (userId) {
+          client.subscribe(`/topic/notifications/${userId}`, (message) => {
+            try {
+              const newNotification = JSON.parse(message.body);
+              console.log("Received user notification:", newNotification);
+
+              setNotifications((prev) => [
+                {
+                  ...newNotification,
+                  id: Date.now() + Math.random(),
+                  read: false,
+                  receivedAt: new Date().toLocaleString(),
+                },
+                ...prev,
+              ]);
+            } catch (error) {
+              console.error("Error parsing user notification:", error);
+            }
+          });
+        }
+      },
+
+      onStompError: (frame) => {
+        console.error("Broker reported error:", frame.headers["message"]);
+        console.error("Additional details:", frame.body);
+      },
+
+      onWebSocketError: (error) => {
+        console.error("WebSocket error:", error);
+      },
+    });
+
+    client.activate();
+
+    return () => {
+      client.deactivate();
+    };
+  }, [userId]);
+
+  const unreadCount = notifications.filter((n) => !n.read).length;
+
+  const markAllAsRead = () => {
+    setNotifications((prev) =>
+      prev.map((notification) => ({
+        ...notification,
+        read: true,
+      }))
+    );
+  };
+
+  const handleNotificationClick = () => {
+    setNotificationOpen((prev) => !prev);
+
+    if (!notificationOpen) {
+      markAllAsRead();
+    }
+  };
+
+  const baseMenu = [
+    { to: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { to: "/admin/equipment", label: "Equipment", icon: Wrench },
+    { to: "/admin/laboratories", label: "Laboratories", icon: FlaskConical },
+    { to: "/admin/issuance", label: "Issuance", icon: ClipboardList },
+    { to: "/admin/maintenance", label: "Maintenance", icon: History },
+    { to: "/admin/reports", label: "Reports", icon: FileBarChart },
+    { to: "/admin/activity-log", label: "Activity Log", icon: ClipboardList },
+  ];
+
+  const superAdminOnlyMenu = [
+    { to: "/admin/users", label: "User Management", icon: Users },
+  ];
+
+  const menu =
+    role === "SUPER_ADMIN"
+      ? [...baseMenu, ...superAdminOnlyMenu]
+      : baseMenu;
 
   const bottomMenu = [
     { to: "/admin/notifications", label: "Notifications", icon: Bell },
@@ -202,21 +302,86 @@ const menu =
       >
         <header
           className="fixed top-0 right-0 px-5 h-20 flex justify-between items-center shadow-md gap-4 z-30"
-          style={{ backgroundColor: "#E89B00", left: sidebarOpen ? "14rem" : "5rem" }}
+          style={{
+            backgroundColor: "#E89B00",
+            left: sidebarOpen ? "14rem" : "5rem",
+          }}
         >
           <div className="min-w-0 flex-1">
-            <h2 className="text-2xl font-bold text-white truncate">{currentTitle}</h2>
+            <h2 className="text-2xl font-bold text-white truncate">
+              {currentTitle}
+            </h2>
             <p className="text-sm text-gray-100 mt-1">{welcomeText}</p>
           </div>
 
           <div className="flex items-center gap-4 flex-shrink-0">
-            <button
-              className="relative p-2 text-white rounded-lg transition-colors"
-              style={{ backgroundColor: "rgba(232, 155, 0, 0.7)" }}
-            >
-              <Bell size={22} />
-              <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border border-white"></span>
-            </button>
+            <div className="relative" ref={notificationRef}>
+              <button
+                onClick={handleNotificationClick}
+                className="relative p-2 text-white rounded-lg transition-colors"
+                style={{ backgroundColor: "rgba(232, 155, 0, 0.7)" }}
+                title="Notifications"
+              >
+                <Bell size={22} />
+
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 flex items-center justify-center text-[10px] font-bold bg-red-500 text-white rounded-full border border-white">
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </span>
+                )}
+              </button>
+
+              {notificationOpen && (
+                <div className="absolute right-0 mt-3 w-96 max-h-[420px] overflow-hidden bg-white border border-gray-200 rounded-xl shadow-lg z-50">
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+                    <h3 className="text-sm font-semibold text-gray-800">
+                      Notifications
+                    </h3>
+                    <button
+                      onClick={markAllAsRead}
+                      className="text-xs text-orange-600 hover:text-orange-700 font-medium"
+                    >
+                      Mark all as read
+                    </button>
+                  </div>
+
+                  <div className="max-h-[360px] overflow-y-auto">
+                    {notifications.length === 0 ? (
+                      <div className="px-4 py-8 text-center text-sm text-gray-500">
+                        No notifications yet
+                      </div>
+                    ) : (
+                      notifications.map((notification) => (
+                        <div
+                          key={notification.id}
+                          className={`px-4 py-3 border-b border-gray-100 hover:bg-gray-50 ${
+                            !notification.read ? "bg-orange-50" : "bg-white"
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-semibold text-gray-800">
+                                {notification.title || "Notification"}
+                              </p>
+                              <p className="text-sm text-gray-600 mt-1 break-words">
+                                {notification.message || "No message"}
+                              </p>
+                              <p className="text-xs text-gray-400 mt-2">
+                                {notification.receivedAt}
+                              </p>
+                            </div>
+
+                            {!notification.read && (
+                              <span className="w-2.5 h-2.5 bg-red-500 rounded-full mt-2 flex-shrink-0"></span>
+                            )}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
 
             <div
               className="w-px h-6 opacity-50"
