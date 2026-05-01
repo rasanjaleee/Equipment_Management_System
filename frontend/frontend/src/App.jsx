@@ -38,7 +38,6 @@ import TechnicianDashboard from './Pages/technician/TechnicianDashboard';
 import TechnicianEquipment from './Pages/technician/TechnicianEquipment';
 import TechnicianActivityLog from './Pages/technician/TechnicianActivityLog';
 
-// Wrapper to provide Router context
 function AppWrapper() {
   return (
     <Router>
@@ -50,7 +49,6 @@ function AppWrapper() {
 function App() {
   const location = useLocation();
 
-  // Pages where Navbar/Footer should NOT appear
   const hideNavbarOn = ['/', '/login', '/register'];
 
   const isAdminRoute = location.pathname.startsWith('/admin');
@@ -79,14 +77,21 @@ function App() {
           <Route path="/change-password" element={<ChangePassword />} />
           <Route path="/home" element={<Home />} />
           <Route path="/equipment" element={<Equipment />} />
-          <Route path="/equipment/details/:equipmentName/:laboratory" element={<EquipmentDetails />}/>
+          <Route path="/equipment/details/:equipmentName/:laboratory" element={<EquipmentDetails />} />
           <Route path="/equipment/item/:id" element={<EquipmentDetails />} />
-          <Route path="/issuance" element={<Navigate to="/admin/issuance" replace state={location.state} />}/>
+          <Route path="/issuance" element={<Navigate to="/admin/issuance" replace state={location.state} />} />
           <Route path="/about" element={<About />} />
           <Route path="/profile" element={<ProfilePage />} />
 
           {/* Admin routes */}
-          <Route path="/admin" element={ <AdminRoute> <AdminLayout /> </AdminRoute> }>
+          <Route
+            path="/admin"
+            element={
+              <AdminRoute>
+                <AdminLayout />
+              </AdminRoute>
+            }
+          >
             <Route path="dashboard" element={<AdminDashboard />} />
             <Route path="equipment" element={<AdminEquipment />} />
             <Route path="equipment/bulk-upload" element={<BulkUploadEquipment />} />
@@ -97,10 +102,26 @@ function App() {
             <Route path="reports" element={<ReportsPage />} />
             <Route path="settings" element={<AdminSettings />} />
             <Route path="notifications" element={<NotificationPage />} />
-            <Route path="users" element={ <SuperAdminRoute> <UserManagement /></SuperAdminRoute>} /> <Route path="activity-log" element={<ActivityLog />} /></Route>
+            <Route
+              path="users"
+              element={
+                <SuperAdminRoute>
+                  <UserManagement />
+                </SuperAdminRoute>
+              }
+            />
+            <Route path="activity-log" element={<ActivityLog />} />
+          </Route>
 
           {/* Technician routes */}
-          <Route path="/technician" element={ <TechnicianRoute> <TechnicianLayout /> </TechnicianRoute>}>
+          <Route
+            path="/technician"
+            element={
+              <TechnicianRoute>
+                <TechnicianLayout />
+              </TechnicianRoute>
+            }
+          >
             <Route path="dashboard" element={<TechnicianDashboard />} />
             <Route path="equipment" element={<TechnicianEquipment />} />
             <Route path="maintenance" element={<MaintenancePage />} />
