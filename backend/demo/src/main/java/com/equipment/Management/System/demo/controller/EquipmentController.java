@@ -149,6 +149,8 @@ public class EquipmentController {
             equipment.setModel(model);
             equipment.setSerialNumber(serialNumber);
             equipment.setCost(cost);
+
+
             equipment.setSupplier(supplier);
             equipment.setStatus(status);
             equipment.setGrnNumber(grnNumber);

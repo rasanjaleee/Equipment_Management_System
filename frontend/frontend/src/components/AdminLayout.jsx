@@ -32,9 +32,11 @@ export default function AdminLayout() {
   const dropdownRef = useRef(null);
   const notificationRef = useRef(null);
 
+  const normalizeRole = (value) => String(value || "").replace(/^ROLE_/i, "").toUpperCase();
+
   const loggedInUser = JSON.parse(localStorage.getItem("user"));
 
-  const role = loggedInUser?.role || "";
+  const role = normalizeRole(loggedInUser?.role);
   const username = loggedInUser?.username || "User";
   const userId = loggedInUser?.id;
 
@@ -177,10 +179,7 @@ export default function AdminLayout() {
     { to: "/admin/users", label: "User Management", icon: Users },
   ];
 
-  const menu =
-    role === "SUPER_ADMIN"
-      ? [...baseMenu, ...superAdminOnlyMenu]
-      : baseMenu;
+  const menu = role === "SUPER_ADMIN" ? [...baseMenu, ...superAdminOnlyMenu] : baseMenu;
 
   const bottomMenu = [
     { to: "/admin/notifications", label: "Notifications", icon: Bell },

@@ -256,12 +256,8 @@ const Navbar = () => {
             )}
           </div>
 
-          {/* ================= MESSAGE ICON ================= */}
-          <button className="text-white hover:text-gray-100 border-2 border-white rounded p-1.5">
-            <MessageSquare size={22} />
-          </button>
+          
 
-          {/* ================= PROFILE ================= */}
           {/* ================= PROFILE ================= */}
 <div className="relative" ref={dropdownRef}>
   <button

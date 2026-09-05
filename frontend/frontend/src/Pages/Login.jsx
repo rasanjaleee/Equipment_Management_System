@@ -14,6 +14,8 @@ export default function Login() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const normalizeRole = (value) => String(value || "").replace(/^ROLE_/i, "").toUpperCase();
+
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
     setError("");
@@ -43,27 +45,22 @@ export default function Login() {
 
 // Store JWT token and user info
 const { token, id, username, email, role, mustChangePassword } = res.data;
+const normalizedRole = normalizeRole(role);
 
 localStorage.setItem("token", token);
 localStorage.setItem(
   "user",
-  JSON.stringify({ id, username, email, role, mustChangePassword })
+  JSON.stringify({ id, username, email, role: normalizedRole, mustChangePassword })
 );
 
 // ✅ Keep axios auth header (important)
 axios.defaults.headers.common.Authorization = `Bearer ${token}`;
 
-// ✅ Keep role normalization
-const normalizedRole = String(role || "")
-  .replace(/^ROLE_/i, "")
-  .toUpperCase();
-
-
 if (mustChangePassword) {
   navigate("/change-password");
-} else if (role === "SUPER_ADMIN" || role === "ADMIN") {
+} else if (normalizedRole === "SUPER_ADMIN" || normalizedRole === "ADMIN") {
   navigate("/admin/dashboard");
-} else if (role === "TECHNICIAN") {
+} else if (normalizedRole === "TECHNICIAN") {
   navigate("/technician/dashboard");
 } else {
   navigate("/home");
