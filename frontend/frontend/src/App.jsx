@@ -102,6 +102,7 @@ function App() {
             <Route path="reports" element={<ReportsPage />} />
             <Route path="settings" element={<AdminSettings />} />
             <Route path="notifications" element={<NotificationPage />} />
+            
             <Route
               path="users"
               element={
