@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Upload, Download, ArrowLeft, FileText, AlertCircle, CheckCircle2 } from 'lucide-react';
 import axios from 'axios';
+import { API_BASE_URL } from '../../services/api';
 import { useNavigate } from 'react-router-dom';
 
 export default function BulkUploadEquipment() {
@@ -28,7 +29,7 @@ export default function BulkUploadEquipment() {
       const token = localStorage.getItem('token');
 
       const response = await axios.get(
-        'http://localhost:8080/api/equipment/bulk-template',
+        `${API_BASE_URL}/api/equipment/bulk-template`,
         {
           responseType: 'blob',
           headers: {
@@ -73,7 +74,7 @@ export default function BulkUploadEquipment() {
       formData.append('file', file);
 
       const response = await axios.post(
-        'http://localhost:8080/api/equipment/bulk-upload',
+        `${API_BASE_URL}/api/equipment/bulk-upload`,
         formData,
         {
           headers: {

@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from "react";
 import Footer from "../components/Footer";
 import SockJS from "sockjs-client";
 import { Client } from "@stomp/stompjs";
+import { API_BASE_URL } from "../services/api";
 import {
   LayoutDashboard,
   Wrench,
@@ -77,7 +78,7 @@ export default function AdminLayout() {
   }, []);
 
   useEffect(() => {
-    const socket = new SockJS("http://localhost:8080/ws");
+    const socket = new SockJS(`${API_BASE_URL}/ws`);
 
     const client = new Client({
       webSocketFactory: () => socket,

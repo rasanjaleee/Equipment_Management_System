@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
+import { API_BASE_URL } from "../../services/api";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -58,10 +59,10 @@ export default function AdminDashboard() {
       };
 
       const results = await Promise.allSettled([
-        axios.get("http://localhost:8080/api/equipment/all", { headers }),
-        axios.get("http://localhost:8080/api/maintenance", { headers }),
-        axios.get("http://localhost:8080/api/activity-logs", { headers }),
-        axios.get("http://localhost:8080/api/laboratories", { headers }),
+        axios.get(`${API_BASE_URL}/api/equipment/all`, { headers }),
+        axios.get(`${API_BASE_URL}/api/maintenance`, { headers }),
+        axios.get(`${API_BASE_URL}/api/activity-logs`, { headers }),
+        axios.get(`${API_BASE_URL}/api/laboratories`, { headers }),
       ]);
 
       const [equipmentRes, maintenanceRes, activityRes, labRes] = results;

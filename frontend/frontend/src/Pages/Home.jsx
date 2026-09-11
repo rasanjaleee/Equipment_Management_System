@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import { API_BASE_URL } from "../services/api";
 
 export default function HomePage() {
   const [totalEquipment, setTotalEquipment] = useState(0);
@@ -18,7 +19,7 @@ export default function HomePage() {
       const token = localStorage.getItem('token');
 
       // Fetch all equipment
-      const res = await axios.get('http://localhost:8080/api/equipment/all', {
+      const res = await axios.get(`${API_BASE_URL}/api/equipment/all`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
 

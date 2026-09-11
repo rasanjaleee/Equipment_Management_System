@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Plus, Save, X, Package, Edit, Trash2, ArrowLeft } from 'lucide-react';
 import axios from 'axios';
+import { API_BASE_URL, getImageUrl } from '../../services/api';
 import { useNavigate } from 'react-router-dom';
 
 export default function AdminEquipment() {
@@ -80,7 +81,7 @@ export default function AdminEquipment() {
   const fetchEquipment = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await axios.get('http://localhost:8080/api/equipment/all', {
+      const res = await axios.get(`${API_BASE_URL}/api/equipment/all`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setEquipmentList(res.data);
@@ -128,7 +129,7 @@ export default function AdminEquipment() {
 
       if (editMode) {
         await axios.put(
-          `http://localhost:8080/api/equipment/update/${editingId}`,
+          `${API_BASE_URL}/api/equipment/update/${editingId}`,
           data,
           {
             headers: {
@@ -140,7 +141,7 @@ export default function AdminEquipment() {
         setSuccess('Equipment updated successfully!');
       } else {
         await axios.post(
-          'http://localhost:8080/api/equipment/add',
+          `${API_BASE_URL}/api/equipment/add`,
           data,
           {
             headers: {
@@ -229,7 +230,7 @@ export default function AdminEquipment() {
 
     try {
       const token = localStorage.getItem('token');
-      await axios.delete(`http://localhost:8080/api/equipment/delete/${id}`, {
+      await axios.delete(`${API_BASE_URL}/api/equipment/delete/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       await fetchEquipment();
@@ -275,7 +276,7 @@ export default function AdminEquipment() {
   );
   // PRINT QR
 const handlePrintQR = (item) => {
-  const qrUrl = `http://localhost:8080/${item.qrCode}`;
+  const qrUrl = getImageUrl(item.qrCode);
 
   const printWindow = window.open('', '_blank');
   printWindow.document.write(`
@@ -308,7 +309,7 @@ const handlePrintQR = (item) => {
 
 // DOWNLOAD QR
 const handleDownloadQR = async (item) => {
-  const url = `http://localhost:8080/${item.qrCode}`;
+  const url = getImageUrl(item.qrCode);
   const response = await fetch(url);
   const blob = await response.blob();
 
@@ -719,7 +720,7 @@ const handleDownloadQR = async (item) => {
                       <td>
                         {item.photoPath ? (
                           <img
-                            src={`http://localhost:8080/${item.photoPath}`}
+                            src={getImageUrl(item.photoPath)}
                             alt="equipment"
                             className="w-16 h-16 object-cover mx-auto rounded"
                           />
@@ -754,7 +755,7 @@ const handleDownloadQR = async (item) => {
       
       {/* QR IMAGE */}
       <img
-        src={`http://localhost:8080/${item.qrCode}`}
+        src={getImageUrl(item.qrCode)}
         alt="QR code"
         className="w-16 h-16 object-contain"
       />

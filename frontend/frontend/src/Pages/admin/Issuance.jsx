@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { API_BASE_URL } from '../../services/api';
 import {
   ArrowRight,
   CalendarDays,
@@ -17,7 +18,7 @@ import {
   XCircle,
 } from 'lucide-react';
 
-const API_BASE = 'http://localhost:8080';
+const API_BASE = API_BASE_URL;
 const BORROW_REQUESTS_API = `${API_BASE}/api/borrow-requests`;
 const ISSUANCES_API = `${API_BASE}/api/issuances`;
 

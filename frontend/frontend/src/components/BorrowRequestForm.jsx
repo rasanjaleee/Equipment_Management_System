@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { X, ClipboardList, CalendarDays, UserRound, Send } from 'lucide-react';
 import axios from 'axios';
+import { API_BASE_URL } from '../services/api';
 
-const API_BASE = 'http://localhost:8080';
+const API_BASE = API_BASE_URL;
 
 const initialForm = {
   applicantName: '',
@@ -227,7 +228,7 @@ export default function BorrowRequestForm({
 
       const token = localStorage.getItem('token');
       console.debug('Submitting borrow request with token:', token ? `${token.slice(0, 12)}...` : 'missing');
-      await axios.post('http://localhost:8080/api/borrow-requests', payload, {
+      await axios.post(`${API_BASE}/api/borrow-requests`, payload, {
         headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
 
