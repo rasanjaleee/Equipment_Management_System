@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
+import { API_BASE_URL } from "../services/api";
 
 export default function LaboratoryPage() {
   const [labs, setLabs] = useState([]);
@@ -26,7 +27,7 @@ export default function LaboratoryPage() {
 
   useEffect(() => {
     axios
-      .get("http://localhost:8080/api/lab")
+      .get(`${API_BASE_URL}/api/lab`)
       .then((res) => setLabs(Array.isArray(res.data) ? res.data : []))
       .catch((err) =>
         console.log("GET ERROR:", err.response?.data || err.message)
@@ -35,7 +36,7 @@ export default function LaboratoryPage() {
 
   useEffect(() => {
     axios
-      .get("http://localhost:8080/api/equipment/all")
+      .get(`${API_BASE_URL}/api/equipment/all`)
       .then((res) =>
         setEquipmentList(Array.isArray(res.data) ? res.data : [])
       )
@@ -79,7 +80,7 @@ export default function LaboratoryPage() {
       underRepairEquipment: Number(newLab.underRepairEquipment || 0),
     };
 
-    const res = await axios.post("http://localhost:8080/api/lab", payload);
+    const res = await axios.post(`${API_BASE_URL}/api/lab`, payload);
 
     setLabs((prev) => [...prev, res.data]);
     setIsAddModalOpen(false);
@@ -97,7 +98,7 @@ export default function LaboratoryPage() {
   };
 
   const handleDelete = async (id) => {
-    await axios.delete(`http://localhost:8080/api/lab/${id}`);
+    await axios.delete(`${API_BASE_URL}/api/lab/${id}`);
     setLabs(labs.filter((lab) => lab.id !== id));
   };
 
@@ -112,7 +113,7 @@ export default function LaboratoryPage() {
     };
 
     const res = await axios.put(
-      `http://localhost:8080/api/lab/${editLab.id}`,
+      `${API_BASE_URL}/api/lab/${editLab.id}`,
       payload
     );
 

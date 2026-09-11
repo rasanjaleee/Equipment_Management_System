@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import SockJS from "sockjs-client/dist/sockjs.min.js";
 import { Client } from "@stomp/stompjs";
+import { API_BASE_URL } from "./api";
 
 const useNotificationSocket = (onMessage) => {
   useEffect(() => {
@@ -9,7 +10,7 @@ const useNotificationSocket = (onMessage) => {
     const client = new Client({
       webSocketFactory: () => {
         console.log("Creating SockJS socket...");
-        return new SockJS("http://localhost:8080/ws");
+        return new SockJS(`${API_BASE_URL}/ws`);
       },
       reconnectDelay: 5000,
 

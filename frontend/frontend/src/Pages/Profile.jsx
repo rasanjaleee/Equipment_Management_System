@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
+import { API_BASE_URL } from "../services/api";
 
 export default function ProfilePage() {
   const [profile, setProfile] = useState(null);
@@ -20,7 +21,7 @@ export default function ProfilePage() {
     try {
       const token = localStorage.getItem("token");
 
-      const res = await axios.get("http://localhost:8080/api/profile", {
+      const res = await axios.get(`${API_BASE_URL}/api/profile`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -42,7 +43,7 @@ export default function ProfilePage() {
       const token = localStorage.getItem("token");
 
       const res = await axios.put(
-        "http://localhost:8080/api/profile/email",
+        `${API_BASE_URL}/api/profile/email`,
         { email },
         {
           headers: {
@@ -78,7 +79,7 @@ export default function ProfilePage() {
     }
 
     try {
-      await axios.post("http://localhost:8080/auth/change-password", {
+      await axios.post(`${API_BASE_URL}/auth/change-password`, {
         username: profile.username,
         oldPassword: passwordForm.oldPassword,
         newPassword: passwordForm.newPassword

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import { API_BASE_URL } from "../services/api";
 import logo from '/images/logo.jpg';
 import loginpage01 from "/images/loginpage01.png";
 
@@ -39,7 +40,7 @@ export default function Login() {
     }
 
     try {
-      const res = await axios.post("http://localhost:8080/auth/login", sanitized);
+      const res = await axios.post(`${API_BASE_URL}/auth/login`, sanitized);
       
       // Store JWT token and user info
 

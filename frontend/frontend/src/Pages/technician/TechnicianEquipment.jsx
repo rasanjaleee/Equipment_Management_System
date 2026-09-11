@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
+import { API_BASE_URL } from "../../services/api";
 
 export default function TechnicianEquipment() {
   const [equipmentList, setEquipmentList] = useState([]);
@@ -15,7 +16,7 @@ export default function TechnicianEquipment() {
   const fetchEquipment = async () => {
     try {
       const token = localStorage.getItem("token");
-      const res = await axios.get("http://localhost:8080/api/equipment/all", {
+      const res = await axios.get(`${API_BASE_URL}/api/equipment/all`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -52,7 +53,7 @@ export default function TechnicianEquipment() {
       formData.append("grnNumber", item.grnNumber || "");
 
       await axios.put(
-        `http://localhost:8080/api/equipment/update/${item.id}`,
+        `${API_BASE_URL}/api/equipment/update/${item.id}`,
         formData,
         {
           headers: {

@@ -1,6 +1,7 @@
 import axios from "axios";
+import { API_BASE_URL } from "./api";
 
-const BASE_URL = "http://localhost:8080/api/notifications";
+const BASE_URL = `${API_BASE_URL}/api/notifications`;
 
 // Helper function to get authorization headers
 const getAuthHeaders = () => {

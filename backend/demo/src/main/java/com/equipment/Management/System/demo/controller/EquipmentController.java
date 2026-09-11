@@ -5,6 +5,7 @@ import com.equipment.Management.System.demo.model.Equipment;
 import com.equipment.Management.System.demo.model.EquipmentStatus;
 import com.equipment.Management.System.demo.service.ActivityLogService;
 import com.equipment.Management.System.demo.service.BorrowRequestService;
+import com.equipment.Management.System.demo.service.CloudinaryService;
 import com.equipment.Management.System.demo.service.EquipmentCsvService;
 import com.equipment.Management.System.demo.service.EquipmentService;
 import org.springframework.http.ResponseEntity;
@@ -29,17 +30,18 @@ public class EquipmentController {
     private final EquipmentCsvService equipmentCsvService;
     private final ActivityLogService activityLogService;
     private final BorrowRequestService borrowRequestService;
-
-    private static final String UPLOAD_DIR = "uploads/";
+    private final CloudinaryService cloudinaryService;
 
     public EquipmentController(EquipmentService equipmentService,
                                EquipmentCsvService equipmentCsvService,
                                ActivityLogService activityLogService,
-                               BorrowRequestService borrowRequestService) {
+                               BorrowRequestService borrowRequestService,
+                               CloudinaryService cloudinaryService) {
         this.equipmentService = equipmentService;
         this.equipmentCsvService = equipmentCsvService;
         this.activityLogService = activityLogService;
         this.borrowRequestService = borrowRequestService;
+        this.cloudinaryService = cloudinaryService;
     }
 
     // ✅ NEW METHOD ADDED (LAB FILTER)
@@ -72,11 +74,7 @@ public class EquipmentController {
             @RequestParam MultipartFile photo
     ) {
         try {
-            Files.createDirectories(Paths.get(UPLOAD_DIR));
-
-            String fileName = System.currentTimeMillis() + "_" + photo.getOriginalFilename();
-            Path filePath = Paths.get(UPLOAD_DIR + fileName);
-            Files.write(filePath, photo.getBytes());
+            String uploadedPhotoUrl = cloudinaryService.uploadImage(photo, "equipment");
 
             Equipment equipment = new Equipment();
             equipment.setEquipmentName(equipmentName);
@@ -87,7 +85,7 @@ public class EquipmentController {
             equipment.setSupplier(supplier);
             equipment.setStatus(status);
             equipment.setGrnNumber(grnNumber);
-            equipment.setPhotoPath(filePath.toString());
+            equipment.setPhotoPath(uploadedPhotoUrl);
 
             if (purchaseDate != null && !purchaseDate.isBlank()) {
                 equipment.setPurchaseDate(LocalDate.parse(purchaseDate));
@@ -160,11 +158,8 @@ public class EquipmentController {
             }
 
             if (photo != null && !photo.isEmpty()) {
-                Files.createDirectories(Paths.get(UPLOAD_DIR));
-                String fileName = System.currentTimeMillis() + "_" + photo.getOriginalFilename();
-                Path filePath = Paths.get(UPLOAD_DIR + fileName);
-                Files.write(filePath, photo.getBytes());
-                equipment.setPhotoPath(filePath.toString());
+                String uploadedPhotoUrl = cloudinaryService.uploadImage(photo, "equipment");
+                equipment.setPhotoPath(uploadedPhotoUrl);
             }
 
             equipmentService.saveEquipment(equipment);
