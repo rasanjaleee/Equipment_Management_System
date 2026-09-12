@@ -23,7 +23,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/equipment")
-@CrossOrigin
+@CrossOrigin(originPatterns = {"http://localhost:*", "https://*.choreoapps.dev", "https://*.choreo.org"})
 public class EquipmentController {
 
     private final EquipmentService equipmentService;
@@ -44,20 +44,17 @@ public class EquipmentController {
         this.cloudinaryService = cloudinaryService;
     }
 
-    // ✅ NEW METHOD ADDED (LAB FILTER)
+    @GetMapping("/all")
+    public List<Equipment> getAllEquipment() {
+        return equipmentService.getAllEquipment();
+    }
+
     @GetMapping("/lab/{labName}")
-    public ResponseEntity<List<Equipment>> getEquipmentByLab(@PathVariable String labName) {
-        try {
-            List<Equipment> equipments = equipmentService.getAllEquipment()
-                    .stream()
-                    .filter(e -> e.getLaboratory().equalsIgnoreCase(labName))
-                    .toList();
-
-            return ResponseEntity.ok(equipments);
-
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().build();
-        }
+    public List<Equipment> getEquipmentByLab(@PathVariable String labName) {
+        return equipmentService.getAllEquipment().stream()
+                .filter(e -> e.getLaboratory() != null &&
+                        e.getLaboratory().equalsIgnoreCase(labName))
+                .toList();
     }
 
     @PostMapping("/add")
@@ -71,10 +68,12 @@ public class EquipmentController {
             @RequestParam(required = false) String supplier,
             @RequestParam EquipmentStatus status,
             @RequestParam(required = false) String grnNumber,
-            @RequestParam MultipartFile photo
+            @RequestParam(required = false) MultipartFile photo
     ) {
         try {
-            String uploadedPhotoUrl = cloudinaryService.uploadImage(photo, "equipment");
+            String uploadedPhotoUrl = (photo != null && !photo.isEmpty())
+                    ? cloudinaryService.uploadImage(photo, "equipment")
+                    : null;
 
             Equipment equipment = new Equipment();
             equipment.setEquipmentName(equipmentName);
