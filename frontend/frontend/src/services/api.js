@@ -1,7 +1,12 @@
 import axios from 'axios';
 
-// Automatically uses environment variable or defaults to localhost
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+// Automatically uses live Choreo backend in production/cloud, or localhost in local development
+const CHOREO_BACKEND_URL = 'https://8c0a7554-4281-4356-8b7f-522782a0f64a-dev.e1-us-east-azure.choreoapis.dev/equipment-management-syst/backend-service/v1.0';
+
+export const API_BASE_URL = 
+  (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1')
+    ? (import.meta.env.VITE_API_BASE_URL && !import.meta.env.VITE_API_BASE_URL.includes('localhost') ? import.meta.env.VITE_API_BASE_URL : CHOREO_BACKEND_URL)
+    : (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080');
 
 // Universal helper for rendering images and QR codes (supports both Cloudinary HTTPS URLs and local paths)
 export const getImageUrl = (path) => {
