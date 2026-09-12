@@ -44,11 +44,6 @@ public class EquipmentController {
         this.cloudinaryService = cloudinaryService;
     }
 
-    @GetMapping("/all")
-    public List<Equipment> getAllEquipment() {
-        return equipmentService.getAllEquipment();
-    }
-
     @GetMapping("/lab/{labName}")
     public List<Equipment> getEquipmentByLab(@PathVariable String labName) {
         return equipmentService.getAllEquipment().stream()
