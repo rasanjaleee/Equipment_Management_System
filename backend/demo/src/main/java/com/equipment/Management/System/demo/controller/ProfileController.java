@@ -8,6 +8,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import com.equipment.Management.System.demo.service.CloudinaryService;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Map;
 
@@ -18,13 +20,15 @@ public class ProfileController {
 
     private final UserRepository userRepository;
     private final UserService userService;
+    private final CloudinaryService cloudinaryService;
 
     public ProfileController(UserRepository userRepository,
-                             UserService userService) {
+                             UserService userService,
+                             CloudinaryService cloudinaryService) {
         this.userRepository = userRepository;
         this.userService = userService;
+        this.cloudinaryService = cloudinaryService;
     }
-
     @GetMapping
     public ResponseEntity<?> getMyProfile() {
         try {
@@ -34,13 +38,17 @@ public class ProfileController {
             User user = userService.getUserByUsername(username)
                     .orElseThrow(() -> new RuntimeException("User not found"));
 
-            return ResponseEntity.ok(Map.of(
-                    "id", user.getId(),
-                    "username", user.getUsername(),
-                    "email", user.getEmail(),
-                    "role", user.getRole(),
-                    "mustChangePassword", user.isMustChangePassword()
-            ));
+            Map<String, Object> profile = new java.util.HashMap<>();
+
+            profile.put("id", user.getId());
+            profile.put("username", user.getUsername());
+            profile.put("email", user.getEmail());
+            profile.put("role", user.getRole());
+            profile.put("mustChangePassword", user.isMustChangePassword());
+            profile.put("lastLogin", user.getLastLogin());
+            profile.put("profileImage", user.getProfileImage());
+
+            return ResponseEntity.ok(profile);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of(
                     "message", "Failed to load profile: " + e.getMessage()
@@ -81,6 +89,42 @@ public class ProfileController {
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of(
                     "message", "Failed to update email: " + e.getMessage()
+            ));
+        }
+    }
+
+    @PostMapping("/photo")
+    public ResponseEntity<?> uploadProfilePhoto(
+            @RequestParam("photo") MultipartFile photo) {
+
+        try {
+            Authentication authentication =
+                    SecurityContextHolder.getContext().getAuthentication();
+
+            String username = authentication.getName();
+
+            User user = userService.getUserByUsername(username)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            if (photo == null || photo.isEmpty()) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("message", "Please select an image"));
+            }
+
+            String imageUrl =
+                    cloudinaryService.uploadImage(photo, "profiles");
+
+            user.setProfileImage(imageUrl);
+            userService.saveUser(user);
+
+            return ResponseEntity.ok(Map.of(
+                    "message", "Profile photo updated successfully",
+                    "profileImage", imageUrl
+            ));
+
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "message", "Failed to upload profile photo: " + e.getMessage()
             ));
         }
     }

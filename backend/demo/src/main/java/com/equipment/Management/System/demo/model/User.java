@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "users")
@@ -32,4 +33,10 @@ public class User {
 
     @Column(nullable = false)
     private boolean mustChangePassword = false;
+
+    @Column(name = "last_login")
+    private LocalDateTime lastLogin;
+
+    @Column(name = "profile_image", length = 500)
+    private String profileImage;
 }
