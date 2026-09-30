@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { API_BASE_URL, getImageUrl } from '../services/api';
-import { ArrowLeft, Loader } from 'lucide-react';
+import { ArrowLeft, Loader, Edit, Trash2 } from 'lucide-react';
+
 
 const EquipmentDetails = () => {
   const { id, equipmentName, laboratory } = useParams();
@@ -16,6 +17,8 @@ const EquipmentDetails = () => {
   const [accessories, setAccessories] = useState([]);
   const [accessoriesLoading, setAccessoriesLoading] = useState(false);
   const [showAccessoryForm, setShowAccessoryForm] = useState(false);
+
+  const [editingAccessoryId, setEditingAccessoryId] = useState(null);
 
 const [accessoryForm, setAccessoryForm] = useState({
   accessoryName: '',
@@ -125,6 +128,66 @@ const handleAddAccessory = async () => {
   } catch (err) {
     console.error('Failed to add accessory:', err);
     alert('Failed to add accessory.');
+  }
+};
+
+const handleEditAccessory = (accessory) => {
+  setEditingAccessoryId(accessory.id);
+
+  setAccessoryForm({
+    accessoryName: accessory.accessoryName || '',
+    quantity: accessory.quantity || 1,
+    status: accessory.status || 'AVAILABLE',
+    description: accessory.description || ''
+  });
+
+  setShowAccessoryForm(true);
+};
+
+const handleUpdateAccessory = async () => {
+  if (!accessoryForm.accessoryName.trim()) {
+    alert('Please enter accessory name.');
+    return;
+  }
+
+  if (Number(accessoryForm.quantity) < 1) {
+    alert('Quantity must be at least 1.');
+    return;
+  }
+
+  try {
+    const token = localStorage.getItem('token');
+
+    await axios.put(
+      `${API_BASE_URL}/api/equipment-accessories/${editingAccessoryId}`,
+      {
+        accessoryName: accessoryForm.accessoryName.trim(),
+        quantity: Number(accessoryForm.quantity),
+        status: accessoryForm.status,
+        description: accessoryForm.description.trim()
+      },
+      {
+        headers: token
+          ? { Authorization: `Bearer ${token}` }
+          : {}
+      }
+    );
+
+    await fetchAccessories(equipment.id);
+
+    setAccessoryForm({
+      accessoryName: '',
+      quantity: 1,
+      status: 'AVAILABLE',
+      description: ''
+    });
+
+    setEditingAccessoryId(null);
+    setShowAccessoryForm(false);
+
+  } catch (err) {
+    console.error('Failed to update accessory:', err);
+    alert('Failed to update accessory.');
   }
 };
 
@@ -273,7 +336,18 @@ const handleAddAccessory = async () => {
 
     <button
   type="button"
-  onClick={() => setShowAccessoryForm(true)}
+  onClick={() => {
+  setEditingAccessoryId(null);
+
+  setAccessoryForm({
+    accessoryName: '',
+    quantity: 1,
+    status: 'AVAILABLE',
+    description: ''
+  });
+
+  setShowAccessoryForm(true);
+}}
   className="bg-yellow-500 hover:bg-yellow-400 text-black font-semibold px-4 py-2 rounded-lg"
 >
   + Add Accessory
@@ -371,7 +445,17 @@ const handleAddAccessory = async () => {
     <div className="flex justify-end gap-3 mt-5">
       <button
         type="button"
-        onClick={() => setShowAccessoryForm(false)}
+        onClick={() => {
+  setShowAccessoryForm(false);
+  setEditingAccessoryId(null);
+
+  setAccessoryForm({
+    accessoryName: '',
+    quantity: 1,
+    status: 'AVAILABLE',
+    description: ''
+  });
+}}
         className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100"
       >
         Cancel
@@ -379,10 +463,14 @@ const handleAddAccessory = async () => {
 
       <button
   type="button"
-  onClick={handleAddAccessory}
+  onClick={
+    editingAccessoryId
+      ? handleUpdateAccessory
+      : handleAddAccessory
+  }
   className="bg-yellow-500 hover:bg-yellow-400 text-black font-semibold px-5 py-2 rounded-lg"
 >
-  Save Accessory
+  {editingAccessoryId ? 'Update Accessory' : 'Save Accessory'}
 </button>
     </div>
   </div>
@@ -413,30 +501,53 @@ const handleAddAccessory = async () => {
                     <th className="px-4 py-3 text-left border-b">
                       Description
                     </th>
+                    <th className="px-4 py-3 text-center border-b">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
 
                 <tbody>
                   {accessories.map((accessory) => (
                     <tr key={accessory.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 border-b">
-                        {accessory.accessoryName}
-                      </td>
 
-                      <td className="px-4 py-3 border-b">
-                        {accessory.quantity}
-                      </td>
+                {/* Accessory */}
+                <td className="px-4 py-3 border-b">
+                  {accessory.accessoryName}
+                </td>
 
-                      <td className="px-4 py-3 border-b">
-                        <span className="px-3 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-700">
-                          {accessory.status}
-                        </span>
-                      </td>
+                {/* Quantity */}
+                <td className="px-4 py-3 border-b">
+                  {accessory.quantity}
+                </td>
 
-                      <td className="px-4 py-3 border-b">
-                        {accessory.description || '-'}
-                      </td>
-                    </tr>
+                {/* Status */}
+                <td className="px-4 py-3 border-b">
+                  <span className="px-3 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-700">
+                    {accessory.status}
+                  </span>
+                </td>
+
+                {/* Description */}
+                <td className="px-4 py-3 border-b">
+                  {accessory.description || '-'}
+                </td>
+
+                {/* Actions */}
+                <td className="px-4 py-3 border-b">
+                  <div className="flex justify-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => handleEditAccessory(accessory)}
+                      className="text-blue-600 hover:text-blue-800"
+                      title="Edit Accessory"
+                    >
+                      <Edit size={18} />
+                    </button>
+                  </div>
+                </td>
+
+              </tr>
                   ))}
                 </tbody>
               </table>
