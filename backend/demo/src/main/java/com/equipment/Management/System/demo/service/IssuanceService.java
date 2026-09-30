@@ -2,11 +2,16 @@ package com.equipment.Management.System.demo.service;
 
 import com.equipment.Management.System.demo.dto.IssuanceDTO;
 import com.equipment.Management.System.demo.dto.IssuanceRequest;
+import com.equipment.Management.System.demo.dto.AccessoryIssueRequest;
 import com.equipment.Management.System.demo.model.Equipment;
+import com.equipment.Management.System.demo.model.EquipmentAccessory;
 import com.equipment.Management.System.demo.model.Issuance;
+import com.equipment.Management.System.demo.model.IssuanceAccessory;
 import com.equipment.Management.System.demo.model.User;
 import com.equipment.Management.System.demo.repository.EquipmentRepository;
+import com.equipment.Management.System.demo.repository.EquipmentAccessoryRepository;
 import com.equipment.Management.System.demo.repository.IssuanceRepository;
+import com.equipment.Management.System.demo.repository.IssuanceAccessoryRepository;
 import com.equipment.Management.System.demo.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -26,6 +31,12 @@ public class IssuanceService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private EquipmentAccessoryRepository equipmentAccessoryRepository;
+
+    @Autowired
+    private IssuanceAccessoryRepository issuanceAccessoryRepository;
 
     @Autowired
     private NotificationService notificationService;
@@ -69,6 +80,61 @@ public class IssuanceService {
         issuance.setRemarks(request.getRemarks());
 
         Issuance saved = issuanceRepository.save(issuance);
+
+        // Create snapshots only for accessories selected for this issuance
+        if (request.getAccessories() != null) {
+
+            for (AccessoryIssueRequest selectedAccessory : request.getAccessories()) {
+
+                EquipmentAccessory accessory = equipmentAccessoryRepository
+                        .findById(selectedAccessory.getAccessoryId())
+                        .orElseThrow(() -> new RuntimeException(
+                                "Accessory not found: " + selectedAccessory.getAccessoryId()
+                        ));
+
+                // Make sure the accessory belongs to the equipment being issued
+                if (!accessory.getEquipmentId().equals(equipment.getId())) {
+                    throw new RuntimeException(
+                            "Accessory " + accessory.getAccessoryName()
+                                    + " does not belong to this equipment"
+                    );
+                }
+
+                // Validate selected quantity
+                if (selectedAccessory.getQuantityIssued() == null
+                        || selectedAccessory.getQuantityIssued() <= 0) {
+                    throw new RuntimeException(
+                            "Invalid quantity for accessory: "
+                                    + accessory.getAccessoryName()
+                    );
+                }
+
+                // Cannot issue more than the registered quantity
+                if (selectedAccessory.getQuantityIssued() > accessory.getQuantity()) {
+                    throw new RuntimeException(
+                            "Cannot issue more than "
+                                    + accessory.getQuantity()
+                                    + " of "
+                                    + accessory.getAccessoryName()
+                    );
+                }
+
+                IssuanceAccessory issuanceAccessory = new IssuanceAccessory();
+
+                issuanceAccessory.setIssuance(saved);
+                issuanceAccessory.setAccessoryId(accessory.getId());
+                issuanceAccessory.setAccessoryName(accessory.getAccessoryName());
+                issuanceAccessory.setQuantityIssued(
+                        selectedAccessory.getQuantityIssued()
+                );
+
+                issuanceAccessory.setQuantityReturned(null);
+                issuanceAccessory.setReturnStatus(null);
+                issuanceAccessory.setRemarks(null);
+
+                issuanceAccessoryRepository.save(issuanceAccessory);
+            }
+        }
 
         // Notify issued user
         notificationService.createNotificationForUser(

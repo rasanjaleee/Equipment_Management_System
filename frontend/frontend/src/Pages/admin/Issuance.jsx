@@ -21,6 +21,8 @@ import {
 const API_BASE = API_BASE_URL;
 const BORROW_REQUESTS_API = `${API_BASE}/api/borrow-requests`;
 const ISSUANCES_API = `${API_BASE}/api/issuances`;
+const ACCESSORIES_API = `${API_BASE}/api/equipment-accessories`;
+const ISSUANCE_ACCESSORIES_API = `${API_BASE}/api/issuance-accessories`;
 
 const borrowRequestFilters = [
   { label: 'All', value: 'ALL' },
@@ -39,6 +41,7 @@ const defaultIssuanceForm = {
   equipmentId: '',
   equipmentName: '',
   userId: '',
+  userDbId: '',
   userName: '',
   roleDept: '',
   contact: '',
@@ -60,7 +63,8 @@ function normalizeBorrowRequest(request, fallbackIndex = 0) {
     id: rawId ?? `request-${fallbackIndex}`,
     requestId: request.requestCode ?? request.requestId ?? `BR-${String(rawId ?? fallbackIndex + 1).padStart(4, '0')}`,
     userName: request.userName ?? request.applicantName ?? request.name ?? 'Unknown user',
-    userId: request.userId ?? request.registrationNumber ?? request.registrationOrStaffId ?? request.staffId ?? 'N/A',
+    userId: request.registrationOrStaffId ?? request.registrationNumber ?? request.staffId ?? 'N/A',
+    userDbId: request.userId ?? null,
     equipmentName: request.equipmentName ?? request.itemName ?? 'Unknown equipment',
     equipmentId: request.equipmentId ?? null,
     laboratoryName: request.laboratoryName ?? request.laboratory ?? request.labName ?? 'N/A',
@@ -340,8 +344,453 @@ function Td({ children, className = '' }) {
   return <td className={`px-6 py-4 text-sm text-gray-700 ${className}`}>{children}</td>;
 }
 
-function IssuanceForm({ form, setForm, selectedRequest, onReset, onSubmit, submitting, message, error }) {
+function IssuedEquipmentTable({
+  issuances,
+  loading,
+  error,
+  onReturn,
+  onRefresh,
+}) {
+  return (
+    <section className="rounded-2xl border border-gray-200 bg-white shadow-sm">
+      <div className="flex flex-col gap-3 border-b px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <div className="flex items-center gap-2">
+            <Package size={20} className="text-yellow-600" />
+            <h2 className="text-xl font-bold text-gray-900">
+              Issued Equipment / Returns
+            </h2>
+          </div>
+
+          <p className="mt-1 text-sm text-gray-500">
+            View issued equipment and process equipment returns.
+          </p>
+        </div>
+
+        <Button
+          type="button"
+          onClick={onRefresh}
+          className="border border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
+        >
+          <Filter size={16} />
+          Refresh
+        </Button>
+      </div>
+
+      {error ? (
+        <div className="m-6 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+          {error}
+        </div>
+      ) : null}
+
+      {loading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 size={20} className="mr-2 animate-spin" />
+          <span className="text-sm text-gray-600">
+            Loading issuance records...
+          </span>
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <Th>Issuance ID</Th>
+                <Th>Equipment</Th>
+                <Th>User</Th>
+                <Th>Issue Date</Th>
+                <Th>Return Due Date</Th>
+                <Th>Status</Th>
+                <Th className="text-right">Action</Th>
+              </tr>
+            </thead>
+
+            <tbody className="divide-y divide-gray-100 bg-white">
+              {issuances.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={7}
+                    className="px-6 py-12 text-center text-sm text-gray-500"
+                  >
+                    No issuance records found.
+                  </td>
+                </tr>
+              ) : (
+                issuances.map((issuance) => {
+                  const status = String(
+                    issuance.status || ''
+                  ).toUpperCase();
+
+                  const alreadyReturned = status === 'RETURNED';
+
+                  return (
+                    <tr
+                      key={issuance.id}
+                      className="hover:bg-gray-50"
+                    >
+                      <Td>
+                        <span className="font-semibold text-gray-900">
+                          {issuance.issuanceId || `#${issuance.id}`}
+                        </span>
+                      </Td>
+
+                      <Td>
+                        {issuance.equipmentName ||
+                          issuance.equipment?.equipmentName ||
+                          `Equipment #${issuance.equipmentId || ''}`}
+                      </Td>
+
+                      <Td>
+                        {issuance.userName ||
+                          issuance.user?.username ||
+                          `User #${issuance.userId || ''}`}
+                      </Td>
+
+                      <Td>{issuance.issueDate || 'N/A'}</Td>
+
+                      <Td>{issuance.returnDueDate || 'N/A'}</Td>
+
+                      <Td>
+                        <span
+                          className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${
+                            alreadyReturned
+                              ? 'border-emerald-200 bg-emerald-100 text-emerald-800'
+                              : 'border-yellow-200 bg-yellow-100 text-yellow-800'
+                          }`}
+                        >
+                          {issuance.status || 'N/A'}
+                        </span>
+                      </Td>
+
+                      <Td className="text-right">
+                        {alreadyReturned ? (
+                          <span className="text-sm font-semibold text-emerald-700">
+                            Returned
+                          </span>
+                        ) : (
+                          <Button
+                            type="button"
+                            onClick={() => onReturn(issuance)}
+                            className="bg-yellow-500 text-black hover:bg-yellow-400"
+                          >
+                            <Package size={16} />
+                            Return
+                          </Button>
+                        )}
+                      </Td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function ReturnModal({
+  issuance,
+  returnForm,
+  setReturnForm,
+  accessories,
+  setAccessories,
+  accessoriesLoading,
+  submitting,
+  error,
+  onClose,
+  onConfirm,
+}) {
+  if (!issuance) {
+    return null;
+  }
+
+  function updateAccessory(id, field, value) {
+    setAccessories((prev) =>
+      prev.map((item) =>
+        item.id === id
+          ? { ...item, [field]: value }
+          : item
+      )
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
+
+        <div className="flex items-center justify-between border-b px-6 py-4">
+          <div>
+            <h2 className="text-xl font-bold text-gray-900">
+              Return Equipment
+            </h2>
+
+            <p className="mt-1 text-sm text-gray-500">
+              {issuance.issuanceId || `#${issuance.id}`}
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full p-2 text-gray-500 hover:bg-gray-100"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="space-y-6 p-6">
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <InfoCard
+              icon={Package}
+              label="Equipment"
+              value={
+                issuance.equipmentName ||
+                issuance.equipment?.equipmentName ||
+                `Equipment #${issuance.equipmentId || ''}`
+              }
+            />
+
+            <InfoCard
+              icon={UserRound}
+              label="User"
+              value={
+                issuance.userName ||
+                issuance.user?.username ||
+                `User #${issuance.userId || ''}`
+              }
+            />
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+
+            <Field label="Return Date">
+              <Input
+                type="date"
+                value={returnForm.returnDate}
+                onChange={(event) =>
+                  setReturnForm((prev) => ({
+                    ...prev,
+                    returnDate: event.target.value,
+                  }))
+                }
+              />
+            </Field>
+
+            <Field label="Condition on Return">
+              <Select
+                value={returnForm.conditionOnReturn}
+                onChange={(event) =>
+                  setReturnForm((prev) => ({
+                    ...prev,
+                    conditionOnReturn: event.target.value,
+                  }))
+                }
+              >
+                <option value="Working">Working</option>
+                <option value="Broken">Broken</option>
+                <option value="Under Repair">Under Repair</option>
+                <option value="Missing Parts">Missing Parts</option>
+              </Select>
+            </Field>
+
+          </div>
+
+          <div className="rounded-xl border border-gray-200 p-4">
+            <div className="mb-4 flex items-center gap-2">
+              <Package size={18} className="text-yellow-600" />
+
+              <h3 className="font-semibold text-gray-900">
+                Issued Accessories
+              </h3>
+            </div>
+
+            {accessoriesLoading ? (
+              <div className="flex items-center gap-2 py-4 text-sm text-gray-600">
+                <Loader2 size={16} className="animate-spin" />
+                Loading issued accessories...
+              </div>
+            ) : accessories.length === 0 ? (
+              <p className="py-3 text-sm text-gray-500">
+                No accessories were issued with this equipment.
+              </p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-sm">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <Th>Accessory</Th>
+                      <Th>Issued</Th>
+                      <Th>Returned</Th>
+                      <Th>Status</Th>
+                      <Th>Remarks</Th>
+                    </tr>
+                  </thead>
+
+                  <tbody className="divide-y divide-gray-100">
+                    {accessories.map((accessory) => (
+                      <tr key={accessory.id}>
+                        <Td>{accessory.accessoryName}</Td>
+
+                        <Td>{accessory.quantityIssued}</Td>
+
+                        <Td>
+                          <Input
+                            type="number"
+                            min="0"
+                            max={accessory.quantityIssued}
+                            value={accessory.quantityReturned}
+                            onChange={(event) =>
+                              updateAccessory(
+                                accessory.id,
+                                'quantityReturned',
+                                Number(event.target.value)
+                              )
+                            }
+                            className="w-24"
+                          />
+                        </Td>
+
+                        <Td>
+                          <Select
+                            value={accessory.returnStatus}
+                            onChange={(event) =>
+                              updateAccessory(
+                                accessory.id,
+                                'returnStatus',
+                                event.target.value
+                              )
+                            }
+                          >
+                            <option value="RETURNED">Returned</option>
+                            <option value="DAMAGED">Damaged</option>
+                            <option value="MISSING">Missing</option>
+                          </Select>
+                        </Td>
+
+                        <Td>
+                          <Input
+                            value={accessory.remarks || ''}
+                            onChange={(event) =>
+                              updateAccessory(
+                                accessory.id,
+                                'remarks',
+                                event.target.value
+                              )
+                            }
+                            placeholder="Optional remarks"
+                          />
+                        </Td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          <Field label="Equipment Return Remarks">
+            <Textarea
+              rows={3}
+              value={returnForm.remarks}
+              onChange={(event) =>
+                setReturnForm((prev) => ({
+                  ...prev,
+                  remarks: event.target.value,
+                }))
+              }
+              placeholder="Optional notes about the equipment return."
+            />
+          </Field>
+
+          {error ? (
+            <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+              {error}
+            </div>
+          ) : null}
+
+          <div className="flex justify-end gap-3 border-t pt-4">
+            <Button
+              type="button"
+              onClick={onClose}
+              disabled={submitting}
+              className="border border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
+            >
+              Cancel
+            </Button>
+
+            <Button
+              type="button"
+              onClick={onConfirm}
+              disabled={submitting}
+              className="bg-yellow-500 text-black hover:bg-yellow-400"
+            >
+              {submitting ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <CheckCircle2 size={16} />
+              )}
+
+              {submitting ? 'Returning...' : 'Confirm Return'}
+            </Button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+function IssuanceForm({ form, setForm, selectedRequest, onReset, onSubmit, submitting, message, error,equipmentAccessories,
+  accessoriesLoading,accessoriesError,selectedAccessories,setSelectedAccessories }) {
   const formRef = useRef(null);
+
+  function isAccessorySelected(accessoryId) {
+  return selectedAccessories.some(
+    (item) => item.accessoryId === accessoryId
+  );
+}
+
+function handleAccessorySelection(accessory) {
+  const selected = isAccessorySelected(accessory.id);
+
+  if (selected) {
+    setSelectedAccessories((prev) =>
+      prev.filter((item) => item.accessoryId !== accessory.id)
+    );
+  } else {
+    setSelectedAccessories((prev) => [
+      ...prev,
+      {
+        accessoryId: accessory.id,
+        quantityIssued: 1,
+      },
+    ]);
+  }
+}
+
+function handleAccessoryQuantity(accessoryId, value, maxQuantity) {
+  let quantity = Number(value);
+
+  if (Number.isNaN(quantity) || quantity < 1) {
+    quantity = 1;
+  }
+
+  if (quantity > maxQuantity) {
+    quantity = maxQuantity;
+  }
+
+  setSelectedAccessories((prev) =>
+    prev.map((item) =>
+      item.accessoryId === accessoryId
+        ? { ...item, quantityIssued: quantity }
+        : item
+    )
+  );
+}
 
   useEffect(() => {
     if (selectedRequest && formRef.current) {
@@ -443,7 +892,7 @@ function IssuanceForm({ form, setForm, selectedRequest, onReset, onSubmit, submi
               className={selectedRequest?.equipmentName ? 'bg-gray-100 text-gray-600' : ''}
             />
           </Field>
-          <Field label="User ID">
+          <Field label="Registration / Staff ID">
             <Input
               value={form.userId}
               onChange={(event) => setForm((prev) => ({ ...prev, userId: event.target.value }))}
@@ -474,6 +923,108 @@ function IssuanceForm({ form, setForm, selectedRequest, onReset, onSubmit, submi
             />
           </Field>
         </div>
+
+        <div className="rounded-xl border border-yellow-200 bg-yellow-50 p-4">
+  <div className="mb-3 flex items-center gap-2">
+    <Package size={18} className="text-yellow-700" />
+
+    <h3 className="font-semibold text-gray-900">
+      Equipment Accessories
+    </h3>
+  </div>
+
+  {!form.equipmentId ? (
+    <p className="text-sm text-gray-500">
+      Select or enter an Equipment ID to view its accessories.
+    </p>
+  ) : accessoriesLoading ? (
+    <div className="flex items-center gap-2 text-sm text-gray-600">
+      <Loader2 size={16} className="animate-spin" />
+      Loading accessories...
+    </div>
+  ) : accessoriesError ? (
+    <p className="text-sm text-red-600">
+      {accessoriesError}
+    </p>
+  ) : equipmentAccessories.length === 0 ? (
+    <p className="text-sm text-gray-500">
+      No accessories registered for this equipment.
+    </p>
+  ) : (
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm">
+  <thead>
+    <tr className="border-b border-yellow-200 text-left">
+      <th className="px-3 py-2">Issue?</th>
+      <th className="px-3 py-2">Accessory</th>
+      <th className="px-3 py-2">Available</th>
+      <th className="px-3 py-2">Issue Quantity</th>
+      <th className="px-3 py-2">Status</th>
+    </tr>
+  </thead>
+
+  <tbody>
+    {equipmentAccessories.map((accessory) => {
+      const selected = selectedAccessories.find(
+        (item) => item.accessoryId === accessory.id
+      );
+
+      const available = accessory.status === 'AVAILABLE';
+
+      return (
+        <tr
+          key={accessory.id}
+          className="border-b border-yellow-100 last:border-0"
+        >
+          <td className="px-3 py-2">
+            <input
+              type="checkbox"
+              checked={Boolean(selected)}
+              disabled={!available}
+              onChange={() => handleAccessorySelection(accessory)}
+              className="h-4 w-4"
+            />
+          </td>
+
+          <td className="px-3 py-2 font-medium text-gray-900">
+            {accessory.accessoryName}
+          </td>
+
+          <td className="px-3 py-2 text-gray-700">
+            {accessory.quantity}
+          </td>
+
+          <td className="px-3 py-2">
+            <input
+              type="number"
+              min="1"
+              max={accessory.quantity}
+              disabled={!selected}
+              value={selected?.quantityIssued || 1}
+              onChange={(event) =>
+                handleAccessoryQuantity(
+                  accessory.id,
+                  event.target.value,
+                  accessory.quantity
+                )
+              }
+              className="h-9 w-24 rounded-lg border border-gray-300 bg-white px-3 text-sm disabled:bg-gray-100"
+            />
+          </td>
+
+          <td className="px-3 py-2">
+            <span className="rounded-full bg-green-100 px-2 py-1 text-xs font-semibold text-green-700">
+              {accessory.status}
+            </span>
+          </td>
+        </tr>
+      );
+    })}
+  </tbody>
+</table>
+    </div>
+  )}
+</div>
 
         <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
           <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-500">Remarks</label>
@@ -524,12 +1075,44 @@ export default function Issuance() {
   const [formMessage, setFormMessage] = useState('');
   const [formSubmitting, setFormSubmitting] = useState(false);
   const [form, setForm] = useState(defaultIssuanceForm);
+  const [equipmentAccessories, setEquipmentAccessories] = useState([]);
+  const [accessoriesLoading, setAccessoriesLoading] = useState(false);
+  const [accessoriesError, setAccessoriesError] = useState('');
+  const [selectedAccessories, setSelectedAccessories] = useState([]);
+
+          const [issuances, setIssuances] = useState([]);
+          const [issuancesLoading, setIssuancesLoading] = useState(false);
+          const [issuancesError, setIssuancesError] = useState('');
+
+          const [returnIssuance, setReturnIssuance] = useState(null);
+          const [returnAccessories, setReturnAccessories] = useState([]);
+          const [returnAccessoriesLoading, setReturnAccessoriesLoading] = useState(false);
+
+          const [returnForm, setReturnForm] = useState({
+            returnDate: todayValue(),
+            conditionOnReturn: 'Working',
+            remarks: '',
+          });
+
+          const [returnSubmitting, setReturnSubmitting] = useState(false);
+          const [returnMessage, setReturnMessage] = useState('');
+          const [returnError, setReturnError] = useState('');
 
   const incomingState = location.state;
 
   useEffect(() => {
     fetchBorrowRequests();
+    fetchIssuances();
   }, []);
+
+  useEffect(() => {
+  if (form.equipmentId) {
+    fetchEquipmentAccessories(form.equipmentId);
+  } else {
+    setEquipmentAccessories([]);
+    setAccessoriesError('');
+  }
+}, [form.equipmentId]);
 
   useEffect(() => {
     if (incomingState && typeof incomingState === 'object') {
@@ -537,6 +1120,242 @@ export default function Issuance() {
       preloadFromRequest(normalized);
     }
   }, [incomingState]);
+
+  async function fetchEquipmentAccessories(equipmentId) {
+  if (!equipmentId || Number.isNaN(Number(equipmentId))) {
+    setEquipmentAccessories([]);
+    setAccessoriesError('');
+    return;
+  }
+
+  try {
+    setAccessoriesLoading(true);
+    setAccessoriesError('');
+
+    const response = await axios.get(
+      `${ACCESSORIES_API}/equipment/${equipmentId}`,
+      {
+        headers: getAuthHeaders(),
+      }
+    );
+
+    const accessories = Array.isArray(response.data)
+  ? response.data
+  : [];
+
+setEquipmentAccessories(accessories);
+
+setSelectedAccessories(
+  accessories
+    .filter((accessory) => accessory.status === 'AVAILABLE')
+    .map((accessory) => ({
+      accessoryId: accessory.id,
+      quantityIssued: accessory.quantity,
+    }))
+);
+  } catch (error) {
+    console.error('Failed to load equipment accessories:', error);
+
+    setEquipmentAccessories([]);
+
+    setAccessoriesError(
+      error.response?.data?.message ||
+        'Failed to load equipment accessories.'
+    );
+  } finally {
+    setAccessoriesLoading(false);
+  }
+}
+
+async function fetchIssuances() {
+  try {
+    setIssuancesLoading(true);
+    setIssuancesError('');
+
+    const response = await axios.get(ISSUANCES_API, {
+      headers: getAuthHeaders(),
+    });
+
+    setIssuances(Array.isArray(response.data) ? response.data : []);
+  } catch (error) {
+    console.error('Failed to load issuances:', error);
+
+    setIssuances([]);
+
+    setIssuancesError(
+      error.response?.data?.message ||
+      error.response?.data ||
+      'Failed to load issuance records.'
+    );
+  } finally {
+    setIssuancesLoading(false);
+  }
+}
+
+async function handleStartReturn(issuance) {
+  setReturnIssuance(issuance);
+  setReturnMessage('');
+  setReturnError('');
+  setReturnAccessories([]);
+
+  setReturnForm({
+    returnDate: todayValue(),
+    conditionOnReturn: 'Working',
+    remarks: '',
+  });
+
+  try {
+    setReturnAccessoriesLoading(true);
+
+    const response = await axios.get(
+      `${ISSUANCE_ACCESSORIES_API}/issuance/${issuance.id}`,
+      {
+        headers: getAuthHeaders(),
+      }
+    );
+
+    const accessories = Array.isArray(response.data)
+      ? response.data
+      : [];
+
+    setReturnAccessories(
+      accessories.map((accessory) => ({
+        ...accessory,
+
+        quantityReturned:
+          accessory.quantityReturned ??
+          accessory.quantityIssued ??
+          0,
+
+        returnStatus:
+          accessory.returnStatus || 'RETURNED',
+
+        remarks:
+          accessory.remarks || '',
+      }))
+    );
+  } catch (error) {
+    console.error('Failed to load issuance accessories:', error);
+
+    setReturnError(
+      error.response?.data?.message ||
+      error.response?.data ||
+      'Failed to load issued accessories.'
+    );
+  } finally {
+    setReturnAccessoriesLoading(false);
+  }
+}
+
+async function handleConfirmReturn() {
+  if (!returnIssuance) {
+    return;
+  }
+
+  if (!returnForm.returnDate) {
+    setReturnError('Return date is required.');
+    return;
+  }
+
+  const confirmed = window.confirm(
+    `Confirm return for ${returnIssuance.issuanceId}?`
+  );
+
+  if (!confirmed) {
+    return;
+  }
+
+  try {
+    setReturnSubmitting(true);
+    setReturnError('');
+    setReturnMessage('');
+
+    // 1. Save accessory return details
+    for (const accessory of returnAccessories) {
+      if (
+        Number(accessory.quantityReturned) < 0 ||
+        Number(accessory.quantityReturned) > Number(accessory.quantityIssued)
+      ) {
+        throw new Error(
+          `Invalid returned quantity for ${accessory.accessoryName}.`
+        );
+      }
+
+      await axios.put(
+        `${ISSUANCE_ACCESSORIES_API}/${accessory.id}/return`,
+        {
+          quantityReturned: Number(accessory.quantityReturned),
+          returnStatus: accessory.returnStatus,
+          remarks: accessory.remarks || null,
+        },
+        {
+          headers: {
+            ...getAuthHeaders(),
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+    }
+
+    // 2. Update main issuance as Returned
+    const payload = {
+      issuanceId: returnIssuance.issuanceId,
+      issueDate: returnIssuance.issueDate,
+      returnDueDate: returnIssuance.returnDueDate,
+      status: 'Returned',
+
+      equipmentId:
+        returnIssuance.equipmentId ??
+        returnIssuance.equipment?.id,
+
+      qtyIssued: returnIssuance.qtyIssued,
+
+      conditionAtIssue: returnIssuance.conditionAtIssue,
+
+      userId:
+        returnIssuance.userId ??
+        returnIssuance.user?.id,
+
+      roleDept: returnIssuance.roleDept || null,
+      contact: returnIssuance.contact || null,
+
+      returnDate: returnForm.returnDate,
+      conditionOnReturn: returnForm.conditionOnReturn,
+      remarks: returnForm.remarks || null,
+    };
+
+    await axios.put(
+      `${ISSUANCES_API}/${returnIssuance.id}`,
+      payload,
+      {
+        headers: {
+          ...getAuthHeaders(),
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    // 3. Refresh issuance table
+    await fetchIssuances();
+
+    setReturnMessage('Equipment returned successfully.');
+
+    setReturnIssuance(null);
+    setReturnAccessories([]);
+
+  } catch (error) {
+    console.error('Failed to return equipment:', error);
+
+    setReturnError(
+      error.response?.data?.message ||
+      error.response?.data ||
+      error.message ||
+      'Failed to return equipment.'
+    );
+  } finally {
+    setReturnSubmitting(false);
+  }
+}
 
   async function fetchBorrowRequests() {
     try {
@@ -573,6 +1392,7 @@ export default function Issuance() {
   function resetForm() {
     setForm(defaultIssuanceForm);
     setSelectedRequest(null);
+    setSelectedAccessories([]);
     setFormError('');
     setFormMessage('');
   }
@@ -589,7 +1409,12 @@ export default function Issuance() {
       status: 'Issued',
       equipmentId: request.equipmentId ? String(request.equipmentId) : '',
       equipmentName: request.equipmentName,
-      userId: request.userId && request.userId !== 'N/A' ? String(request.userId) : '',
+      userId: request.userId && request.userId !== 'N/A'
+        ? String(request.userId)
+        : '',
+      userDbId: request.userDbId
+        ? String(request.userDbId)
+        : '',
       userName: request.userName,
       roleDept: request.department || '',
       contact: request.contactNumber || '',
@@ -678,10 +1503,12 @@ export default function Issuance() {
       nextErrors.equipmentName = 'Equipment name is required.';
     }
     if (!form.userId.trim()) {
-      nextErrors.userId = 'User ID is required.';
-    } else if (Number.isNaN(Number(form.userId))) {
-      nextErrors.userId = 'User ID must be numeric for issuance creation.';
-    }
+      nextErrors.userId = 'Registration / Staff ID is required.';
+   }
+
+   if (!form.userDbId || Number.isNaN(Number(form.userDbId))) {
+     nextErrors.userDbId = 'Valid database user ID is missing for this request.';
+  }
     if (!form.userName.trim()) {
       nextErrors.userName = 'User name is required.';
     }
@@ -713,12 +1540,16 @@ export default function Issuance() {
       equipmentId: Number(form.equipmentId),
       qtyIssued: Number(form.qtyIssued),
       conditionAtIssue: form.conditionAtIssue,
-      userId: Number(form.userId),
+      userId: Number(form.userDbId),
       roleDept: form.roleDept || null,
       contact: form.contact || null,
       returnDate: null,
       conditionOnReturn: null,
       remarks: form.remarks || null,
+      accessories: selectedAccessories.map((item) => ({
+  accessoryId: Number(item.accessoryId),
+  quantityIssued: Number(item.quantityIssued),
+})),
     };
 
     try {
@@ -739,6 +1570,7 @@ export default function Issuance() {
       setSelectedRequest(null);
       setDetailsRequest(null);
       setForm(defaultIssuanceForm);
+      setSelectedAccessories([]);
     } catch (error) {
       setFormError(
         error.response?.data?.message ||
@@ -807,6 +1639,14 @@ export default function Issuance() {
         />
       )}
 
+      <IssuedEquipmentTable
+  issuances={issuances}
+  loading={issuancesLoading}
+  error={issuancesError}
+  onReturn={handleStartReturn}
+  onRefresh={fetchIssuances}
+/>
+
       <IssuanceForm
         form={form}
         setForm={setForm}
@@ -816,6 +1656,11 @@ export default function Issuance() {
         submitting={formSubmitting}
         message={formMessage}
         error={formError}
+        equipmentAccessories={equipmentAccessories}
+        accessoriesLoading={accessoriesLoading}
+        accessoriesError={accessoriesError}
+        selectedAccessories={selectedAccessories}
+        setSelectedAccessories={setSelectedAccessories}
       />
 
       {detailsRequest ? (
@@ -827,6 +1672,28 @@ export default function Issuance() {
           actionLoading={actionLoadingId}
         />
       ) : null}
+
+      {returnIssuance ? (
+  <ReturnModal
+    issuance={returnIssuance}
+    returnForm={returnForm}
+    setReturnForm={setReturnForm}
+    accessories={returnAccessories}
+    setAccessories={setReturnAccessories}
+    accessoriesLoading={returnAccessoriesLoading}
+    submitting={returnSubmitting}
+    error={returnError}
+    onClose={() => {
+      setReturnIssuance(null);
+      setReturnAccessories([]);
+      setReturnError('');
+      setReturnMessage('');
+    }}
+    onConfirm={handleConfirmReturn}
+  />
+) : null}
+
     </div>
+    
   );
 }
