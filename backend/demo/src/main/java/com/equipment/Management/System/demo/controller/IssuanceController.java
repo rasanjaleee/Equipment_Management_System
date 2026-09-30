@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.Authentication;
 
 import java.util.List;
 
@@ -70,6 +71,25 @@ public class IssuanceController {
             return new ResponseEntity<>(issuances, HttpStatus.OK);
         } catch (Exception e) {
             return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    // Get logged-in user's issuances
+    @GetMapping("/my")
+    public ResponseEntity<List<IssuanceDTO>> getMyIssuances(
+            Authentication authentication) {
+
+        try {
+            List<IssuanceDTO> issuances =
+                    issuanceService.getMyIssuances(authentication.getName());
+
+            return new ResponseEntity<>(issuances, HttpStatus.OK);
+
+        } catch (Exception e) {
+            return new ResponseEntity<>(
+                    null,
+                    HttpStatus.INTERNAL_SERVER_ERROR
+            );
         }
     }
 

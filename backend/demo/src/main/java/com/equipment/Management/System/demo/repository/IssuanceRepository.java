@@ -17,4 +17,9 @@ public interface IssuanceRepository extends JpaRepository<Issuance, Long> {
     List<Issuance> findByUser_Id(Long userId);
 
     List<Issuance> findByEquipment_Id(Long equipmentId);
+
+    boolean existsByEquipment_IdAndStatusIgnoreCase(
+            Long equipmentId,
+            String status
+    );
 }

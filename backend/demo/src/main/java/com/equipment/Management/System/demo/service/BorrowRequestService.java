@@ -37,6 +37,35 @@ public class BorrowRequestService {
         return borrowRequestRepository.findAll().stream().map(this::toResponse).toList();
     }
 
+    public List<BorrowRequestResponse> getMyBorrowRequests(String username) {
+
+        if (username == null || username.isBlank()) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED,
+                    "Authenticated user is required."
+            );
+        }
+
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "User not found."
+                ));
+
+        if (user.getEmail() == null || user.getEmail().isBlank()) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "User email is not available."
+            );
+        }
+
+        return borrowRequestRepository
+                .findByEmailIgnoreCaseOrderByCreatedAtDesc(user.getEmail())
+                .stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
     public BorrowRequestResponse createBorrowRequest(BorrowRequestCreateRequest request) {
         validateRequest(request);
 

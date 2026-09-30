@@ -24,4 +24,6 @@ public interface BorrowRequestRepository extends JpaRepository<BorrowRequest, Lo
             @Param("requestedEnd") LocalDate requestedEnd,
             @Param("blockingStatuses") List<String> blockingStatuses
     );
+
+    List<BorrowRequest> findByEmailIgnoreCaseOrderByCreatedAtDesc(String email);
 }

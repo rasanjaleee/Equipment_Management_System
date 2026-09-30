@@ -87,16 +87,42 @@ public class SecurityConfig {
                         // ACTIVITY LOGS
                         .requestMatchers(HttpMethod.GET, "/api/activity-logs/**").hasAnyRole("SUPER_ADMIN", "ADMIN", "TECHNICIAN")
 
-                        // ISSUANCES
-                        .requestMatchers(HttpMethod.GET, "/api/issuances/**").authenticated()
-                        .requestMatchers(HttpMethod.POST, "/api/issuances/**").hasAnyRole("SUPER_ADMIN", "ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/api/issuances/**").hasAnyRole("SUPER_ADMIN", "ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/api/issuances/**").hasAnyRole("SUPER_ADMIN", "ADMIN")
+                                // ISSUANCES
 
-                        // BORROW REQUESTS
-                        .requestMatchers(HttpMethod.GET, "/api/borrow-requests/**").hasAnyRole("SUPER_ADMIN", "ADMIN")
-                        .requestMatchers(HttpMethod.POST, "/api/borrow-requests/**").authenticated()
-                        .requestMatchers(HttpMethod.PATCH, "/api/borrow-requests/**").hasAnyRole("SUPER_ADMIN", "ADMIN")
+// Logged-in user can view only their own issuances
+                                .requestMatchers(HttpMethod.GET, "/api/issuances/my")
+                                .authenticated()
+
+// Admins can view all other issuance endpoints
+                                .requestMatchers(HttpMethod.GET, "/api/issuances/**")
+                                .hasAnyRole("SUPER_ADMIN", "ADMIN")
+
+                                .requestMatchers(HttpMethod.POST, "/api/issuances/**")
+                                .hasAnyRole("SUPER_ADMIN", "ADMIN")
+
+                                .requestMatchers(HttpMethod.PUT, "/api/issuances/**")
+                                .hasAnyRole("SUPER_ADMIN", "ADMIN")
+
+                                .requestMatchers(HttpMethod.DELETE, "/api/issuances/**")
+                                .hasAnyRole("SUPER_ADMIN", "ADMIN")
+
+                                // BORROW REQUESTS
+
+// Logged-in users can view their own borrow requests
+                                .requestMatchers(HttpMethod.GET, "/api/borrow-requests/my")
+                                .authenticated()
+
+// Only admins can view all borrow requests
+                                .requestMatchers(HttpMethod.GET, "/api/borrow-requests/**")
+                                .hasAnyRole("SUPER_ADMIN", "ADMIN")
+
+// Logged-in users can create borrow requests
+                                .requestMatchers(HttpMethod.POST, "/api/borrow-requests/**")
+                                .authenticated()
+
+// Only admins can approve/reject requests
+                                .requestMatchers(HttpMethod.PATCH, "/api/borrow-requests/**")
+                                .hasAnyRole("SUPER_ADMIN", "ADMIN")
 
                         // REPORTS
                         .requestMatchers(HttpMethod.GET, "/api/reports/**").hasAnyRole("SUPER_ADMIN", "ADMIN")

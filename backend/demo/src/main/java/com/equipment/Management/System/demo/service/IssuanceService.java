@@ -57,6 +57,28 @@ public class IssuanceService {
         Equipment equipment = equipmentRepository.findById(request.getEquipmentId())
                 .orElseThrow(() -> new RuntimeException("Equipment not found"));
 
+        // Check whether this physical equipment unit is already issued
+        boolean alreadyIssued =
+                issuanceRepository.existsByEquipment_IdAndStatusIgnoreCase(
+                        equipment.getId(),
+                        "Issued"
+                );
+
+        if (alreadyIssued) {
+            throw new RuntimeException(
+                    "This equipment is already issued and has not been returned"
+            );
+        }
+
+        // Only WORKING equipment can be issued
+        if (equipment.getStatus() == null ||
+                !equipment.getStatus().name().equalsIgnoreCase("WORKING")) {
+
+            throw new RuntimeException(
+                    "Only working equipment can be issued"
+            );
+        }
+
         User user = userRepository.findById(request.getUserId())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
@@ -196,6 +218,18 @@ public class IssuanceService {
                 .stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
+    }
+
+    public List<IssuanceDTO> getMyIssuances(String username) {
+
+        if (username == null || username.isBlank()) {
+            throw new RuntimeException("Authenticated user is required");
+        }
+
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        return getIssuancesByUserId(user.getId());
     }
 
     public List<IssuanceDTO> getIssuancesByEquipmentId(Long equipmentId) {

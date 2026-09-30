@@ -1,4 +1,4 @@
-import { Search, ChevronDown, X } from 'lucide-react';
+import {Search,ChevronDown,X,ClipboardList,Clock,CheckCircle,Package,RotateCcw} from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -26,6 +26,11 @@ const Equipment = () => {
   const [isBorrowModalOpen, setIsBorrowModalOpen] = useState(false);
   const [selectedEquipmentForBorrow, setSelectedEquipmentForBorrow] = useState(null);
   const [labPages, setLabPages] = useState({});
+  const [isMyEquipmentOpen, setIsMyEquipmentOpen] = useState(false);
+const [myRequests, setMyRequests] = useState([]);
+const [myIssuances, setMyIssuances] = useState([]);
+const [myEquipmentLoading, setMyEquipmentLoading] = useState(false);
+const [myEquipmentError, setMyEquipmentError] = useState('');
 
   const departments = [
     'Department of Electrical and Information Engineering',
@@ -67,6 +72,70 @@ const Equipment = () => {
       setLoading(false);
     }
   };
+
+  const fetchMyEquipment = async () => {
+  try {
+    setMyEquipmentLoading(true);
+    setMyEquipmentError('');
+
+    const token = localStorage.getItem('token');
+
+    if (!token) {
+      setMyEquipmentError('Please login to view your equipment.');
+      return;
+    }
+
+    const headers = {
+      Authorization: `Bearer ${token}`
+    };
+
+    const [requestsResponse, issuancesResponse] = await Promise.all([
+      axios.get(`${API_BASE_URL}/api/borrow-requests/my`, { headers }),
+      axios.get(`${API_BASE_URL}/api/issuances/my`, { headers })
+    ]);
+
+    setMyRequests(
+      Array.isArray(requestsResponse.data)
+        ? requestsResponse.data
+        : []
+    );
+
+    setMyIssuances(
+      Array.isArray(issuancesResponse.data)
+        ? issuancesResponse.data
+        : []
+    );
+
+  } catch (err) {
+    console.error('Failed to load my equipment:', err);
+
+    setMyEquipmentError(
+      'Failed to load your equipment information.'
+    );
+
+    setMyRequests([]);
+    setMyIssuances([]);
+
+  } finally {
+    setMyEquipmentLoading(false);
+  }
+};
+
+const pendingRequests = myRequests.filter(
+  (request) => normalizeValue(request.status) === 'pending'
+);
+
+const approvedRequests = myRequests.filter(
+  (request) => normalizeValue(request.status) === 'approved'
+);
+
+const currentBorrowed = myIssuances.filter(
+  (issuance) => normalizeValue(issuance.status) === 'issued'
+);
+
+const returnedEquipment = myIssuances.filter(
+  (issuance) => normalizeValue(issuance.status) === 'returned'
+);
 
   const dynamicLabMap = equipmentList.reduce((acc, item) => {
     const labName = (item.laboratory || '').trim();
@@ -337,6 +406,17 @@ const Equipment = () => {
               </button>
 
               <button
+              onClick={() => {
+                setIsMyEquipmentOpen(true);
+                fetchMyEquipment();
+              }}
+              className="bg-white hover:bg-yellow-50 text-gray-900 font-semibold px-5 py-2.5 rounded-lg text-sm transition-colors shadow-sm border border-gray-300 flex items-center gap-2"
+            >
+              <ClipboardList size={17} />
+              My Equipment
+            </button>
+
+              <button
                 onClick={() => {
                   setSelectedEquipmentForBorrow(null);
                   setIsBorrowModalOpen(true);
@@ -565,6 +645,385 @@ const Equipment = () => {
             );
           })}
       </div>
+
+      {/* ================= MY EQUIPMENT MODAL ================= */}
+{isMyEquipmentOpen && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+
+    <div className="bg-white w-full max-w-6xl max-h-[90vh] overflow-y-auto rounded-2xl shadow-2xl">
+
+      {/* HEADER */}
+      <div className="sticky top-0 z-10 bg-white border-b px-6 py-4 flex items-center justify-between">
+
+        <div>
+          <h2 className="text-xl font-bold text-gray-900">
+            My Equipment
+          </h2>
+
+          <p className="text-sm text-gray-500">
+            Your requests, borrowed equipment and return history
+          </p>
+        </div>
+
+        <button
+          onClick={() => setIsMyEquipmentOpen(false)}
+          className="p-2 hover:bg-gray-100 rounded-full"
+        >
+          <X size={22} />
+        </button>
+
+      </div>
+
+      <div className="p-6">
+
+        {myEquipmentLoading ? (
+
+          <div className="py-16 text-center">
+            <div className="inline-block animate-spin rounded-full h-10 w-10 border-b-2 border-yellow-500" />
+            <p className="mt-3 text-gray-500">
+              Loading your equipment...
+            </p>
+          </div>
+
+        ) : myEquipmentError ? (
+
+          <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">
+            {myEquipmentError}
+          </div>
+
+        ) : (
+          <>
+
+            {/* SUMMARY */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+
+              <div className="bg-yellow-50 border border-yellow-100 rounded-xl p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-500">
+                      Pending
+                    </p>
+
+                    <p className="text-2xl font-bold text-yellow-600">
+                      {pendingRequests.length}
+                    </p>
+                  </div>
+
+                  <Clock
+                    size={26}
+                    className="text-yellow-500"
+                  />
+                </div>
+              </div>
+
+              <div className="bg-green-50 border border-green-100 rounded-xl p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-500">
+                      Approved
+                    </p>
+
+                    <p className="text-2xl font-bold text-green-600">
+                      {approvedRequests.length}
+                    </p>
+                  </div>
+
+                  <CheckCircle
+                    size={26}
+                    className="text-green-500"
+                  />
+                </div>
+              </div>
+
+              <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-500">
+                      Currently Borrowed
+                    </p>
+
+                    <p className="text-2xl font-bold text-blue-600">
+                      {currentBorrowed.length}
+                    </p>
+                  </div>
+
+                  <Package
+                    size={26}
+                    className="text-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-500">
+                      Returned
+                    </p>
+
+                    <p className="text-2xl font-bold text-gray-700">
+                      {returnedEquipment.length}
+                    </p>
+                  </div>
+
+                  <RotateCcw
+                    size={26}
+                    className="text-gray-500"
+                  />
+                </div>
+              </div>
+
+            </div>
+
+
+            {/* MY REQUESTS */}
+            <div className="mb-8">
+
+              <h3 className="font-bold text-lg text-gray-900 mb-3">
+                My Requests
+              </h3>
+
+              <div className="border border-gray-200 rounded-xl overflow-x-auto">
+
+                <table className="w-full min-w-[750px] text-sm">
+
+                  <thead className="bg-gray-100 text-left">
+                    <tr>
+                      <th className="p-3">Equipment</th>
+                      <th className="p-3">Serial No.</th>
+                      <th className="p-3">Laboratory</th>
+                      <th className="p-3">Borrow Period</th>
+                      <th className="p-3">Status</th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+
+                    {myRequests.length === 0 ? (
+
+                      <tr>
+                        <td
+                          colSpan="5"
+                          className="p-6 text-center text-gray-500"
+                        >
+                          You have no equipment requests.
+                        </td>
+                      </tr>
+
+                    ) : (
+
+                      myRequests.map((request) => (
+
+                        <tr
+                          key={request.id}
+                          className="border-t hover:bg-gray-50"
+                        >
+
+                          <td className="p-3 font-medium">
+                            {request.equipmentName || '-'}
+                          </td>
+
+                          <td className="p-3">
+                            {request.serialNumber || '-'}
+                          </td>
+
+                          <td className="p-3">
+                            {request.laboratoryName || '-'}
+                          </td>
+
+                          <td className="p-3">
+                            {request.borrowStartDate || '-'}
+                            {' → '}
+                            {request.borrowEndDate || '-'}
+                          </td>
+
+                          <td className="p-3">
+                            <span
+                              className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
+                                normalizeValue(request.status) === 'approved'
+                                  ? 'bg-green-100 text-green-700'
+                                  : normalizeValue(request.status) === 'rejected'
+                                    ? 'bg-red-100 text-red-700'
+                                    : 'bg-yellow-100 text-yellow-700'
+                              }`}
+                            >
+                              {request.status || 'PENDING'}
+                            </span>
+                          </td>
+
+                        </tr>
+
+                      ))
+
+                    )}
+
+                  </tbody>
+
+                </table>
+
+              </div>
+            </div>
+
+
+            {/* CURRENTLY BORROWED */}
+            <div className="mb-8">
+
+              <h3 className="font-bold text-lg text-gray-900 mb-3">
+                Currently Borrowed
+              </h3>
+
+              <div className="border border-gray-200 rounded-xl overflow-x-auto">
+
+                <table className="w-full min-w-[700px] text-sm">
+
+                  <thead className="bg-gray-100 text-left">
+                    <tr>
+                      <th className="p-3">Issuance ID</th>
+                      <th className="p-3">Equipment</th>
+                      <th className="p-3">Issue Date</th>
+                      <th className="p-3">Due Date</th>
+                      <th className="p-3">Status</th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+
+                    {currentBorrowed.length === 0 ? (
+
+                      <tr>
+                        <td
+                          colSpan="5"
+                          className="p-6 text-center text-gray-500"
+                        >
+                          You currently have no borrowed equipment.
+                        </td>
+                      </tr>
+
+                    ) : (
+
+                      currentBorrowed.map((issuance) => (
+
+                        <tr
+                          key={issuance.id}
+                          className="border-t hover:bg-gray-50"
+                        >
+
+                          <td className="p-3 font-medium">
+                            {issuance.issuanceId || '-'}
+                          </td>
+
+                          <td className="p-3">
+                            {issuance.equipmentName || '-'}
+                          </td>
+
+                          <td className="p-3">
+                            {issuance.issueDate || '-'}
+                          </td>
+
+                          <td className="p-3">
+                            {issuance.returnDueDate || '-'}
+                          </td>
+
+                          <td className="p-3">
+                            <span className="inline-flex rounded-full bg-blue-100 text-blue-700 px-2.5 py-1 text-xs font-semibold">
+                              {issuance.status}
+                            </span>
+                          </td>
+
+                        </tr>
+
+                      ))
+
+                    )}
+
+                  </tbody>
+
+                </table>
+
+              </div>
+            </div>
+
+
+            {/* RETURN HISTORY */}
+            <div>
+
+              <h3 className="font-bold text-lg text-gray-900 mb-3">
+                Return History
+              </h3>
+
+              <div className="border border-gray-200 rounded-xl overflow-x-auto">
+
+                <table className="w-full min-w-[700px] text-sm">
+
+                  <thead className="bg-gray-100 text-left">
+                    <tr>
+                      <th className="p-3">Issuance ID</th>
+                      <th className="p-3">Equipment</th>
+                      <th className="p-3">Return Date</th>
+                      <th className="p-3">Condition</th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+
+                    {returnedEquipment.length === 0 ? (
+
+                      <tr>
+                        <td
+                          colSpan="4"
+                          className="p-6 text-center text-gray-500"
+                        >
+                          No return history available.
+                        </td>
+                      </tr>
+
+                    ) : (
+
+                      returnedEquipment.map((issuance) => (
+
+                        <tr
+                          key={issuance.id}
+                          className="border-t hover:bg-gray-50"
+                        >
+
+                          <td className="p-3 font-medium">
+                            {issuance.issuanceId || '-'}
+                          </td>
+
+                          <td className="p-3">
+                            {issuance.equipmentName || '-'}
+                          </td>
+
+                          <td className="p-3">
+                            {issuance.returnDate || '-'}
+                          </td>
+
+                          <td className="p-3">
+                            {issuance.conditionOnReturn || '-'}
+                          </td>
+
+                        </tr>
+
+                      ))
+
+                    )}
+
+                  </tbody>
+
+                </table>
+
+              </div>
+            </div>
+
+          </>
+        )}
+
+      </div>
+
+    </div>
+
+  </div>
+)}
 
       <BorrowRequestForm
         isOpen={isBorrowModalOpen}
