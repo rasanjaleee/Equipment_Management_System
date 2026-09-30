@@ -25,6 +25,15 @@ public class BorrowRequestController {
         return ResponseEntity.ok(borrowRequestService.getAllBorrowRequests());
     }
 
+    @GetMapping("/my")
+    public ResponseEntity<List<BorrowRequestResponse>> getMyRequests(
+            org.springframework.security.core.Authentication authentication) {
+
+        return ResponseEntity.ok(
+                borrowRequestService.getMyBorrowRequests(authentication.getName())
+        );
+    }
+
     @PostMapping
     public ResponseEntity<BorrowRequestResponse> createBorrowRequest(@RequestBody BorrowRequestCreateRequest request) {
         BorrowRequestResponse created = borrowRequestService.createBorrowRequest(request);

@@ -10,6 +10,8 @@ public interface EquipmentRepository extends JpaRepository<Equipment, Long> {
 
     boolean existsBySerialNumber(String serialNumber);
 
+    List<Equipment> findByLaboratoryIgnoreCase(String laboratory);
+
     @Query("""
         SELECT e.grnNumber, e.supplier, COUNT(e), COALESCE(SUM(e.cost), 0)
         FROM Equipment e

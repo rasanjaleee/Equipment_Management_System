@@ -1,12 +1,17 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
+import { Eye, Edit, Trash2 } from "lucide-react";
 import { API_BASE_URL } from "../services/api";
+
 
 export default function LaboratoryPage() {
   const [labs, setLabs] = useState([]);
   const [equipmentList, setEquipmentList] = useState([]);
 
   const [selectedLab, setSelectedLab] = useState(null);
+  const [labInventory, setLabInventory] = useState([]);
+  const [inventoryLoading, setInventoryLoading] = useState(false);
+  const [inventoryError, setInventoryError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState("");
 
@@ -70,6 +75,39 @@ useEffect(() => {
       setEquipmentList([]);
     });
 }, []);
+
+const loadLabInventory = async (labName) => {
+  if (!labName) return;
+
+  setInventoryLoading(true);
+  setInventoryError("");
+  setLabInventory([]);
+
+  try {
+    const token = localStorage.getItem("token");
+
+    const res = await axios.get(
+      `${API_BASE_URL}/api/lab-inventory/${encodeURIComponent(labName)}`,
+      {
+        headers: token
+          ? { Authorization: `Bearer ${token}` }
+          : {},
+      }
+    );
+
+    setLabInventory(Array.isArray(res.data) ? res.data : []);
+  } catch (err) {
+    console.log(
+      "LAB INVENTORY ERROR:",
+      err.response?.data || err.message
+    );
+
+    setInventoryError("Failed to load equipment inventory.");
+    setLabInventory([]);
+  } finally {
+    setInventoryLoading(false);
+  }
+};
 
   const getLabStats = (labName) => {
     const labEquipment = equipmentList.filter(
@@ -223,177 +261,333 @@ useEffect(() => {
   </div>
 </div>
 
-      {/* VIEW PANEL */}
+      {/* ================= VIEW LAB MODAL ================= */}
 {selectedLab && (
-  <div className="mx-4 mb-4 p-6 bg-white shadow rounded-lg">
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+    <div className="bg-white rounded-xl shadow-xl w-full max-w-6xl max-h-[90vh] overflow-y-auto">
 
-    <h2 className="text-2xl font-bold mb-5">
-      {selectedLab.name} - Overview
-    </h2>
+      {/* HEADER */}
+      <div className="flex items-center justify-between border-b px-6 py-4 sticky top-0 bg-white z-10">
+        <div>
+          <h2 className="text-xl font-bold text-gray-900">
+            {selectedLab.name}
+          </h2>
 
-    {/* LAB DETAILS */}
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-
-      <div>
-        <p className="text-sm text-gray-500">Location</p>
-        <p className="font-semibold">
-          {selectedLab.location || "-"}
-        </p>
-      </div>
-
-      <div>
-        <p className="text-sm text-gray-500">In Charge</p>
-        <p className="font-semibold">
-          {selectedLab.inCharge || "-"}
-        </p>
-      </div>
-
-      <div>
-        <p className="text-sm text-gray-500">
-          Technical Officer In Charge
-        </p>
-        <p className="font-semibold">
-          {selectedLab.technicalOfficerInCharge || "-"}
-        </p>
-      </div>
-
-    </div>
-
-    {/* EQUIPMENT STATISTICS */}
-    {(() => {
-      const stats = getLabStats(selectedLab.name);
-
-      return (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-
-          <div className="bg-gray-100 p-4 rounded-lg text-center">
-            <p>Total</p>
-            <p className="text-2xl font-bold">
-              {stats.total}
-            </p>
-          </div>
-
-          <div className="bg-green-100 p-4 rounded-lg text-center">
-            <p>Working</p>
-            <p className="text-2xl font-bold text-green-600">
-              {stats.working}
-            </p>
-          </div>
-
-          <div className="bg-blue-100 p-4 rounded-lg text-center">
-            <p>Under Repair</p>
-            <p className="text-2xl font-bold text-blue-600">
-              {stats.underRepair}
-            </p>
-          </div>
-
-          <div className="bg-red-100 p-4 rounded-lg text-center">
-            <p>Broken</p>
-            <p className="text-2xl font-bold text-red-600">
-              {stats.broken}
-            </p>
-          </div>
-
+          <p className="text-sm text-gray-500">
+            Laboratory Overview
+          </p>
         </div>
-      );
-    })()}
 
-    <button
-      onClick={() => setSelectedLab(null)}
-      className="mt-5 text-blue-600 hover:underline"
-    >
-      Close
-    </button>
+        <button
+          type="button"
+          onClick={() => {
+            setSelectedLab(null);
+            setLabInventory([]);
+            setInventoryError("");
+          }}
+          className="text-gray-500 hover:text-gray-800 text-2xl"
+          title="Close"
+        >
+          ×
+        </button>
+      </div>
 
+      <div className="p-6">
+
+        {/* LAB DETAILS */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6">
+          <div>
+            <p className="text-sm text-gray-500">Location</p>
+            <p className="font-semibold">
+              {selectedLab.location || "-"}
+            </p>
+          </div>
+
+          <div>
+            <p className="text-sm text-gray-500">In Charge</p>
+            <p className="font-semibold">
+              {selectedLab.inCharge || "-"}
+            </p>
+          </div>
+
+          <div>
+            <p className="text-sm text-gray-500">
+              Technical Officer In Charge
+            </p>
+            <p className="font-semibold">
+              {selectedLab.technicalOfficerInCharge || "-"}
+            </p>
+          </div>
+        </div>
+
+        {/* EQUIPMENT STATISTICS */}
+        {(() => {
+          const stats = getLabStats(selectedLab.name);
+
+          return (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+
+              <div className="bg-gray-100 p-4 rounded-lg text-center">
+                <p>Total</p>
+                <p className="text-2xl font-bold">
+                  {stats.total}
+                </p>
+              </div>
+
+              <div className="bg-green-100 p-4 rounded-lg text-center">
+                <p>Working</p>
+                <p className="text-2xl font-bold text-green-600">
+                  {stats.working}
+                </p>
+              </div>
+
+              <div className="bg-blue-100 p-4 rounded-lg text-center">
+                <p>Under Repair</p>
+                <p className="text-2xl font-bold text-blue-600">
+                  {stats.underRepair}
+                </p>
+              </div>
+
+              <div className="bg-red-100 p-4 rounded-lg text-center">
+                <p>Broken</p>
+                <p className="text-2xl font-bold text-red-600">
+                  {stats.broken}
+                </p>
+              </div>
+
+            </div>
+          );
+        })()}
+
+        {/* EQUIPMENT INVENTORY */}
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-lg font-bold text-gray-900">
+              Equipment Inventory
+            </h3>
+
+            <button
+              type="button"
+              onClick={() => loadLabInventory(selectedLab.name)}
+              disabled={inventoryLoading}
+              className="text-sm text-blue-600 hover:text-blue-800 disabled:text-gray-400"
+            >
+              {inventoryLoading ? "Refreshing..." : "Refresh"}
+            </button>
+          </div>
+
+          {inventoryLoading ? (
+            <div className="border rounded-lg p-8 text-center text-gray-500">
+              Loading equipment inventory...
+            </div>
+          ) : inventoryError ? (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-600">
+              {inventoryError}
+            </div>
+          ) : labInventory.length === 0 ? (
+            <div className="border rounded-lg p-8 text-center text-gray-500">
+              No equipment found for this laboratory.
+            </div>
+          ) : (
+            <div className="border border-gray-200 rounded-lg overflow-hidden">
+              <div className="overflow-x-auto">
+
+                <table className="w-full text-sm">
+
+                  <thead className="bg-gray-200 text-left">
+                    <tr>
+                      <th className="p-3">Equipment</th>
+                      <th className="p-3 text-center">Total</th>
+                      <th className="p-3 text-center">Available</th>
+                      <th className="p-3 text-center">Issued</th>
+                      <th className="p-3 text-center">Under Repair</th>
+                      <th className="p-3 text-center">Broken</th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {labInventory.map((item) => (
+                      <tr
+                        key={item.equipmentName}
+                        className="border-t hover:bg-gray-50"
+                      >
+                        <td className="p-3 font-medium">
+                          {item.equipmentName}
+                        </td>
+
+                        <td className="p-3 text-center font-semibold">
+                          {item.total}
+                        </td>
+
+                        <td className="p-3 text-center">
+                          <span className="inline-flex min-w-8 justify-center rounded-full bg-green-100 px-2 py-1 font-semibold text-green-700">
+                            {item.available}
+                          </span>
+                        </td>
+
+                        <td className="p-3 text-center">
+                          <span className="inline-flex min-w-8 justify-center rounded-full bg-amber-100 px-2 py-1 font-semibold text-amber-700">
+                            {item.issued}
+                          </span>
+                        </td>
+
+                        <td className="p-3 text-center">
+                          <span className="inline-flex min-w-8 justify-center rounded-full bg-blue-100 px-2 py-1 font-semibold text-blue-700">
+                            {item.underRepair}
+                          </span>
+                        </td>
+
+                        <td className="p-3 text-center">
+                          <span className="inline-flex min-w-8 justify-center rounded-full bg-red-100 px-2 py-1 font-semibold text-red-700">
+                            {item.broken}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+
+                </table>
+
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* FOOTER */}
+        <div className="flex justify-end mt-6 pt-4 border-t">
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedLab(null);
+              setLabInventory([]);
+              setInventoryError("");
+            }}
+            className="px-5 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg font-medium"
+          >
+            Close
+          </button>
+        </div>
+
+      </div>
+    </div>
   </div>
 )}
 
       {/* TABLE */}
-      <div className="p-4">
-        <div className="bg-white rounded-lg shadow overflow-x-auto">
-        <table className="w-full min-w-[1200px] border">
+<div className="p-4">
+  <div className="bg-white rounded-lg shadow overflow-hidden">
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[1200px] text-sm">
 
-            <thead className="bg-gray-100">
-              <tr>
-                <th className="p-3 border">Name</th>
-                <th className="p-3 border">Dept</th>
-                <th className="p-3 border">Location</th>
-                <th className="p-3 border">Lab In Charge</th>
-                <th className="p-3 border">Technical Officer In Charge</th>
-                <th className="p-3 border">Total</th>
-                <th className="p-3 border">Working</th>
-                <th className="p-3 border">Actions</th>
-              </tr>
-            </thead>
+        <thead className="bg-gray-200 text-left">
+          <tr>
+            <th className="p-3">Name</th>
+            <th className="p-3">Dept</th>
+            <th className="p-3">Location</th>
+            <th className="p-3">Lab In Charge</th>
+            <th className="p-3">
+              Technical Officer In Charge
+            </th>
+            <th className="p-3 text-center">Total</th>
+            <th className="p-3 text-center">Working</th>
+            <th className="p-3 text-center">Actions</th>
+          </tr>
+        </thead>
 
-            <tbody>
-              {filteredLabs.map((lab) => {
-                const stats = getLabStats(lab.name);
+        <tbody>
+          {filteredLabs.length === 0 ? (
+            <tr>
+              <td
+                colSpan={8}
+                className="p-4 text-gray-500"
+              >
+                No laboratories found.
+              </td>
+            </tr>
+          ) : (
+            filteredLabs.map((lab) => {
+              const stats = getLabStats(lab.name);
 
-                return (
-                  <tr key={lab.id} className="border">
-                <td className="p-3 border">
-                  {lab.name}
+              return (
+                <tr
+                  key={lab.id}
+                  className="border-t hover:bg-gray-50"
+                >
+                  <td className="p-3">
+                    {lab.name}
+                  </td>
+
+                  <td className="p-3">
+                    {lab.department}
+                  </td>
+
+                  <td className="p-3">
+                    {lab.location}
+                  </td>
+
+                  <td className="p-3">
+                    {lab.inCharge || "-"}
+                  </td>
+
+                  <td className="p-3">
+                    {lab.technicalOfficerInCharge || "-"}
+                  </td>
+
+                  <td className="p-3 text-center">
+                    {stats.total}
+                  </td>
+
+                  <td className="p-3 text-center text-green-600">
+                    {stats.working}
+                  </td>
+
+                  <td className="p-3">
+                  <div className="flex justify-center gap-3">
+
+                    {/* VIEW */}
+                    <button
+                      onClick={() => {
+                      setSelectedLab(lab);
+                      loadLabInventory(lab.name);}}
+                      className="btn-icon text-green-600 hover:text-green-800"
+                      title="View Details"
+                    >
+                      <Eye size={18} />
+                    </button>
+
+                    {/* EDIT */}
+                    <button
+                      onClick={() => {
+                        setEditLab(lab);
+                        setIsEditModalOpen(true);
+                      }}
+                      className="btn-icon text-blue-600 hover:text-blue-800"
+                      title="Edit"
+                    >
+                      <Edit size={18} />
+                    </button>
+
+                    {/* DELETE */}
+                    <button
+                      onClick={() => handleDelete(lab.id)}
+                      className="btn-icon text-red-600 hover:text-red-800"
+                      title="Delete"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+
+                  </div>
                 </td>
+                </tr>
+              );
+            })
+          )}
+        </tbody>
 
-                <td className="p-3 border">
-                  {lab.department}
-                </td>
-
-                <td className="p-3 border">
-                  {lab.location}
-                </td>
-
-                <td className="p-3 border">
-                  {lab.inCharge || "-"}
-                </td>
-
-                {/* THIS WAS THE MISSING COLUMN */}
-                <td className="p-3 border">
-                  {lab.technicalOfficerInCharge || "-"}
-                </td>
-
-                <td className="p-3 border text-center">
-                  {stats.total}
-                </td>
-
-                <td className="p-3 border text-center text-green-600">
-                  {stats.working}
-                </td>
-
-                <td className="p-3 border text-center space-x-2">
-                  <button
-                    onClick={() => setSelectedLab(lab)}
-                    className="text-blue-600 hover:text-blue-800 font-medium"
-                  >
-                    View
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      setEditLab(lab);
-                      setIsEditModalOpen(true);
-                    }}
-                    className="text-green-600 hover:text-green-800 font-medium"
-                  >
-                    Edit
-                  </button>
-
-                  <button
-                    onClick={() => handleDelete(lab.id)}
-                    className="text-red-600 hover:text-red-800 font-medium"
-                  >
-                    Delete
-                  </button>
-                </td>
-              </tr>
-                );
-              })}
-            </tbody>
-
-          </table>
-        </div>
-      </div>
+      </table>
+    </div>
+  </div>
+</div>
 
       {/* ================= ADD MODAL ================= */}
       {isAddModalOpen && (
