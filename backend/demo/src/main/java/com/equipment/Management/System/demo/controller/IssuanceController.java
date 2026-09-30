@@ -21,10 +21,18 @@ public class IssuanceController {
 
     // Creat  e a new issuance
     @PostMapping
-    public ResponseEntity<IssuanceDTO> createIssuance(@RequestBody IssuanceRequest request) {
+    public ResponseEntity<IssuanceDTO> createIssuance(
+            @RequestBody IssuanceRequest request,
+            Authentication authentication) {
+
         try {
-            IssuanceDTO issuance = issuanceService.createIssuance(request);
+            IssuanceDTO issuance = issuanceService.createIssuance(
+                    request,
+                    authentication.getName()
+            );
+
             return new ResponseEntity<>(issuance, HttpStatus.CREATED);
+
         } catch (Exception e) {
             return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
         }
@@ -124,5 +132,19 @@ public class IssuanceController {
         } catch (Exception e) {
             return new ResponseEntity<>("Error deleting issuance", HttpStatus.INTERNAL_SERVER_ERROR);
         }
+    }
+
+    @GetMapping("/equipment/{equipmentId}/current")
+    public ResponseEntity<IssuanceDTO> getCurrentIssuanceByEquipment(
+            @PathVariable Long equipmentId) {
+
+        IssuanceDTO issuance =
+                issuanceService.getCurrentIssuanceByEquipmentId(equipmentId);
+
+        if (issuance == null) {
+            return ResponseEntity.noContent().build();
+        }
+
+        return ResponseEntity.ok(issuance);
     }
 }
