@@ -191,6 +191,35 @@ const handleUpdateAccessory = async () => {
   }
 };
 
+const handleDeleteAccessory = async (accessory) => {
+  const confirmed = window.confirm(
+    `Are you sure you want to delete "${accessory.accessoryName}"?`
+  );
+
+  if (!confirmed) {
+    return;
+  }
+
+  try {
+    const token = localStorage.getItem('token');
+
+    await axios.delete(
+      `${API_BASE_URL}/api/equipment-accessories/${accessory.id}`,
+      {
+        headers: token
+          ? { Authorization: `Bearer ${token}` }
+          : {}
+      }
+    );
+
+    await fetchAccessories(equipment.id);
+
+  } catch (err) {
+    console.error('Failed to delete accessory:', err);
+    alert('Failed to delete accessory.');
+  }
+};
+
   const fetchGroupedEquipmentDetails = async () => {
     try {
       setLoading(true);
@@ -535,17 +564,28 @@ const handleUpdateAccessory = async () => {
 
                 {/* Actions */}
                 <td className="px-4 py-3 border-b">
-                  <div className="flex justify-center gap-3">
-                    <button
-                      type="button"
-                      onClick={() => handleEditAccessory(accessory)}
-                      className="text-blue-600 hover:text-blue-800"
-                      title="Edit Accessory"
-                    >
-                      <Edit size={18} />
-                    </button>
-                  </div>
-                </td>
+                <div className="flex justify-center gap-3">
+
+                <button
+                  type="button"
+                  onClick={() => handleEditAccessory(accessory)}
+                  className="text-blue-600 hover:text-blue-800"
+                  title="Edit Accessory"
+                >
+                  <Edit size={18} />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleDeleteAccessory(accessory)}
+                  className="text-red-600 hover:text-red-800"
+                  title="Delete Accessory"
+                >
+                  <Trash2 size={18} />
+                </button>
+
+                </div>
+              </td>
 
               </tr>
                   ))}
