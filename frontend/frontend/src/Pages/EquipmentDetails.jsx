@@ -14,6 +14,9 @@ const EquipmentDetails = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  const [currentIssuance, setCurrentIssuance] = useState(null);
+  const [currentIssuanceLoading, setCurrentIssuanceLoading] = useState(false);
+
   const [accessories, setAccessories] = useState([]);
   const [accessoriesLoading, setAccessoriesLoading] = useState(false);
   const [showAccessoryForm, setShowAccessoryForm] = useState(false);
@@ -48,10 +51,12 @@ const [accessoryForm, setAccessoryForm] = useState({
       });
 
       setEquipment(res.data);
-      setError('');
+setError('');
 
-      await fetchAccessories(res.data.id);
-
+await Promise.all([
+  fetchAccessories(res.data.id),
+  fetchCurrentIssuance(res.data.id)
+]);
     } catch (err) {
       console.error('Failed to fetch single equipment:', err);
       setError('Failed to load equipment details. Please try again later.');
@@ -82,6 +87,35 @@ const [accessoryForm, setAccessoryForm] = useState({
     setAccessories([]);
   } finally {
     setAccessoriesLoading(false);
+  }
+};
+
+const fetchCurrentIssuance = async (equipmentId) => {
+  try {
+    setCurrentIssuanceLoading(true);
+
+    const token = localStorage.getItem('token');
+
+    const response = await axios.get(
+      `${API_BASE_URL}/api/issuances/equipment/${equipmentId}/current`,
+      {
+        headers: token
+          ? { Authorization: `Bearer ${token}` }
+          : {}
+      }
+    );
+
+    if (response.status === 200 && response.data) {
+      setCurrentIssuance(response.data);
+    } else {
+      setCurrentIssuance(null);
+    }
+
+  } catch (err) {
+    console.error('Failed to fetch current issuance:', err);
+    setCurrentIssuance(null);
+  } finally {
+    setCurrentIssuanceLoading(false);
   }
 };
 
@@ -355,6 +389,93 @@ const handleDeleteAccessory = async (accessory) => {
           </div>
         </div>
 
+                {/* Equipment Availability / Current Holder */}
+        <div className="bg-white rounded-lg shadow-md p-6 mt-6">
+          <div className="flex items-center justify-between mb-5">
+            <h2 className="text-xl font-bold text-gray-900">
+              Equipment Availability
+            </h2>
+
+            {!currentIssuanceLoading && (
+              <span
+                className={`px-4 py-1.5 rounded-full text-sm font-semibold ${
+                  currentIssuance
+                    ? 'bg-red-100 text-red-700'
+                    : 'bg-green-100 text-green-700'
+                }`}
+              >
+                {currentIssuance ? 'ISSUED' : 'AVAILABLE'}
+              </span>
+            )}
+          </div>
+
+          {currentIssuanceLoading ? (
+            <div className="flex items-center gap-2 text-gray-500">
+              <Loader className="animate-spin h-5 w-5" />
+              Loading current holder...
+            </div>
+          ) : currentIssuance ? (
+            <div>
+              <h3 className="font-semibold text-gray-900 mb-4">
+                Current Holder
+              </h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <p className="text-sm text-gray-500">Holder Name</p>
+                  <p className="font-semibold text-gray-900">
+                    {currentIssuance.userName || '-'}
+                  </p>
+                </div>
+
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <p className="text-sm text-gray-500">Department / Role</p>
+                  <p className="font-semibold text-gray-900">
+                    {currentIssuance.roleDept || '-'}
+                  </p>
+                </div>
+
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <p className="text-sm text-gray-500">Issue Date</p>
+                  <p className="font-semibold text-gray-900">
+                    {formatDate(currentIssuance.issueDate)}
+                  </p>
+                </div>
+
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <p className="text-sm text-gray-500">Return Due Date</p>
+                  <p className="font-semibold text-gray-900">
+                    {formatDate(currentIssuance.returnDueDate)}
+                  </p>
+                </div>
+
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <p className="text-sm text-gray-500">Issued By</p>
+                  <p className="font-semibold text-gray-900">
+                    {currentIssuance.issuedByName || '-'}
+                  </p>
+                </div>
+
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <p className="text-sm text-gray-500">Issuance ID</p>
+                  <p className="font-semibold text-gray-900">
+                    {currentIssuance.issuanceId || '-'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <p className="font-semibold text-green-700">
+                This equipment is currently available.
+              </p>
+              <p className="text-sm text-green-600 mt-1">
+                There is no current holder for this equipment.
+              </p>
+            </div>
+          )}
+        </div>
+
         {/* Accessories Section */}
 <div className="bg-white rounded-lg shadow-md p-6 mt-6">
 
@@ -596,6 +717,7 @@ const handleDeleteAccessory = async (accessory) => {
         </div>
 
       </div>
+
     );
   }
 

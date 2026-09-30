@@ -398,6 +398,7 @@ function IssuedEquipmentTable({
                 <Th>Issuance ID</Th>
                 <Th>Equipment</Th>
                 <Th>User</Th>
+                <Th>Issued By</Th>
                 <Th>Issue Date</Th>
                 <Th>Return Due Date</Th>
                 <Th>Status</Th>
@@ -409,7 +410,7 @@ function IssuedEquipmentTable({
               {issuances.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={7}
+                    colSpan={8}
                     className="px-6 py-12 text-center text-sm text-gray-500"
                   >
                     No issuance records found.
@@ -441,14 +442,18 @@ function IssuedEquipmentTable({
                       </Td>
 
                       <Td>
-                        {issuance.userName ||
-                          issuance.user?.username ||
-                          `User #${issuance.userId || ''}`}
-                      </Td>
+  {issuance.userName ||
+    issuance.user?.username ||
+    `User #${issuance.userId || ''}`}
+</Td>
 
-                      <Td>{issuance.issueDate || 'N/A'}</Td>
+<Td>
+  {issuance.issuedByName || '-'}
+</Td>
 
-                      <Td>{issuance.returnDueDate || 'N/A'}</Td>
+<Td>{issuance.issueDate || 'N/A'}</Td>
+
+<Td>{issuance.returnDueDate || 'N/A'}</Td>
 
                       <Td>
                         <span

@@ -39,6 +39,10 @@ public class Issuance {
     @JoinColumn(name = "user_id")
     private User user;
 
+    @ManyToOne
+    @JoinColumn(name = "issued_by_user_id")
+    private User issuedBy;
+
     @Column(length = 50)
     private String roleDept; // Student, Lab Assistant, Lecturer, Technician
 
@@ -165,5 +169,13 @@ public class Issuance {
 
     public void setRemarks(String remarks) {
         this.remarks = remarks;
+    }
+
+    public User getIssuedBy() {
+        return issuedBy;
+    }
+
+    public void setIssuedBy(User issuedBy) {
+        this.issuedBy = issuedBy;
     }
 }

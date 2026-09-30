@@ -52,7 +52,7 @@ public class IssuanceService {
 
     // ================= CREATE =================
     @Transactional
-    public IssuanceDTO createIssuance(IssuanceRequest request) {
+    public IssuanceDTO createIssuance(IssuanceRequest request,String issuedByUsername) {
 
         Equipment equipment = equipmentRepository.findById(request.getEquipmentId())
                 .orElseThrow(() -> new RuntimeException("Equipment not found"));
@@ -82,6 +82,9 @@ public class IssuanceService {
         User user = userRepository.findById(request.getUserId())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
+        User issuedBy = userRepository.findByUsername(issuedByUsername)
+                .orElseThrow(() -> new RuntimeException("Issuing user not found"));
+
         if (issuanceRepository.findByIssuanceId(request.getIssuanceId()).isPresent()) {
             throw new RuntimeException("Issuance ID already exists");
         }
@@ -95,6 +98,7 @@ public class IssuanceService {
         issuance.setQtyIssued(request.getQtyIssued());
         issuance.setConditionAtIssue(request.getConditionAtIssue());
         issuance.setUser(user);
+        issuance.setIssuedBy(issuedBy);
         issuance.setRoleDept(request.getRoleDept());
         issuance.setContact(request.getContact());
         issuance.setReturnDate(request.getReturnDate());
@@ -203,6 +207,22 @@ public class IssuanceService {
     public IssuanceDTO getIssuanceByIssuanceId(String issuanceId) {
         Issuance issuance = issuanceRepository.findByIssuanceId(issuanceId)
                 .orElseThrow(() -> new RuntimeException("Issuance not found"));
+        return convertToDTO(issuance);
+    }
+
+    public IssuanceDTO getCurrentIssuanceByEquipmentId(Long equipmentId) {
+
+        Issuance issuance = issuanceRepository
+                .findFirstByEquipment_IdAndStatusIgnoreCase(
+                        equipmentId,
+                        "Issued"
+                )
+                .orElse(null);
+
+        if (issuance == null) {
+            return null;
+        }
+
         return convertToDTO(issuance);
     }
 
@@ -332,6 +352,11 @@ public class IssuanceService {
         dto.setUserId(issuance.getUser().getId());
         dto.setUserName(issuance.getUser().getUsername());
         dto.setUserEmail(issuance.getUser().getEmail());
+
+        if (issuance.getIssuedBy() != null) {
+            dto.setIssuedById(issuance.getIssuedBy().getId());
+            dto.setIssuedByName(issuance.getIssuedBy().getUsername());
+        }
 
         dto.setRoleDept(issuance.getRoleDept());
         dto.setContact(issuance.getContact());
