@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Save, X, Package, Edit, Trash2, ArrowLeft } from 'lucide-react';
+import {Plus,Save,X,Package,Edit,Trash2,ArrowLeft,Eye} from 'lucide-react';
 import axios from 'axios';
 import { API_BASE_URL, getImageUrl } from '../../services/api';
 import { useNavigate } from 'react-router-dom';
@@ -784,23 +784,37 @@ const handleDownloadQR = async (item) => {
                       <td>{item.grnNumber || '-'}</td>
 
                       <td className="py-3">
-                        <div className="flex justify-center gap-3">
-                          <button
-                            onClick={() => handleEdit(item)}
-                            className="btn-icon text-blue-600 hover:text-blue-800"
-                            title="Edit"
-                          >
-                            <Edit size={18} />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(item.id)}
-                            className="btn-icon text-red-600 hover:text-red-800"
-                            title="Delete"
-                          >
-                            <Trash2 size={18} />
-                          </button>
-                        </div>
-                      </td>
+  <div className="flex justify-center gap-3">
+
+    {/* VIEW */}
+    <button
+      onClick={() => navigate(`/equipment/item/${item.id}`)}
+      className="btn-icon text-green-600 hover:text-green-800"
+      title="View Details"
+    >
+      <Eye size={18} />
+    </button>
+
+    {/* EDIT */}
+    <button
+      onClick={() => handleEdit(item)}
+      className="btn-icon text-blue-600 hover:text-blue-800"
+      title="Edit"
+    >
+      <Edit size={18} />
+    </button>
+
+    {/* DELETE */}
+    <button
+      onClick={() => handleDelete(item.id)}
+      className="btn-icon text-red-600 hover:text-red-800"
+      title="Delete"
+    >
+      <Trash2 size={18} />
+    </button>
+
+  </div>
+</td>
                     </tr>
                   ))}
                 </tbody>
