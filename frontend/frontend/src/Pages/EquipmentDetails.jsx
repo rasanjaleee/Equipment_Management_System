@@ -13,6 +13,17 @@ const EquipmentDetails = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  const [accessories, setAccessories] = useState([]);
+  const [accessoriesLoading, setAccessoriesLoading] = useState(false);
+  const [showAccessoryForm, setShowAccessoryForm] = useState(false);
+
+const [accessoryForm, setAccessoryForm] = useState({
+  accessoryName: '',
+  quantity: 1,
+  status: 'AVAILABLE',
+  description: ''
+});
+
   const normalizeValue = (value) =>
     (value || '').trim().replace(/\s+/g, ' ').toLowerCase();
 
@@ -35,6 +46,9 @@ const EquipmentDetails = () => {
 
       setEquipment(res.data);
       setError('');
+
+      await fetchAccessories(res.data.id);
+
     } catch (err) {
       console.error('Failed to fetch single equipment:', err);
       setError('Failed to load equipment details. Please try again later.');
@@ -42,6 +56,77 @@ const EquipmentDetails = () => {
       setLoading(false);
     }
   };
+
+  const fetchAccessories = async (equipmentId) => {
+  try {
+    setAccessoriesLoading(true);
+
+    const token = localStorage.getItem('token');
+
+    const res = await axios.get(
+      `${API_BASE_URL}/api/equipment-accessories/equipment/${equipmentId}`,
+      {
+        headers: token
+          ? { Authorization: `Bearer ${token}` }
+          : {}
+      }
+    );
+
+    setAccessories(Array.isArray(res.data) ? res.data : []);
+
+  } catch (err) {
+    console.error('Failed to fetch accessories:', err);
+    setAccessories([]);
+  } finally {
+    setAccessoriesLoading(false);
+  }
+};
+
+const handleAddAccessory = async () => {
+  if (!accessoryForm.accessoryName.trim()) {
+    alert('Please enter accessory name.');
+    return;
+  }
+
+  if (Number(accessoryForm.quantity) < 1) {
+    alert('Quantity must be at least 1.');
+    return;
+  }
+
+  try {
+    const token = localStorage.getItem('token');
+
+    await axios.post(
+      `${API_BASE_URL}/api/equipment-accessories/equipment/${equipment.id}`,
+      {
+        accessoryName: accessoryForm.accessoryName.trim(),
+        quantity: Number(accessoryForm.quantity),
+        status: accessoryForm.status,
+        description: accessoryForm.description.trim()
+      },
+      {
+        headers: token
+          ? { Authorization: `Bearer ${token}` }
+          : {}
+      }
+    );
+
+    await fetchAccessories(equipment.id);
+
+    setAccessoryForm({
+      accessoryName: '',
+      quantity: 1,
+      status: 'AVAILABLE',
+      description: ''
+    });
+
+    setShowAccessoryForm(false);
+
+  } catch (err) {
+    console.error('Failed to add accessory:', err);
+    alert('Failed to add accessory.');
+  }
+};
 
   const fetchGroupedEquipmentDetails = async () => {
     try {
@@ -174,9 +259,191 @@ const EquipmentDetails = () => {
                   )}
                 </div>
               </div>
-            </div>
+                        </div>
           </div>
         </div>
+
+        {/* Accessories Section */}
+<div className="bg-white rounded-lg shadow-md p-6 mt-6">
+
+  <div className="flex items-center justify-between mb-4">
+    <h2 className="text-xl font-bold text-gray-900">
+      Accessories
+    </h2>
+
+    <button
+  type="button"
+  onClick={() => setShowAccessoryForm(true)}
+  className="bg-yellow-500 hover:bg-yellow-400 text-black font-semibold px-4 py-2 rounded-lg"
+>
+  + Add Accessory
+</button>
+  </div>
+  {showAccessoryForm && (
+  <div className="mb-6 p-5 bg-gray-50 border border-gray-200 rounded-lg">
+    <h3 className="text-lg font-semibold text-gray-900 mb-4">
+      Add Accessory
+    </h3>
+
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+      {/* Accessory Name */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Accessory Name
+        </label>
+        <input
+          type="text"
+          value={accessoryForm.accessoryName}
+          onChange={(e) =>
+            setAccessoryForm({
+              ...accessoryForm,
+              accessoryName: e.target.value
+            })
+          }
+          className="w-full border border-gray-300 rounded-lg px-3 py-2"
+          placeholder="e.g. Power Cable"
+        />
+      </div>
+
+      {/* Quantity */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Quantity
+        </label>
+        <input
+          type="number"
+          min="1"
+          value={accessoryForm.quantity}
+          onChange={(e) =>
+            setAccessoryForm({
+              ...accessoryForm,
+              quantity: e.target.value
+            })
+          }
+          className="w-full border border-gray-300 rounded-lg px-3 py-2"
+        />
+      </div>
+
+      {/* Status */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Status
+        </label>
+        <select
+          value={accessoryForm.status}
+          onChange={(e) =>
+            setAccessoryForm({
+              ...accessoryForm,
+              status: e.target.value
+            })
+          }
+          className="w-full border border-gray-300 rounded-lg px-3 py-2"
+        >
+          <option value="AVAILABLE">Available</option>
+          <option value="IN_USE">In Use</option>
+          <option value="DAMAGED">Damaged</option>
+          <option value="LOST">Lost</option>
+        </select>
+      </div>
+
+      {/* Description */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Description
+        </label>
+        <input
+          type="text"
+          value={accessoryForm.description}
+          onChange={(e) =>
+            setAccessoryForm({
+              ...accessoryForm,
+              description: e.target.value
+            })
+          }
+          className="w-full border border-gray-300 rounded-lg px-3 py-2"
+          placeholder="Accessory description"
+        />
+      </div>
+
+    </div>
+
+    <div className="flex justify-end gap-3 mt-5">
+      <button
+        type="button"
+        onClick={() => setShowAccessoryForm(false)}
+        className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100"
+      >
+        Cancel
+      </button>
+
+      <button
+  type="button"
+  onClick={handleAddAccessory}
+  className="bg-yellow-500 hover:bg-yellow-400 text-black font-semibold px-5 py-2 rounded-lg"
+>
+  Save Accessory
+</button>
+    </div>
+  </div>
+)}
+          {accessoriesLoading ? (
+            <div className="flex items-center gap-2 text-gray-500">
+              <Loader className="animate-spin h-5 w-5" />
+              Loading accessories...
+            </div>
+          ) : accessories.length === 0 ? (
+            <p className="text-gray-500">
+              No accessories registered for this equipment.
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full border border-gray-200">
+                <thead className="bg-gray-100">
+                  <tr>
+                    <th className="px-4 py-3 text-left border-b">
+                      Accessory
+                    </th>
+                    <th className="px-4 py-3 text-left border-b">
+                      Quantity
+                    </th>
+                    <th className="px-4 py-3 text-left border-b">
+                      Status
+                    </th>
+                    <th className="px-4 py-3 text-left border-b">
+                      Description
+                    </th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {accessories.map((accessory) => (
+                    <tr key={accessory.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 border-b">
+                        {accessory.accessoryName}
+                      </td>
+
+                      <td className="px-4 py-3 border-b">
+                        {accessory.quantity}
+                      </td>
+
+                      <td className="px-4 py-3 border-b">
+                        <span className="px-3 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-700">
+                          {accessory.status}
+                        </span>
+                      </td>
+
+                      <td className="px-4 py-3 border-b">
+                        {accessory.description || '-'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
       </div>
     );
   }
