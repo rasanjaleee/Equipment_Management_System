@@ -4,6 +4,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import java.time.LocalDate;
+import java.util.List;
 
 public class IssuanceRequest {
     
@@ -41,6 +42,8 @@ public class IssuanceRequest {
     private LocalDate returnDate;
     private String conditionOnReturn;
     private String remarks;
+    // Accessories selected for this issuance
+    private List<AccessoryIssueRequest> accessories;
 
     // Getters and Setters
     public String getIssuanceId() {
@@ -146,4 +149,8 @@ public class IssuanceRequest {
     public void setRemarks(String remarks) {
         this.remarks = remarks;
     }
+
+    public List<AccessoryIssueRequest> getAccessories() {return accessories;}
+
+    public void setAccessories(List<AccessoryIssueRequest> accessories) {this.accessories = accessories; }
 }

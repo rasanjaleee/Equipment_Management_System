@@ -147,6 +147,12 @@ public class BorrowRequestService {
         response.setLaboratoryName(entity.getEquipment().getLaboratory());
         response.setModel(entity.getEquipment().getModel());
         response.setSerialNumber(entity.getEquipment().getSerialNumber());
+
+        User user = userRepository.findByEmail(entity.getEmail())
+                .orElse(null);
+
+        response.setUserId(user != null ? user.getId() : null);
+
         response.setApplicantName(entity.getApplicantName());
         response.setRegistrationOrStaffId(entity.getRegistrationOrStaffId());
         response.setDepartment(entity.getDepartment());
