@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { X, ClipboardList, CalendarDays, UserRound, Send } from 'lucide-react';
 import axios from 'axios';
+import Swal from 'sweetalert2';
 import { API_BASE_URL } from '../services/api';
 
 const API_BASE = API_BASE_URL;
@@ -199,10 +200,21 @@ export default function BorrowRequestForm({
       return;
     }
 
-    const confirmed = window.confirm('Submit this borrow request?');
-    if (!confirmed) {
-      return;
-    }
+    const result = await Swal.fire({
+  title: 'Submit Borrow Request?',
+  text: 'Are you sure you want to submit this borrow request?',
+  icon: 'question',
+  showCancelButton: true,
+  confirmButtonText: 'Yes, Submit',
+  cancelButtonText: 'Cancel',
+  confirmButtonColor: '#eab308',
+  cancelButtonColor: '#6b7280',
+  reverseButtons: true
+});
+
+if (!result.isConfirmed) {
+  return;
+}
 
     const payload = {
       equipmentId: selectedEquipment.id,
