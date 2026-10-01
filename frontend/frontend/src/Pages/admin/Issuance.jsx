@@ -1464,10 +1464,21 @@ setReturnAccessories([]);
   }
 
   async function handleReject(request) {
-    const confirmed = window.confirm(`Reject borrow request ${request.requestId}?`);
-    if (!confirmed) {
-      return;
-    }
+    const result = await Swal.fire({
+  title: 'Reject Borrow Request?',
+  text: `Are you sure you want to reject ${request.requestId}?`,
+  icon: 'warning',
+  showCancelButton: true,
+  confirmButtonText: 'Yes, Reject',
+  cancelButtonText: 'Cancel',
+  confirmButtonColor: '#dc2626',
+  cancelButtonColor: '#6b7280',
+  reverseButtons: true
+});
+
+if (!result.isConfirmed) {
+  return;
+}
 
     try {
       setActionLoadingId(request.id);
@@ -1544,10 +1555,21 @@ setReturnAccessories([]);
       return;
     }
 
-    const confirmed = window.confirm('Create this issuance record now?');
-    if (!confirmed) {
-      return;
-    }
+    const result = await Swal.fire({
+  title: 'Create Issuance?',
+  text: 'Are you sure you want to create this issuance record?',
+  icon: 'question',
+  showCancelButton: true,
+  confirmButtonText: 'Yes, Create',
+  cancelButtonText: 'Cancel',
+  confirmButtonColor: '#eab308',
+  cancelButtonColor: '#6b7280',
+  reverseButtons: true
+});
+
+if (!result.isConfirmed) {
+  return;
+}
 
     const payload = {
       issuanceId: form.issuanceId.trim() || makeIssuanceId(selectedRequest?.id),
