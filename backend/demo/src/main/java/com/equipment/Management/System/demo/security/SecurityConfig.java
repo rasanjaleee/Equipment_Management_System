@@ -113,7 +113,9 @@ public class SecurityConfig {
         configuration.setAllowedOriginPatterns(List.of(
                 "http://localhost:*",
                 "https://*.choreoapps.dev",
-                "https://*.choreo.org"
+                "https://*.choreo.org",
+                "https://*.vercel.app",
+                "https://*.onrender.com"
         ));
 
         configuration.setAllowedMethods(List.of(
