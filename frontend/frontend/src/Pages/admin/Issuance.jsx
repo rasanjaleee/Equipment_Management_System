@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import Swal from 'sweetalert2';
 import { API_BASE_URL } from '../../services/api';
 import {
   ArrowRight,
@@ -1102,6 +1103,7 @@ export default function Issuance() {
           const [returnSubmitting, setReturnSubmitting] = useState(false);
           const [returnMessage, setReturnMessage] = useState('');
           const [returnError, setReturnError] = useState('');
+          const [returnSuccessMessage, setReturnSuccessMessage] = useState('');
 
   const incomingState = location.state;
 
@@ -1262,13 +1264,21 @@ async function handleConfirmReturn() {
     return;
   }
 
-  const confirmed = window.confirm(
-    `Confirm return for ${returnIssuance.issuanceId}?`
-  );
+  const result = await Swal.fire({
+  title: 'Confirm Equipment Return',
+  text: `Are you sure you want to return ${returnIssuance.issuanceId}?`,
+  icon: 'question',
+  showCancelButton: true,
+  confirmButtonText: 'Yes, Return',
+  cancelButtonText: 'Cancel',
+  confirmButtonColor: '#eab308',
+  cancelButtonColor: '#6b7280',
+  reverseButtons: true
+});
 
-  if (!confirmed) {
-    return;
-  }
+if (!result.isConfirmed) {
+  return;
+}
 
   try {
     setReturnSubmitting(true);
@@ -1341,12 +1351,14 @@ async function handleConfirmReturn() {
     );
 
     // 3. Refresh issuance table
-    await fetchIssuances();
+await fetchIssuances();
 
-    setReturnMessage('Equipment returned successfully.');
+setReturnSuccessMessage('Equipment returned successfully.');
 
-    setReturnIssuance(null);
-    setReturnAccessories([]);
+setReturnIssuance(null);
+setReturnAccessories([]);
+
+
 
   } catch (error) {
     console.error('Failed to return equipment:', error);
@@ -1643,6 +1655,12 @@ async function handleConfirmReturn() {
           actionLoading={actionLoadingId}
         />
       )}
+
+      {returnSuccessMessage && (
+  <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800">
+    ✓ {returnSuccessMessage}
+  </div>
+)}
 
       <IssuedEquipmentTable
   issuances={issuances}

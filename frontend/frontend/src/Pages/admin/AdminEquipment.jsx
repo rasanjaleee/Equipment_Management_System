@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import {Plus,Save,X,Package,Edit,Trash2,ArrowLeft,Eye} from 'lucide-react';
 import axios from 'axios';
+import Swal from 'sweetalert2';
 import { API_BASE_URL, getImageUrl } from '../../services/api';
 import { useNavigate } from 'react-router-dom';
+
 
 export default function AdminEquipment() {
   const navigate = useNavigate();
@@ -224,23 +226,64 @@ export default function AdminEquipment() {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this equipment?')) {
-      return;
-    }
+  const equipment = equipmentList.find((item) => item.id === id);
 
-    try {
-      const token = localStorage.getItem('token');
-      await axios.delete(`${API_BASE_URL}/api/equipment/delete/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      await fetchEquipment();
-      setSuccess('Equipment deleted successfully!');
-      setTimeout(() => setSuccess(''), 3000);
-    } catch (err) {
-      setError(err.response?.data || 'Failed to delete equipment');
-      setTimeout(() => setError(''), 3000);
-    }
-  };
+  const result = await Swal.fire({
+    title: 'Delete Equipment?',
+    text: equipment
+      ? `Are you sure you want to delete "${equipment.equipmentName}"?`
+      : 'Are you sure you want to delete this equipment?',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'Yes, Delete',
+    cancelButtonText: 'Cancel',
+    confirmButtonColor: '#dc2626',
+    cancelButtonColor: '#6b7280',
+    reverseButtons: true,
+  });
+
+  if (!result.isConfirmed) {
+    return;
+  }
+
+  try {
+    const token = localStorage.getItem('token');
+
+    await axios.delete(
+      `${API_BASE_URL}/api/equipment/delete/${id}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    );
+
+    await fetchEquipment();
+
+    setSuccess('Equipment deleted successfully!');
+
+setTimeout(() => {
+  setSuccess('');
+}, 3000);
+
+  } catch (err) {
+    console.error(
+      'DELETE EQUIPMENT ERROR:',
+      err.response?.data || err.message
+    );
+
+    await Swal.fire({
+      title: 'Delete Failed',
+      text:
+        err.response?.data?.message ||
+        err.response?.data ||
+        'Failed to delete equipment.',
+      icon: 'error',
+      confirmButtonText: 'OK',
+      confirmButtonColor: '#dc2626',
+    });
+  }
+};
 
   const filteredEquipment = equipmentList.filter(item =>
     item.equipmentName?.toLowerCase().includes(searchTerm.toLowerCase()) &&

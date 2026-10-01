@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
+import Swal from "sweetalert2";
 import { Eye, Edit, Trash2 } from "lucide-react";
 import { API_BASE_URL } from "../services/api";
 
@@ -14,6 +15,8 @@ export default function LaboratoryPage() {
   const [inventoryError, setInventoryError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState("");
+
+  const [successMessage, setSuccessMessage] = useState("");
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -164,10 +167,61 @@ const loadLabInventory = async (labName) => {
     });
   };
 
-  const handleDelete = async (id) => {
-    await axios.delete(`${API_BASE_URL}/api/lab/${id}`);
-    setLabs(labs.filter((lab) => lab.id !== id));
-  };
+ const handleDelete = async (id) => {
+  const lab = labs.find((item) => item.id === id);
+
+  const result = await Swal.fire({
+    title: "Delete Laboratory?",
+    text: lab
+      ? `Are you sure you want to delete "${lab.name}"?`
+      : "Are you sure you want to delete this laboratory?",
+    icon: "warning",
+    showCancelButton: true,
+    confirmButtonText: "Yes, Delete",
+    cancelButtonText: "Cancel",
+    confirmButtonColor: "#dc2626",
+    cancelButtonColor: "#6b7280",
+    reverseButtons: true,
+  });
+
+  if (!result.isConfirmed) {
+    return;
+  }
+
+  try {
+    const token = localStorage.getItem("token");
+
+    await axios.delete(`${API_BASE_URL}/api/lab/${id}`, {
+      headers: token
+        ? { Authorization: `Bearer ${token}` }
+        : {},
+    });
+
+    setLabs((prev) => prev.filter((item) => item.id !== id));
+
+    setSuccessMessage("Laboratory deleted successfully.");
+
+setTimeout(() => {
+  setSuccessMessage("");
+}, 3000);
+
+  } catch (err) {
+    console.error(
+      "DELETE LAB ERROR:",
+      err.response?.data || err.message
+    );
+
+    await Swal.fire({
+      title: "Delete Failed",
+      text:
+        err.response?.data?.message ||
+        "Failed to delete the laboratory.",
+      icon: "error",
+      confirmButtonText: "OK",
+      confirmButtonColor: "#dc2626",
+    });
+  }
+};
 
   const handleEditSave = async (e) => {
     e.preventDefault();
@@ -192,6 +246,12 @@ const loadLabInventory = async (labName) => {
 
   return (
     <div className="min-h-screen bg-gray-100">
+
+      {successMessage && (
+  <div className="mx-4 mt-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800">
+    ✓ {successMessage}
+  </div>
+)}
 
       {/* PAGE TITLE + ADD LAB */}
 <div className="flex items-center justify-between px-4 pt-5 pb-3">
