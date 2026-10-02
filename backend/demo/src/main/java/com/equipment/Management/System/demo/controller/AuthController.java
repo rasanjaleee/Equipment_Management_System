@@ -13,10 +13,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import java.time.LocalDateTime;
 
 @RestController
 @RequestMapping("/auth")
-@CrossOrigin(originPatterns = "http://localhost:*")
+@CrossOrigin(originPatterns = {"http://localhost:*", "https://*.choreoapps.dev", "https://*.choreo.org"})
 public class AuthController {
 
     @Autowired
@@ -124,8 +125,11 @@ public class AuthController {
                 .getUserByUsername(loginRequest.getUsername())
                 .orElseThrow();
 
-        // 4️⃣ Generate JWT
+// Save successful login time
+        user.setLastLogin(LocalDateTime.now());
+        userService.saveUser(user);
 
+// Generate JWT
         String token = jwtUtil.generateToken(user.getUsername(), user.getRole());
 
         return ResponseEntity.ok(Map.of(

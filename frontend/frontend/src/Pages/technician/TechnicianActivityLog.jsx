@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
+import { API_BASE_URL } from "../../services/api";
 
 export default function TechnicianActivityLog() {
   const [logs, setLogs] = useState([]);
@@ -16,7 +17,7 @@ export default function TechnicianActivityLog() {
       const username = user?.username;
 
       const res = await axios.get(
-        `http://localhost:8080/api/activity-logs/user/${username}`,
+        `${API_BASE_URL}/api/activity-logs/user/${username}`,
         {
           headers: {
             Authorization: `Bearer ${token}`

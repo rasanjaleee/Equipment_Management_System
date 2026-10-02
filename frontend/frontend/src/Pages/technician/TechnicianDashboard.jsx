@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
+import { API_BASE_URL } from "../../services/api";
 import { Package, CheckCircle, Wrench, XCircle } from "lucide-react";
 
 export default function TechnicianDashboard() {
@@ -12,7 +13,7 @@ export default function TechnicianDashboard() {
   const fetchEquipment = async () => {
     try {
       const token = localStorage.getItem("token");
-      const res = await axios.get("http://localhost:8080/api/equipment/all", {
+      const res = await axios.get(`${API_BASE_URL}/api/equipment/all`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setEquipmentList(res.data);

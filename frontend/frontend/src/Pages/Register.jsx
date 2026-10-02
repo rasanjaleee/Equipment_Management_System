@@ -1,6 +1,7 @@
 import { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import { API_BASE_URL } from "../services/api";
 import signuppage01 from "/images/signuppage01.png";
 
 
@@ -60,7 +61,7 @@ export default function Register() {
     }
 
     try {
-      const res = await axios.post("http://localhost:8080/auth/register", sanitized);
+      const res = await axios.post(`${API_BASE_URL}/auth/register`, sanitized);
       setSuccess("Registration successful! Redirecting to login...");
       setForm({ username: "", email: "", password: "" });
       
