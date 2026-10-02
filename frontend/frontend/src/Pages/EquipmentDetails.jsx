@@ -1,17 +1,31 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { API_BASE_URL, getImageUrl } from '../services/api';
-import { ArrowLeft, Loader } from 'lucide-react';
+import { ArrowLeft, Loader, Calendar } from 'lucide-react';
+import BorrowRequestForm from '../components/BorrowRequestForm';
 
 const EquipmentDetails = () => {
   const { id, equipmentName, laboratory } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [equipment, setEquipment] = useState(null);
   const [equipmentList, setEquipmentList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [isBorrowModalOpen, setIsBorrowModalOpen] = useState(false);
+  const [selectedEquipmentForBorrow, setSelectedEquipmentForBorrow] = useState(null);
+
+  const handleReserve = (targetItem) => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      navigate('/login', { state: { from: location.pathname } });
+      return;
+    }
+    setSelectedEquipmentForBorrow(targetItem);
+    setIsBorrowModalOpen(true);
+  };
 
   const normalizeValue = (value) =>
     (value || '').trim().replace(/\s+/g, ' ').toLowerCase();
@@ -161,6 +175,16 @@ const EquipmentDetails = () => {
                 <div><span className="font-semibold">Purchase Date:</span> {formatDate(equipment.purchaseDate)}</div>
                 <div><span className="font-semibold">Status:</span> {formatStatus(equipment.status)}</div>
 
+                <div className="pt-4 flex flex-col sm:flex-row gap-3">
+                  <button
+                    onClick={() => handleReserve(equipment)}
+                    className="bg-yellow-500 hover:bg-yellow-400 text-black font-semibold px-6 py-2.5 rounded-lg inline-flex items-center justify-center gap-2 shadow-sm transition-colors cursor-pointer"
+                  >
+                    <Calendar size={18} />
+                    Reserve / Request to Borrow
+                  </button>
+                </div>
+
                 <div className="pt-4">
                   <p className="font-semibold mb-2">QR Code</p>
                   {equipment.qrCode ? (
@@ -177,6 +201,17 @@ const EquipmentDetails = () => {
             </div>
           </div>
         </div>
+
+        <BorrowRequestForm
+          isOpen={isBorrowModalOpen}
+          onClose={() => setIsBorrowModalOpen(false)}
+          equipmentList={equipment ? [equipment] : []}
+          preselectedEquipment={selectedEquipmentForBorrow || equipment}
+          onSubmitted={() => {
+            setSelectedEquipmentForBorrow(null);
+            setIsBorrowModalOpen(false);
+          }}
+        />
       </div>
     );
   }
@@ -303,6 +338,7 @@ const EquipmentDetails = () => {
                   <th className="px-3 py-3 text-left text-xs font-bold text-black uppercase tracking-wider">Date of Purchase</th>
                   <th className="px-3 py-3 text-left text-xs font-bold text-black uppercase tracking-wider">Model</th>
                   <th className="px-3 py-3 text-left text-xs font-bold text-black uppercase tracking-wider">Status</th>
+                  <th className="px-3 py-3 text-left text-xs font-bold text-black uppercase tracking-wider">Action</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -345,12 +381,35 @@ const EquipmentDetails = () => {
                         {formatStatus(item.status)}
                       </span>
                     </td>
+                    <td className="px-3 py-3 whitespace-nowrap text-sm">
+                      {item.status === 'WORKING' ? (
+                        <button
+                          onClick={() => handleReserve(item)}
+                          className="bg-yellow-500 hover:bg-yellow-400 text-black text-xs font-semibold px-3 py-1.5 rounded transition-colors cursor-pointer"
+                        >
+                          Reserve
+                        </button>
+                      ) : (
+                        <span className="text-xs text-gray-400">Unavailable</span>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         </div>
+
+        <BorrowRequestForm
+          isOpen={isBorrowModalOpen}
+          onClose={() => setIsBorrowModalOpen(false)}
+          equipmentList={equipmentList}
+          preselectedEquipment={selectedEquipmentForBorrow}
+          onSubmitted={() => {
+            setSelectedEquipmentForBorrow(null);
+            setIsBorrowModalOpen(false);
+          }}
+        />
       </div>
     </div>
   );
