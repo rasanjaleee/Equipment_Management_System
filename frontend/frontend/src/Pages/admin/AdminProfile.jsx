@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
+import { API_BASE_URL } from "../../services/api";
 
 export default function AdminProfile() {
 
@@ -16,7 +17,7 @@ export default function AdminProfile() {
 
   useEffect(() => {
     axios
-      .get("http://localhost:8080/api/admin/profile")
+      .get(`${API_BASE_URL}/api/admin/profile`)
       .then((res) => setAdmin(res.data))
       .catch((err) =>
         console.log("PROFILE ERROR:", err.response?.data || err.message)
@@ -46,7 +47,7 @@ export default function AdminProfile() {
         formData.append("file", imageFile);
 
         const uploadRes = await axios.post(
-          "http://localhost:8080/api/admin/upload-profile",
+          `${API_BASE_URL}/api/admin/upload-profile`,
           formData,
           {
             headers: {
@@ -59,7 +60,7 @@ export default function AdminProfile() {
       }
 
       const res = await axios.put(
-        "http://localhost:8080/api/admin/profile",
+        `${API_BASE_URL}/api/admin/profile`,
         updatedAdmin
       );
 

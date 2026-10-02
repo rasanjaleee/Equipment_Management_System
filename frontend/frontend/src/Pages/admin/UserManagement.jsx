@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
+import { API_BASE_URL } from "../../services/api";
 
 export default function UserManagement() {
   const [users, setUsers] = useState([]);
@@ -16,7 +17,7 @@ export default function UserManagement() {
 
   const fetchUsers = async () => {
     try {
-      const res = await axios.get("http://localhost:8080/api/admin/users", {
+      const res = await axios.get(`${API_BASE_URL}/api/admin/users`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setUsers(res.data);
@@ -50,7 +51,7 @@ export default function UserManagement() {
       };
 
       const res = await axios.post(
-        "http://localhost:8080/api/admin/create-user",
+        `${API_BASE_URL}/api/admin/create-user`,
         payload,
         {
           headers: { Authorization: `Bearer ${token}` }

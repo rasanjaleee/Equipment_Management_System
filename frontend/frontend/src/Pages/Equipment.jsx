@@ -2,6 +2,7 @@ import { Search, ChevronDown, X } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { API_BASE_URL, getImageUrl } from '../services/api';
 import image from '/images/1.webp';
 import BorrowRequestForm from '../components/BorrowRequestForm';
 
@@ -52,7 +53,7 @@ const Equipment = () => {
       setLoading(true);
       const token = localStorage.getItem('token');
 
-      const res = await axios.get('http://localhost:8080/api/equipment/all', {
+      const res = await axios.get(`${API_BASE_URL}/api/equipment/all`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
 
@@ -470,7 +471,7 @@ const Equipment = () => {
                         <img
                           src={
                             group.displayItem.photoPath
-                              ? `http://localhost:8080/${group.displayItem.photoPath}?t=${Date.now()}`
+                              ? getImageUrl(group.displayItem.photoPath)
                               : '/images/sample1.jpg'
                           }
                           alt={group.name}

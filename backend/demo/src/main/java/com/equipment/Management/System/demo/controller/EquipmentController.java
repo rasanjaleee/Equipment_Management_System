@@ -5,6 +5,7 @@ import com.equipment.Management.System.demo.model.Equipment;
 import com.equipment.Management.System.demo.model.EquipmentStatus;
 import com.equipment.Management.System.demo.service.ActivityLogService;
 import com.equipment.Management.System.demo.service.BorrowRequestService;
+import com.equipment.Management.System.demo.service.CloudinaryService;
 import com.equipment.Management.System.demo.service.EquipmentCsvService;
 import com.equipment.Management.System.demo.service.EquipmentService;
 import org.springframework.http.ResponseEntity;
@@ -22,40 +23,33 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/equipment")
-@CrossOrigin
+@CrossOrigin(originPatterns = {"http://localhost:*", "https://*.choreoapps.dev", "https://*.choreo.org"})
 public class EquipmentController {
 
     private final EquipmentService equipmentService;
     private final EquipmentCsvService equipmentCsvService;
     private final ActivityLogService activityLogService;
     private final BorrowRequestService borrowRequestService;
-
-    private static final String UPLOAD_DIR = "uploads/";
+    private final CloudinaryService cloudinaryService;
 
     public EquipmentController(EquipmentService equipmentService,
                                EquipmentCsvService equipmentCsvService,
                                ActivityLogService activityLogService,
-                               BorrowRequestService borrowRequestService) {
+                               BorrowRequestService borrowRequestService,
+                               CloudinaryService cloudinaryService) {
         this.equipmentService = equipmentService;
         this.equipmentCsvService = equipmentCsvService;
         this.activityLogService = activityLogService;
         this.borrowRequestService = borrowRequestService;
+        this.cloudinaryService = cloudinaryService;
     }
 
-    // ✅ NEW METHOD ADDED (LAB FILTER)
     @GetMapping("/lab/{labName}")
-    public ResponseEntity<List<Equipment>> getEquipmentByLab(@PathVariable String labName) {
-        try {
-            List<Equipment> equipments = equipmentService.getAllEquipment()
-                    .stream()
-                    .filter(e -> e.getLaboratory().equalsIgnoreCase(labName))
-                    .toList();
-
-            return ResponseEntity.ok(equipments);
-
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().build();
-        }
+    public List<Equipment> getEquipmentByLab(@PathVariable String labName) {
+        return equipmentService.getAllEquipment().stream()
+                .filter(e -> e.getLaboratory() != null &&
+                        e.getLaboratory().equalsIgnoreCase(labName))
+                .toList();
     }
 
     @PostMapping("/add")
@@ -69,14 +63,12 @@ public class EquipmentController {
             @RequestParam(required = false) String supplier,
             @RequestParam EquipmentStatus status,
             @RequestParam(required = false) String grnNumber,
-            @RequestParam MultipartFile photo
+            @RequestParam(required = false) MultipartFile photo
     ) {
         try {
-            Files.createDirectories(Paths.get(UPLOAD_DIR));
-
-            String fileName = System.currentTimeMillis() + "_" + photo.getOriginalFilename();
-            Path filePath = Paths.get(UPLOAD_DIR + fileName);
-            Files.write(filePath, photo.getBytes());
+            String uploadedPhotoUrl = (photo != null && !photo.isEmpty())
+                    ? cloudinaryService.uploadImage(photo, "equipment")
+                    : null;
 
             Equipment equipment = new Equipment();
             equipment.setEquipmentName(equipmentName);
@@ -87,7 +79,7 @@ public class EquipmentController {
             equipment.setSupplier(supplier);
             equipment.setStatus(status);
             equipment.setGrnNumber(grnNumber);
-            equipment.setPhotoPath(filePath.toString());
+            equipment.setPhotoPath(uploadedPhotoUrl);
 
             if (purchaseDate != null && !purchaseDate.isBlank()) {
                 equipment.setPurchaseDate(LocalDate.parse(purchaseDate));
@@ -160,11 +152,8 @@ public class EquipmentController {
             }
 
             if (photo != null && !photo.isEmpty()) {
-                Files.createDirectories(Paths.get(UPLOAD_DIR));
-                String fileName = System.currentTimeMillis() + "_" + photo.getOriginalFilename();
-                Path filePath = Paths.get(UPLOAD_DIR + fileName);
-                Files.write(filePath, photo.getBytes());
-                equipment.setPhotoPath(filePath.toString());
+                String uploadedPhotoUrl = cloudinaryService.uploadImage(photo, "equipment");
+                equipment.setPhotoPath(uploadedPhotoUrl);
             }
 
             equipmentService.saveEquipment(equipment);

@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from "react";
 import Footer from "./Footer";
 import SockJS from "sockjs-client";
 import { Client } from "@stomp/stompjs";
+import { API_BASE_URL } from "../services/api";
 import {
   LayoutDashboard,
   Wrench,
@@ -28,8 +29,8 @@ export default function AdminLayout() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Retrieve user session state at top level before effects
   const loggedInUser = JSON.parse(localStorage.getItem("user"));
+
   const normalizeRole = (value) =>
     String(value || "").replace(/^ROLE_/i, "").toUpperCase();
 
@@ -75,14 +76,17 @@ export default function AdminLayout() {
     };
 
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
   }, []);
 
   // 3. WebSocket Subscription
   useEffect(() => {
     if (!userId) return;
 
-    const socket = new SockJS("http://localhost:8080/ws");
+    const socket = new SockJS(`${API_BASE_URL}/ws`);
 
     const client = new Client({
       webSocketFactory: () => socket,
@@ -91,13 +95,22 @@ export default function AdminLayout() {
       onConnect: () => {
         console.log("Connected to WebSocket");
 
-        // Single subscription for user notifications
+        // User-specific notification topic
         client.subscribe(`/topic/notifications/${userId}`, (message) => {
           try {
             const newNotification = JSON.parse(message.body);
+
             console.log("Received user notification:", newNotification);
 
-            setNotifications((prev) => [newNotification, ...prev]);
+            setNotifications((prev) => [
+              {
+                ...newNotification,
+                read: false,
+                status: "UNREAD",
+                receivedAt: new Date().toLocaleString(),
+              },
+              ...prev,
+            ]);
           } catch (error) {
             console.error("Error parsing user notification:", error);
           }
@@ -105,7 +118,10 @@ export default function AdminLayout() {
       },
 
       onStompError: (frame) => {
-        console.error("Broker reported error:", frame.headers["message"]);
+        console.error(
+          "Broker reported error:",
+          frame.headers["message"]
+        );
         console.error("Additional details:", frame.body);
       },
 
@@ -140,9 +156,11 @@ export default function AdminLayout() {
       : "Welcome back!";
 
   const displayName = username;
-  const avatarLetter = username ? username.charAt(0).toUpperCase() : "U";
+  const avatarLetter = username
+    ? username.charAt(0).toUpperCase()
+    : "U";
 
-  // Calculate unread items strictly by read/status attributes
+  // Calculate unread notifications
   const unreadCount = notifications.filter(
     (n) => !n.read && n.status !== "READ"
   ).length;
@@ -161,7 +179,10 @@ export default function AdminLayout() {
 
     // Backend sync
     markAllAsReadApi(userId).catch((error) => {
-      console.error("Failed to mark all as read on backend:", error);
+      console.error(
+        "Failed to mark all as read on backend:",
+        error
+      );
     });
   };
 
@@ -170,25 +191,67 @@ export default function AdminLayout() {
   };
 
   const baseMenu = [
-    { to: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { to: "/admin/equipment", label: "Equipment", icon: Wrench },
-    { to: "/admin/laboratories", label: "Laboratories", icon: FlaskConical },
-    { to: "/admin/issuance", label: "Issuance", icon: ClipboardList },
-    { to: "/admin/maintenance", label: "Maintenance", icon: History },
-    { to: "/admin/reports", label: "Reports", icon: FileBarChart },
-    { to: "/admin/activity-log", label: "Activity Log", icon: ClipboardList },
+    {
+      to: "/admin/dashboard",
+      label: "Dashboard",
+      icon: LayoutDashboard,
+    },
+    {
+      to: "/admin/equipment",
+      label: "Equipment",
+      icon: Wrench,
+    },
+    {
+      to: "/admin/laboratories",
+      label: "Laboratories",
+      icon: FlaskConical,
+    },
+    {
+      to: "/admin/issuance",
+      label: "Issuance",
+      icon: ClipboardList,
+    },
+    {
+      to: "/admin/maintenance",
+      label: "Maintenance",
+      icon: History,
+    },
+    {
+      to: "/admin/reports",
+      label: "Reports",
+      icon: FileBarChart,
+    },
+    {
+      to: "/admin/activity-log",
+      label: "Activity Log",
+      icon: ClipboardList,
+    },
   ];
 
   const superAdminOnlyMenu = [
-    { to: "/admin/users", label: "User Management", icon: Users },
+    {
+      to: "/admin/users",
+      label: "User Management",
+      icon: Users,
+    },
   ];
 
   const menu =
-    role === "SUPER_ADMIN" ? [...baseMenu, ...superAdminOnlyMenu] : baseMenu;
+    role === "SUPER_ADMIN"
+      ? [...baseMenu, ...superAdminOnlyMenu]
+      : baseMenu;
 
   const bottomMenu = [
-    { to: "/admin/notifications", label: "Notifications", icon: Bell },
-    { to: "/admin/settings", label: "Settings", icon: Settings },
+    {
+      to: "/admin/notifications",
+      label: "Notifications",
+      icon: Bell,
+    },
+    {
+      to: "/admin/settings",
+      label: "Settings",
+      icon: Settings,
+    },
   ];
 
   const titleMap = {
@@ -243,11 +306,13 @@ export default function AdminLayout() {
               alt="University Logo"
               className="w-14 h-14 object-contain flex-shrink-0"
             />
+
             {sidebarOpen && (
               <div className="leading-tight min-w-0">
                 <h1 className="text-[11px] font-bold text-white break-words">
                   Faculty of Engineering
                 </h1>
+
                 <p className="text-[11px] text-orange-100 break-words">
                   Equipment Management System
                 </p>
@@ -259,6 +324,7 @@ export default function AdminLayout() {
         <nav className="flex-1 px-3 py-5 space-y-2">
           {menu.map((item) => {
             const Icon = item.icon;
+
             return (
               <NavLink
                 key={item.to}
@@ -267,6 +333,7 @@ export default function AdminLayout() {
                 title={!sidebarOpen ? item.label : ""}
               >
                 <Icon size={20} className="flex-shrink-0" />
+
                 {sidebarOpen && <span>{item.label}</span>}
               </NavLink>
             );
@@ -276,6 +343,7 @@ export default function AdminLayout() {
         <div className="px-3 py-3 border-t border-gray-200 space-y-2">
           {bottomMenu.map((item) => {
             const Icon = item.icon;
+
             return (
               <NavLink
                 key={item.to}
@@ -284,6 +352,7 @@ export default function AdminLayout() {
                 title={!sidebarOpen ? item.label : ""}
               >
                 <Icon size={20} className="flex-shrink-0" />
+
                 {sidebarOpen && <span>{item.label}</span>}
               </NavLink>
             );
@@ -302,7 +371,9 @@ export default function AdminLayout() {
 
       <div
         className="min-h-screen flex flex-col transition-all duration-300"
-        style={{ marginLeft: sidebarOpen ? "14rem" : "5rem" }}
+        style={{
+          marginLeft: sidebarOpen ? "14rem" : "5rem",
+        }}
       >
         <header
           className="fixed top-0 right-0 px-5 h-20 flex justify-between items-center shadow-md gap-4 z-30"
@@ -315,15 +386,23 @@ export default function AdminLayout() {
             <h2 className="text-2xl font-bold text-white truncate">
               {currentTitle}
             </h2>
-            <p className="text-sm text-gray-100 mt-1">{welcomeText}</p>
+
+            <p className="text-sm text-gray-100 mt-1">
+              {welcomeText}
+            </p>
           </div>
 
           <div className="flex items-center gap-4 flex-shrink-0">
-            <div className="relative" ref={notificationRef}>
+            <div
+              className="relative"
+              ref={notificationRef}
+            >
               <button
                 onClick={handleNotificationClick}
                 className="relative p-2 text-white rounded-lg transition-colors"
-                style={{ backgroundColor: "rgba(232, 155, 0, 0.7)" }}
+                style={{
+                  backgroundColor: "rgba(232, 155, 0, 0.7)",
+                }}
                 title="Notifications"
               >
                 <Bell size={22} />
@@ -341,6 +420,7 @@ export default function AdminLayout() {
                     <h3 className="text-sm font-semibold text-gray-800">
                       Notifications
                     </h3>
+
                     <button
                       onClick={handleMarkAllAsRead}
                       className="text-xs text-orange-600 hover:text-orange-700 font-medium"
@@ -357,22 +437,30 @@ export default function AdminLayout() {
                     ) : (
                       notifications.map((notification) => {
                         const isRead =
-                          notification.read || notification.status === "READ";
+                          notification.read ||
+                          notification.status === "READ";
+
                         return (
                           <div
                             key={notification.id}
                             className={`px-4 py-3 border-b border-gray-100 hover:bg-gray-50 ${
-                              !isRead ? "bg-orange-50" : "bg-white"
+                              !isRead
+                                ? "bg-orange-50"
+                                : "bg-white"
                             }`}
                           >
                             <div className="flex items-start justify-between gap-3">
                               <div className="flex-1 min-w-0">
                                 <p className="text-sm font-semibold text-gray-800">
-                                  {notification.title || "Notification"}
+                                  {notification.title ||
+                                    "Notification"}
                                 </p>
+
                                 <p className="text-sm text-gray-600 mt-1 break-words">
-                                  {notification.message || "No message"}
+                                  {notification.message ||
+                                    "No message"}
                                 </p>
+
                                 <p className="text-xs text-gray-400 mt-2">
                                   {notification.createdAt
                                     ? new Date(
@@ -397,15 +485,22 @@ export default function AdminLayout() {
 
             <div
               className="w-px h-6 opacity-50"
-              style={{ backgroundColor: "rgba(255, 255, 255, 0.3)" }}
+              style={{
+                backgroundColor: "rgba(255, 255, 255, 0.3)",
+              }}
             ></div>
 
-            <div className="relative" ref={dropdownRef}>
+            <div
+              className="relative"
+              ref={dropdownRef}
+            >
               <button
                 type="button"
                 onClick={() => setDropdownOpen(!dropdownOpen)}
                 className="flex items-center gap-3 p-2 rounded-lg transition-colors"
-                style={{ backgroundColor: "rgba(232, 155, 0, 0.7)" }}
+                style={{
+                  backgroundColor: "rgba(232, 155, 0, 0.7)",
+                }}
               >
                 <div
                   className="w-9 h-9 bg-white rounded-full flex items-center justify-center font-bold shadow-md"
@@ -418,7 +513,10 @@ export default function AdminLayout() {
                   <p className="text-sm font-semibold text-white">
                     {displayName}
                   </p>
-                  <p className="text-xs text-gray-100">{displayRole}</p>
+
+                  <p className="text-xs text-gray-100">
+                    {displayRole}
+                  </p>
                 </div>
 
                 <ChevronDown
@@ -435,7 +533,8 @@ export default function AdminLayout() {
                     onClick={goProfile}
                     className="w-full flex items-center gap-3 px-5 py-3.5 text-sm text-gray-700 transition-colors font-medium border-b border-gray-100"
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = "#FEF5E6";
+                      e.currentTarget.style.backgroundColor =
+                        "#FEF5E6";
                       e.currentTarget.style.color = "#E89B00";
                     }}
                     onMouseLeave={(e) => {

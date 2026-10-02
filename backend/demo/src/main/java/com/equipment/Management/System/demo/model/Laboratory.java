@@ -16,6 +16,7 @@ public class Laboratory {
     private String categoryDepartment;
     private String location;
     private String inCharge;
+    private String technicalOfficerInCharge;
 
     private int totalEquipment;
     private int workingEquipment;
@@ -63,6 +64,12 @@ public class Laboratory {
 
     public void setInCharge(String inCharge) {
         this.inCharge = inCharge;
+    }
+
+    public String getTechnicalOfficerInCharge() {return technicalOfficerInCharge;}
+
+    public void setTechnicalOfficerInCharge(String technicalOfficerInCharge) {
+        this.technicalOfficerInCharge = technicalOfficerInCharge;
     }
 
     public int getTotalEquipment() {

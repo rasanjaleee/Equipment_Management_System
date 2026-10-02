@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
+import { API_BASE_URL } from "../../services/api";
 
 export default function ReportsPage() {
   const [activeTab, setActiveTab] = useState("grn");
@@ -28,7 +29,7 @@ export default function ReportsPage() {
 
   const fetchGrnReport = async () => {
     try {
-      const res = await axios.get("http://localhost:8080/api/reports/grn", {
+      const res = await axios.get(`${API_BASE_URL}/api/reports/grn`, {
         headers: getHeaders(),
       });
       setGrnData(res.data || []);
@@ -46,11 +47,11 @@ export default function ReportsPage() {
       };
 
       const [summaryRes, listRes] = await Promise.all([
-        axios.get("http://localhost:8080/api/reports/inventory-summary", {
+        axios.get(`${API_BASE_URL}/api/reports/inventory-summary`, {
           headers: getHeaders(),
           params,
         }),
-        axios.get("http://localhost:8080/api/reports/inventory-list", {
+        axios.get(`${API_BASE_URL}/api/reports/inventory-list`, {
           headers: getHeaders(),
           params,
         }),
@@ -71,7 +72,7 @@ export default function ReportsPage() {
 
   const handleDownloadCsv = async () => {
     try {
-      const response = await axios.get("http://localhost:8080/api/reports/inventory/export/csv", {
+      const response = await axios.get(`${API_BASE_URL}/api/reports/inventory/export/csv`, {
         headers: getHeaders(),
         params: {
           laboratory: laboratoryFilter,
@@ -94,7 +95,7 @@ export default function ReportsPage() {
 
   const handleDownloadPdf = async () => {
     try {
-      const response = await axios.get("http://localhost:8080/api/reports/inventory/export/pdf", {
+      const response = await axios.get(`${API_BASE_URL}/api/reports/inventory/export/pdf`, {
         headers: getHeaders(),
         params: {
           laboratory: laboratoryFilter,
@@ -117,7 +118,7 @@ export default function ReportsPage() {
 
   const handleDownloadGrnCsv = async () => {
     try {
-      const response = await axios.get("http://localhost:8080/api/reports/grn/export/csv", {
+      const response = await axios.get(`${API_BASE_URL}/api/reports/grn/export/csv`, {
         headers: getHeaders(),
         responseType: "blob",
       });
@@ -136,7 +137,7 @@ export default function ReportsPage() {
 
   const handleDownloadGrnPdf = async () => {
     try {
-      const response = await axios.get("http://localhost:8080/api/reports/grn/export/pdf", {
+      const response = await axios.get(`${API_BASE_URL}/api/reports/grn/export/pdf`, {
         headers: getHeaders(),
         responseType: "blob",
       });

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { API_BASE_URL, getImageUrl } from '../services/api';
 import { ArrowLeft, Loader } from 'lucide-react';
 
 const EquipmentDetails = () => {
@@ -28,7 +29,7 @@ const EquipmentDetails = () => {
       setLoading(true);
       const token = localStorage.getItem('token');
 
-      const res = await axios.get(`http://localhost:8080/api/equipment/${id}`, {
+      const res = await axios.get(`${API_BASE_URL}/api/equipment/${id}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
 
@@ -47,7 +48,7 @@ const EquipmentDetails = () => {
       setLoading(true);
       const token = localStorage.getItem('token');
 
-      const res = await axios.get(`http://localhost:8080/api/equipment/all`, {
+      const res = await axios.get(`${API_BASE_URL}/api/equipment/all`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
 
@@ -141,7 +142,7 @@ const EquipmentDetails = () => {
               <div>
                 {equipment.photoPath ? (
                   <img
-                    src={`http://localhost:8080/${equipment.photoPath}`}
+                    src={getImageUrl(equipment.photoPath)}
                     alt={equipment.equipmentName}
                     className="w-full h-72 object-cover rounded-lg border"
                   />
@@ -164,7 +165,7 @@ const EquipmentDetails = () => {
                   <p className="font-semibold mb-2">QR Code</p>
                   {equipment.qrCode ? (
                     <img
-                      src={`http://localhost:8080/${equipment.qrCode}`}
+                      src={getImageUrl(equipment.qrCode)}
                       alt="QR code"
                       className="w-48 h-48 object-contain border rounded p-2 bg-white"
                     />
@@ -226,7 +227,7 @@ const EquipmentDetails = () => {
             <div className="flex-shrink-0 w-full md:w-80">
               {displayEquipment.photoPath ? (
                 <img
-                  src={`http://localhost:8080/${displayEquipment.photoPath}`}
+                  src={getImageUrl(displayEquipment.photoPath)}
                   alt={displayEquipment.equipmentName}
                   className="w-full h-64 object-cover rounded-lg border-2 border-gray-200"
                 />
@@ -322,7 +323,7 @@ const EquipmentDetails = () => {
                     <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900">
                       {item.qrCode ? (
                         <img
-                          src={`http://localhost:8080/${item.qrCode}`}
+                          src={getImageUrl(item.qrCode)}
                           alt="QR code"
                           className="w-16 h-16 object-contain"
                         />
