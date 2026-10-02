@@ -1,6 +1,6 @@
 import { Outlet, NavLink, useLocation, useNavigate } from "react-router-dom";
 import React, { useEffect, useRef, useState } from "react";
-import Footer from "../components/Footer";
+import Footer from "./Footer";
 import SockJS from "sockjs-client";
 import { Client } from "@stomp/stompjs";
 import {
@@ -19,10 +19,23 @@ import {
   Menu,
   X,
 } from "lucide-react";
+import {
+  getNotifications,
+  markAllAsRead as markAllAsReadApi,
+} from "../services/notificationService";
 
 export default function AdminLayout() {
   const location = useLocation();
   const navigate = useNavigate();
+
+  // Retrieve user session state at top level before effects
+  const loggedInUser = JSON.parse(localStorage.getItem("user"));
+  const normalizeRole = (value) =>
+    String(value || "").replace(/^ROLE_/i, "").toUpperCase();
+
+  const role = normalizeRole(loggedInUser?.role);
+  const username = loggedInUser?.username || "User";
+  const userId = loggedInUser?.id;
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
@@ -32,13 +45,81 @@ export default function AdminLayout() {
   const dropdownRef = useRef(null);
   const notificationRef = useRef(null);
 
-  const normalizeRole = (value) => String(value || "").replace(/^ROLE_/i, "").toUpperCase();
+  // 1. Initial Fetch of Navbar Notifications
+  useEffect(() => {
+    if (!userId) return;
 
-  const loggedInUser = JSON.parse(localStorage.getItem("user"));
+    getNotifications(userId)
+      .then((response) => {
+        console.log("Navbar notifications loaded:", response.data);
+        setNotifications(response.data);
+      })
+      .catch((error) => {
+        console.error("Failed to load navbar notifications:", error);
+      });
+  }, [userId]);
 
-  const role = normalizeRole(loggedInUser?.role);
-  const username = loggedInUser?.username || "User";
-  const userId = loggedInUser?.id;
+  // 2. Dropdown outside click handler
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setDropdownOpen(false);
+      }
+
+      if (
+        notificationRef.current &&
+        !notificationRef.current.contains(e.target)
+      ) {
+        setNotificationOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // 3. WebSocket Subscription
+  useEffect(() => {
+    if (!userId) return;
+
+    const socket = new SockJS("http://localhost:8080/ws");
+
+    const client = new Client({
+      webSocketFactory: () => socket,
+      reconnectDelay: 5000,
+
+      onConnect: () => {
+        console.log("Connected to WebSocket");
+
+        // Single subscription for user notifications
+        client.subscribe(`/topic/notifications/${userId}`, (message) => {
+          try {
+            const newNotification = JSON.parse(message.body);
+            console.log("Received user notification:", newNotification);
+
+            setNotifications((prev) => [newNotification, ...prev]);
+          } catch (error) {
+            console.error("Error parsing user notification:", error);
+          }
+        });
+      },
+
+      onStompError: (frame) => {
+        console.error("Broker reported error:", frame.headers["message"]);
+        console.error("Additional details:", frame.body);
+      },
+
+      onWebSocketError: (error) => {
+        console.error("WebSocket error:", error);
+      },
+    });
+
+    client.activate();
+
+    return () => {
+      client.deactivate();
+    };
+  }, [userId]);
 
   const displayRole =
     role === "SUPER_ADMIN"
@@ -61,108 +142,31 @@ export default function AdminLayout() {
   const displayName = username;
   const avatarLetter = username ? username.charAt(0).toUpperCase() : "U";
 
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-        setDropdownOpen(false);
-      }
+  // Calculate unread items strictly by read/status attributes
+  const unreadCount = notifications.filter(
+    (n) => !n.read && n.status !== "READ"
+  ).length;
 
-      if (notificationRef.current && !notificationRef.current.contains(e.target)) {
-        setNotificationOpen(false);
-      }
-    };
+  const handleMarkAllAsRead = () => {
+    if (!userId || unreadCount === 0) return;
 
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  useEffect(() => {
-    const socket = new SockJS("http://localhost:8080/ws");
-
-    const client = new Client({
-      webSocketFactory: () => socket,
-      reconnectDelay: 5000,
-
-      onConnect: () => {
-        console.log("Connected to WebSocket");
-
-        // Global topic (matches your current backend)
-        client.subscribe("/topic/notifications", (message) => {
-          try {
-            const newNotification = JSON.parse(message.body);
-            console.log("Received notification:", newNotification);
-
-            setNotifications((prev) => [
-              {
-                ...newNotification,
-                id: Date.now() + Math.random(),
-                read: false,
-                receivedAt: new Date().toLocaleString(),
-              },
-              ...prev,
-            ]);
-          } catch (error) {
-            console.error("Error parsing notification:", error);
-          }
-        });
-
-        // Optional user-specific topic
-        if (userId) {
-          client.subscribe(`/topic/notifications/${userId}`, (message) => {
-            try {
-              const newNotification = JSON.parse(message.body);
-              console.log("Received user notification:", newNotification);
-
-              setNotifications((prev) => [
-                {
-                  ...newNotification,
-                  id: Date.now() + Math.random(),
-                  read: false,
-                  receivedAt: new Date().toLocaleString(),
-                },
-                ...prev,
-              ]);
-            } catch (error) {
-              console.error("Error parsing user notification:", error);
-            }
-          });
-        }
-      },
-
-      onStompError: (frame) => {
-        console.error("Broker reported error:", frame.headers["message"]);
-        console.error("Additional details:", frame.body);
-      },
-
-      onWebSocketError: (error) => {
-        console.error("WebSocket error:", error);
-      },
-    });
-
-    client.activate();
-
-    return () => {
-      client.deactivate();
-    };
-  }, [userId]);
-
-  const unreadCount = notifications.filter((n) => !n.read).length;
-
-  const markAllAsRead = () => {
+    // Optimistic state update
     setNotifications((prev) =>
       prev.map((notification) => ({
         ...notification,
         read: true,
+        status: "READ",
       }))
     );
+
+    // Backend sync
+    markAllAsReadApi(userId).catch((error) => {
+      console.error("Failed to mark all as read on backend:", error);
+    });
   };
 
   const handleNotificationClick = () => {
     setNotificationOpen((prev) => !prev);
-
-    if (!notificationOpen) {
-      markAllAsRead();
-    }
   };
 
   const baseMenu = [
@@ -179,7 +183,8 @@ export default function AdminLayout() {
     { to: "/admin/users", label: "User Management", icon: Users },
   ];
 
-  const menu = role === "SUPER_ADMIN" ? [...baseMenu, ...superAdminOnlyMenu] : baseMenu;
+  const menu =
+    role === "SUPER_ADMIN" ? [...baseMenu, ...superAdminOnlyMenu] : baseMenu;
 
   const bottomMenu = [
     { to: "/admin/notifications", label: "Notifications", icon: Bell },
@@ -337,7 +342,7 @@ export default function AdminLayout() {
                       Notifications
                     </h3>
                     <button
-                      onClick={markAllAsRead}
+                      onClick={handleMarkAllAsRead}
                       className="text-xs text-orange-600 hover:text-orange-700 font-medium"
                     >
                       Mark all as read
@@ -350,32 +355,40 @@ export default function AdminLayout() {
                         No notifications yet
                       </div>
                     ) : (
-                      notifications.map((notification) => (
-                        <div
-                          key={notification.id}
-                          className={`px-4 py-3 border-b border-gray-100 hover:bg-gray-50 ${
-                            !notification.read ? "bg-orange-50" : "bg-white"
-                          }`}
-                        >
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-semibold text-gray-800">
-                                {notification.title || "Notification"}
-                              </p>
-                              <p className="text-sm text-gray-600 mt-1 break-words">
-                                {notification.message || "No message"}
-                              </p>
-                              <p className="text-xs text-gray-400 mt-2">
-                                {notification.receivedAt}
-                              </p>
-                            </div>
+                      notifications.map((notification) => {
+                        const isRead =
+                          notification.read || notification.status === "READ";
+                        return (
+                          <div
+                            key={notification.id}
+                            className={`px-4 py-3 border-b border-gray-100 hover:bg-gray-50 ${
+                              !isRead ? "bg-orange-50" : "bg-white"
+                            }`}
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-semibold text-gray-800">
+                                  {notification.title || "Notification"}
+                                </p>
+                                <p className="text-sm text-gray-600 mt-1 break-words">
+                                  {notification.message || "No message"}
+                                </p>
+                                <p className="text-xs text-gray-400 mt-2">
+                                  {notification.createdAt
+                                    ? new Date(
+                                        notification.createdAt
+                                      ).toLocaleString()
+                                    : notification.receivedAt || ""}
+                                </p>
+                              </div>
 
-                            {!notification.read && (
-                              <span className="w-2.5 h-2.5 bg-red-500 rounded-full mt-2 flex-shrink-0"></span>
-                            )}
+                              {!isRead && (
+                                <span className="w-2.5 h-2.5 bg-red-500 rounded-full mt-2 flex-shrink-0"></span>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      ))
+                        );
+                      })
                     )}
                   </div>
                 </div>
@@ -402,7 +415,9 @@ export default function AdminLayout() {
                 </div>
 
                 <div className="text-left hidden sm:block">
-                  <p className="text-sm font-semibold text-white">{displayName}</p>
+                  <p className="text-sm font-semibold text-white">
+                    {displayName}
+                  </p>
                   <p className="text-xs text-gray-100">{displayRole}</p>
                 </div>
 
