@@ -127,6 +127,7 @@ function App() {
             <Route path="equipment" element={<TechnicianEquipment />} />
             <Route path="maintenance" element={<MaintenancePage />} />
             <Route path="activity-log" element={<TechnicianActivityLog />} />
+            <Route path="notifications" element={<NotificationPage />} />
             <Route path="profile" element={<ProfilePage />} />
           </Route>
         </Routes>

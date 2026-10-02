@@ -1,7 +1,6 @@
 package com.equipment.Management.System.demo.repository;
 
 import com.equipment.Management.System.demo.model.Maintenance;
-
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
@@ -15,4 +14,14 @@ public interface MaintenanceRepository extends JpaRepository<Maintenance, Long> 
 
     @Query("SELECT m FROM Maintenance m JOIN FETCH m.equipment")
     List<Maintenance> findAllWithEquipment();
+
+    @Query("""
+           SELECT m
+           FROM Maintenance m
+           JOIN FETCH m.equipment
+           WHERE m.status IN :statuses
+           """)
+    List<Maintenance> findByStatusInWithEquipment(
+            List<String> statuses
+    );
 }

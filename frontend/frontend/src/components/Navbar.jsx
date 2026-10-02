@@ -20,8 +20,16 @@ const Navbar = () => {
   const notifRef = useRef(null);
   const navigate = useNavigate();
 
-  const userId = 1; // replace with logged-in user id later
 
+  const loggedInUser = (() => {
+  try {
+    return JSON.parse(localStorage.getItem("user"));
+  } catch {
+    return null;
+  }
+  })();
+
+const userId = loggedInUser?.id;
   // ================= FETCH USERNAME FROM LOCALSTORAGE / JWT =================
   useEffect(() => {
     // Try to get username from localStorage (set during login)
@@ -66,7 +74,7 @@ const Navbar = () => {
     setUnreadCount((prev) => prev + 1);
   }, []);
 
-  useNotificationSocket(handleRealtimeNotification);
+  useNotificationSocket(userId, handleRealtimeNotification);
 
   // ================= LOAD NOTIFICATIONS =================
   const loadNotifications = async () => {

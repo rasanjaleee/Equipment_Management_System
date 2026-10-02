@@ -2,24 +2,39 @@ import { useEffect } from "react";
 import SockJS from "sockjs-client/dist/sockjs.min.js";
 import { Client } from "@stomp/stompjs";
 
-const useNotificationSocket = (onMessage) => {
+const useNotificationSocket = (userId, onMessage) => {
   useEffect(() => {
-    console.log("Starting WebSocket connection...");
+    if (!userId) {
+      console.log("No user ID. WebSocket not started.");
+      return;
+    }
+
+    console.log("Starting WebSocket connection for user:", userId);
 
     const client = new Client({
       webSocketFactory: () => {
         console.log("Creating SockJS socket...");
         return new SockJS("http://localhost:8080/ws");
       },
+
       reconnectDelay: 5000,
 
       onConnect: () => {
         console.log("WebSocket connected");
 
-        client.subscribe("/topic/notifications", (message) => {
+        const topic = `/topic/notifications/${userId}`;
+
+        console.log("Subscribing to:", topic);
+
+        client.subscribe(topic, (message) => {
           console.log("Message received:", message.body);
-          const data = JSON.parse(message.body);
-          onMessage(data);
+
+          try {
+            const data = JSON.parse(message.body);
+            onMessage(data);
+          } catch (error) {
+            console.error("Invalid notification message:", error);
+          }
         });
       },
 
@@ -42,7 +57,7 @@ const useNotificationSocket = (onMessage) => {
       console.log("Cleaning up WebSocket...");
       client.deactivate();
     };
-  }, [onMessage]);
+  }, [userId, onMessage]);
 };
 
 export default useNotificationSocket;
