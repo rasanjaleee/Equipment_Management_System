@@ -34,6 +34,13 @@ export default function BorrowRequestForm({
   const [successMessage, setSuccessMessage] = useState('');
   const [availabilityChecking, setAvailabilityChecking] = useState(false);
   const [availability, setAvailability] = useState({ checked: false, available: null, message: '' });
+  const [calendarOpen, setCalendarOpen] = useState(false);
+const [calendarDate, setCalendarDate] = useState(new Date());
+const [blockedPeriods, setBlockedPeriods] = useState([]);
+const [calendarLoading, setCalendarLoading] = useState(false);
+const [calendarError, setCalendarError] = useState('');
+const [calendarStartDate, setCalendarStartDate] = useState('');
+const [calendarEndDate, setCalendarEndDate] = useState('');
 
   useEffect(() => {
     if (!isOpen) {
@@ -101,6 +108,165 @@ export default function BorrowRequestForm({
       setAvailabilityChecking(false);
     }
   };
+
+  const loadCalendarAvailability = async (date = calendarDate) => {
+  if (!selectedEquipmentId) {
+    setCalendarError('Please select equipment first.');
+    return;
+  }
+
+  try {
+    setCalendarLoading(true);
+    setCalendarError('');
+
+    const year = date.getFullYear();
+    const month = date.getMonth();
+
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+
+    const formatDate = (value) => {
+      const y = value.getFullYear();
+      const m = String(value.getMonth() + 1).padStart(2, '0');
+      const d = String(value.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    };
+
+    const token = localStorage.getItem('token');
+
+    const response = await axios.get(
+      `${API_BASE}/api/equipment/${selectedEquipmentId}/availability-calendar`,
+      {
+        params: {
+          startDate: formatDate(firstDay),
+          endDate: formatDate(lastDay)
+        },
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      }
+    );
+
+    setBlockedPeriods(Array.isArray(response.data) ? response.data : []);
+  } catch (error) {
+    console.error('Failed to load equipment calendar:', error);
+
+    setBlockedPeriods([]);
+    setCalendarError(
+      error.response?.data?.message ||
+        'Unable to load equipment availability calendar.'
+    );
+  } finally {
+    setCalendarLoading(false);
+  }
+};
+
+const openCalendar = async () => {
+  if (!selectedEquipmentId) {
+    setErrors((prev) => ({
+      ...prev,
+      selectedEquipmentId: 'Please select equipment first.'
+    }));
+    return;
+  }
+
+  const initialDate = formData.borrowStartDate
+    ? new Date(`${formData.borrowStartDate}T00:00:00`)
+    : new Date();
+
+  setCalendarDate(initialDate);
+  setCalendarStartDate(formData.borrowStartDate || '');
+  setCalendarEndDate(formData.borrowEndDate || '');
+  setCalendarError('');
+  setCalendarOpen(true);
+
+  await loadCalendarAvailability(initialDate);
+};
+
+const changeCalendarMonth = async (offset) => {
+  const newDate = new Date(
+    calendarDate.getFullYear(),
+    calendarDate.getMonth() + offset,
+    1
+  );
+
+  setCalendarDate(newDate);
+  setCalendarStartDate('');
+  setCalendarEndDate('');
+
+  await loadCalendarAvailability(newDate);
+};
+
+const isDateBlocked = (dateString) => {
+  return blockedPeriods.some(
+    (period) =>
+      dateString >= period.startDate &&
+      dateString <= period.endDate
+  );
+};
+
+const handleCalendarDateClick = (dateString) => {
+  if (isDateBlocked(dateString)) {
+    return;
+  }
+
+  if (!calendarStartDate || calendarEndDate) {
+    setCalendarStartDate(dateString);
+    setCalendarEndDate('');
+    return;
+  }
+
+  if (dateString <= calendarStartDate) {
+    setCalendarStartDate(dateString);
+    setCalendarEndDate('');
+    return;
+  }
+
+  const selectedStart = new Date(`${calendarStartDate}T00:00:00`);
+  const selectedEnd = new Date(`${dateString}T00:00:00`);
+
+  const blockedInsideRange = blockedPeriods.some((period) => {
+    const blockedStart = new Date(`${period.startDate}T00:00:00`);
+    const blockedEnd = new Date(`${period.endDate}T00:00:00`);
+
+    return blockedStart <= selectedEnd && blockedEnd >= selectedStart;
+  });
+
+  if (blockedInsideRange) {
+    setCalendarError(
+      'The selected range contains unavailable dates. Please choose another range.'
+    );
+    return;
+  }
+
+  setCalendarError('');
+  setCalendarEndDate(dateString);
+};
+
+const useCalendarDates = () => {
+  if (!calendarStartDate || !calendarEndDate) {
+    setCalendarError('Please select both a start date and an end date.');
+    return;
+  }
+
+  setFormData((prev) => ({
+    ...prev,
+    borrowStartDate: calendarStartDate,
+    borrowEndDate: calendarEndDate
+  }));
+
+  setErrors((prev) => ({
+    ...prev,
+    borrowStartDate: '',
+    borrowEndDate: ''
+  }));
+
+  setAvailability({
+    checked: false,
+    available: null,
+    message: ''
+  });
+
+  setCalendarOpen(false);
+};
 
   useEffect(() => {
     const runAvailabilityCheck = async () => {
@@ -268,6 +434,7 @@ if (!result.isConfirmed) {
   }
 
   return (
+  <>
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div className="w-full max-w-3xl rounded-2xl bg-white shadow-2xl max-h-[92vh] overflow-y-auto">
         <div className="sticky top-0 z-10 flex items-center justify-between border-b bg-white px-6 py-4">
@@ -363,6 +530,25 @@ if (!result.isConfirmed) {
                 error={errors.borrowEndDate}
               />
             </div>
+
+            <div className="mt-4">
+  <button
+    type="button"
+    onClick={openCalendar}
+    disabled={!selectedEquipmentId}
+    className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-yellow-400 bg-yellow-50 px-4 py-2.5 text-sm font-semibold text-yellow-800 transition hover:bg-yellow-100 disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-400 sm:w-auto"
+  >
+    <CalendarDays size={17} />
+    Check Availability Calendar
+  </button>
+
+  {!selectedEquipmentId && (
+    <p className="mt-1 text-xs text-gray-500">
+      Select equipment first to view its availability calendar.
+    </p>
+  )}
+</div>
+
             <div className="mt-4">
               <label className="mb-1 block text-sm font-medium text-gray-700">Purpose of Borrowing</label>
               <textarea
@@ -402,9 +588,27 @@ if (!result.isConfirmed) {
             </button>
           </div>
         </form>
-      </div>
+            </div>
     </div>
-  );
+
+    {calendarOpen && (
+      <AvailabilityCalendarModal
+        equipment={selectedEquipment}
+        calendarDate={calendarDate}
+        blockedPeriods={blockedPeriods}
+        loading={calendarLoading}
+        error={calendarError}
+        startDate={calendarStartDate}
+        endDate={calendarEndDate}
+        onClose={() => setCalendarOpen(false)}
+        onPreviousMonth={() => changeCalendarMonth(-1)}
+        onNextMonth={() => changeCalendarMonth(1)}
+        onDateClick={handleCalendarDateClick}
+        onUseDates={useCalendarDates}
+      />
+    )}
+  </>
+);
 }
 
 function ReadOnly({ label, value }) {
@@ -427,6 +631,214 @@ function Field({ label, error, type = 'text', value, onChange }) {
         className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-yellow-500 focus:outline-none focus:ring-1 focus:ring-yellow-500"
       />
       {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+    </div>
+  );
+}
+
+function AvailabilityCalendarModal({
+  equipment,
+  calendarDate,
+  blockedPeriods,
+  loading,
+  error,
+  startDate,
+  endDate,
+  onClose,
+  onPreviousMonth,
+  onNextMonth,
+  onDateClick,
+  onUseDates
+}) {
+  const year = calendarDate.getFullYear();
+  const month = calendarDate.getMonth();
+
+  const firstDayIndex = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  const monthName = calendarDate.toLocaleString('en-US', {
+    month: 'long',
+    year: 'numeric'
+  });
+
+  const formatDate = (day) => {
+    const m = String(month + 1).padStart(2, '0');
+    const d = String(day).padStart(2, '0');
+    return `${year}-${m}-${d}`;
+  };
+
+  const isBlocked = (dateString) =>
+    blockedPeriods.some(
+      (period) =>
+        dateString >= period.startDate &&
+        dateString <= period.endDate
+    );
+
+  const isSelected = (dateString) => {
+    if (!startDate) return false;
+
+    if (!endDate) {
+      return dateString === startDate;
+    }
+
+    return dateString >= startDate && dateString <= endDate;
+  };
+
+  const cells = [];
+
+  for (let i = 0; i < firstDayIndex; i += 1) {
+    cells.push(
+      <div
+        key={`empty-${i}`}
+        className="h-11 rounded-lg"
+      />
+    );
+  }
+
+  for (let day = 1; day <= daysInMonth; day += 1) {
+    const dateString = formatDate(day);
+    const blocked = isBlocked(dateString);
+    const selected = isSelected(dateString);
+
+    cells.push(
+      <button
+        key={dateString}
+        type="button"
+        disabled={blocked}
+        onClick={() => onDateClick(dateString)}
+        className={`h-11 rounded-lg border text-sm font-semibold transition ${
+          blocked
+            ? 'cursor-not-allowed border-red-200 bg-red-100 text-red-500'
+            : selected
+              ? 'border-blue-500 bg-blue-500 text-white'
+              : 'border-green-200 bg-green-50 text-green-700 hover:bg-green-100'
+        }`}
+        title={blocked ? 'Unavailable' : 'Available'}
+      >
+        {day}
+      </button>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4">
+      <div className="w-full max-w-xl rounded-2xl bg-white shadow-2xl">
+        <div className="flex items-start justify-between border-b px-5 py-4">
+          <div>
+            <h3 className="flex items-center gap-2 text-lg font-bold text-gray-900">
+              <CalendarDays size={20} className="text-yellow-600" />
+              Equipment Availability
+            </h3>
+
+            <p className="mt-1 text-sm text-gray-500">
+              {equipment?.equipmentName || 'Selected Equipment'}
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full p-2 text-gray-500 hover:bg-gray-100"
+            aria-label="Close availability calendar"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="p-5">
+          <div className="mb-4 flex items-center justify-between">
+            <button
+              type="button"
+              onClick={onPreviousMonth}
+              className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+            >
+              ← Previous
+            </button>
+
+            <h4 className="text-base font-bold text-gray-900">
+              {monthName}
+            </h4>
+
+            <button
+              type="button"
+              onClick={onNextMonth}
+              className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+            >
+              Next →
+            </button>
+          </div>
+
+          {loading ? (
+            <div className="py-12 text-center text-sm text-gray-500">
+              Loading availability...
+            </div>
+          ) : (
+            <>
+              <div className="mb-2 grid grid-cols-7 gap-2 text-center text-xs font-semibold uppercase text-gray-500">
+                <div>Sun</div>
+                <div>Mon</div>
+                <div>Tue</div>
+                <div>Wed</div>
+                <div>Thu</div>
+                <div>Fri</div>
+                <div>Sat</div>
+              </div>
+
+              <div className="grid grid-cols-7 gap-2">
+                {cells}
+              </div>
+            </>
+          )}
+
+          <div className="mt-5 flex flex-wrap gap-4 text-xs font-medium text-gray-600">
+            <span className="flex items-center gap-2">
+              <span className="h-3 w-3 rounded bg-green-100 ring-1 ring-green-300" />
+              Available
+            </span>
+
+            <span className="flex items-center gap-2">
+              <span className="h-3 w-3 rounded bg-red-100 ring-1 ring-red-300" />
+              Unavailable
+            </span>
+
+            <span className="flex items-center gap-2">
+              <span className="h-3 w-3 rounded bg-blue-500" />
+              Selected
+            </span>
+          </div>
+
+          {(startDate || endDate) && (
+            <div className="mt-4 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-sm text-blue-800">
+              <strong>Selected:</strong>{' '}
+              {startDate || '—'} → {endDate || 'Select end date'}
+            </div>
+          )}
+
+          {error && (
+            <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {error}
+            </div>
+          )}
+
+          <div className="mt-5 flex flex-col-reverse justify-end gap-3 border-t pt-4 sm:flex-row">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+
+            <button
+              type="button"
+              onClick={onUseDates}
+              disabled={!startDate || !endDate}
+              className="rounded-lg bg-yellow-500 px-4 py-2 text-sm font-semibold text-black hover:bg-yellow-400 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Use These Dates
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
