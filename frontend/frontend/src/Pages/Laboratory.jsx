@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import Swal from "sweetalert2";
-import { Eye, Edit, Trash2 } from "lucide-react";
 import { API_BASE_URL } from "../services/api";
+import { Eye, Edit, Trash2, FlaskConical } from "lucide-react";
 
 
 export default function LaboratoryPage() {

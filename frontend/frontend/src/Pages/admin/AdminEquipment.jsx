@@ -714,7 +714,18 @@ const handleDownloadQR = async (item) => {
 
 };
 
+const statusStyles = {
+  WORKING: 'bg-green-100 text-green-800',
+  UNDER_REPAIR: 'bg-blue-100 text-blue-800',
+  BROKEN: 'bg-red-100 text-red-800'
+};
 
+const formatStatus = (status) =>
+  (status || '')
+    .toLowerCase()
+    .split('_')
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ');
 
   return (
 
@@ -1462,133 +1473,119 @@ const handleDownloadQR = async (item) => {
 
             </div>
 
+            <div className="bg-white shadow-md border border-gray-100 overflow-x-auto rounded-xl">
+  <table className="w-full text-sm text-gray-800">
+    <thead className="bg-gray-200 text-gray-900">
+      <tr className="text-left">
+        <th className="px-4 py-4 font-bold">Equipment</th>
+        <th className="px-4 py-4 font-bold">Serial</th>
+        <th className="px-4 py-4 font-bold">Cost</th>
+        <th className="px-4 py-4 font-bold">Purchase Date</th>
+        <th className="px-4 py-4 font-bold">Supplier</th>
+        <th className="px-4 py-4 font-bold">GRN</th>
+        <th className="px-4 py-4 font-bold">Status</th>
+        <th className="px-4 py-4 font-bold">QR</th>
+        <th className="px-4 py-4 font-bold">Actions</th>
+      </tr>
+    </thead>
 
-
-            <div className="bg-white rounded-lg shadow overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[1500px] text-sm">
-                  <thead className="bg-gray-200 text-left">
-                    <tr>
-                      <th className="p-3 text-center">ID</th>
-                      <th className="p-3 text-center">Photo</th>
-                      <th className="p-3">Name</th>
-                      <th className="p-3">Lab</th>
-                      <th className="p-3">Model</th>
-                      <th className="p-3">Serial</th>
-                      <th className="p-3">Cost</th>
-                      <th className="p-3">Date</th>
-                      <th className="p-3">Supplier</th>
-                      <th className="p-3 text-center">Status</th>
-                      <th className="p-3 text-center">QR</th>
-                      <th className="p-3">GRN</th>
-                      <th className="p-3 text-center">Actions</th>
-                    </tr>
-                  </thead>
-
-                  <tbody>
-                    {paginatedEquipment.map(item => (
-                      <tr key={item.id} className="border-t hover:bg-gray-50">
-                        <td className="p-3 text-center">{item.id}</td>
-
-                        <td className="p-3 text-center">
-                          {item.photoPath ? (
-                            <img
-                              src={getImageUrl(item.photoPath)}
-                              alt="equipment"
-                              className="w-16 h-16 object-cover mx-auto rounded"
-                            />
-                          ) : '-'}
-                        </td>
-
-                        <td className="p-3 font-medium">{item.equipmentName}</td>
-                        <td className="p-3">{item.laboratory}</td>
-                        <td className="p-3">{item.model || '-'}</td>
-                        <td className="p-3">{item.serialNumber || '-'}</td>
-                        <td className="p-3">{item.cost ? `$${item.cost}` : '-'}</td>
-                        <td className="p-3">{item.purchaseDate || '-'}</td>
-                        <td className="p-3">{item.supplier || '-'}</td>
-
-                        <td className="p-3 text-center">
-                          <span className={`inline-block px-2 py-1 rounded text-white text-xs font-semibold ${
-                            item.status === 'WORKING'
-                              ? 'bg-green-500'
-                              : item.status === 'UNDER_REPAIR'
-                              ? 'bg-blue-500'
-                              : item.status === 'BROKEN'
-                              ? 'bg-red-500'
-                              : 'bg-gray-500'
-                          }`}>
-                            {item.status}
-                          </span>
-                        </td>
-
-                        <td className="p-3 text-center">
-                          {item.qrCode ? (
-                            <div className="flex flex-col items-center gap-1">
-                              <img
-                                src={getImageUrl(item.qrCode)}
-                                alt="QR code"
-                                className="w-16 h-16 object-contain"
-                              />
-
-                              <div className="flex gap-1">
-                                <button
-                                  type="button"
-                                  onClick={() => handlePrintQR(item)}
-                                  className="text-xs bg-gray-500 text-white px-2 py-1 rounded hover:bg-gray-600"
-                                >
-                                  Print
-                                </button>
-
-                                <button
-                                  type="button"
-                                  onClick={() => handleDownloadQR(item)}
-                                  className="text-xs bg-slate-600 text-white px-2 py-1 rounded hover:bg-slate-700"
-                                >
-                                  Download
-                                </button>
-                              </div>
-                            </div>
-                          ) : '-'}
-                        </td>
-
-                        <td className="p-3">{item.grnNumber || '-'}</td>
-
-                        <td className="p-3">
-                          <div className="flex justify-center gap-3">
-                            <button
-                              type="button"
-                              onClick={() => navigate(`/equipment/item/${item.id}`)}
-                              className="btn-icon text-green-600 hover:text-green-800"
-                              title="View Details"
-                            >
-                              <Eye size={18} />
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() => handleEdit(item)}
-                              className="btn-icon text-blue-600 hover:text-blue-800"
-                              title="Edit"
-                            >
-                              <Edit size={18} />
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() => handleDelete(item.id)}
-                              className="btn-icon text-red-600 hover:text-red-800"
-                              title="Delete"
-                            >
-                              <Trash2 size={18} />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+    <tbody>
+      {paginatedEquipment.map((item) => (
+        <tr key={item.id} className="border-b border-gray-100 hover:bg-gray-50">
+          {/* Equipment: photo + name + sub-line */}
+          <td className="px-4 py-4">
+            <div className="flex items-center gap-3">
+              {item.photoPath ? (
+                <img
+                  src={getImageUrl(item.photoPath)}
+                  alt="equipment"
+                  className="w-12 h-12 object-cover rounded-lg"
+                />
+              ) : (
+                <div className="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400">
+                  <Package size={20} />
+                </div>
+              )}
+              <div>
+                <div className="font-semibold text-gray-900">{item.equipmentName}</div>
+                <div className="text-xs text-gray-500">
+                  ID: {item.id}
+                  {item.laboratory && <> • {item.laboratory}</>}
+                  {item.model && <> • {item.model}</>}
+                </div>
               </div>
+            </div>
+          </td>
+
+          <td className="px-4 py-4">{item.serialNumber || '-'}</td>
+          <td className="px-4 py-4">{item.cost ? `$${item.cost}` : '-'}</td>
+          <td className="px-4 py-4">{item.purchaseDate || '-'}</td>
+          <td className="px-4 py-4">{item.supplier || '-'}</td>
+          <td className="px-4 py-4">{item.grnNumber || '-'}</td>
+
+          {/* Status pill */}
+          <td className="px-4 py-4">
+            <span
+              className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${
+                statusStyles[item.status] || 'bg-gray-100 text-gray-700'
+              }`}
+            >
+              {formatStatus(item.status)}
+            </span>
+          </td>
+
+          {/* QR */}
+          <td className="px-4 py-4">
+            {item.qrCode ? (
+              <div className="flex flex-col items-start gap-1">
+                <img
+                  src={getImageUrl(item.qrCode)}
+                  alt="QR code"
+                  className="w-14 h-14 object-contain"
+                />
+                <div className="flex gap-1">
+                  <button
+                    onClick={() => handlePrintQR(item)}
+                    className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded hover:bg-gray-200"
+                  >
+                    Print
+                  </button>
+                  <button
+                    onClick={() => handleDownloadQR(item)}
+                    className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded hover:bg-gray-200"
+                  >
+                    Download
+                  </button>
+                </div>
+              </div>
+            ) : (
+              '-'
+            )}
+          </td>
+
+          {/* Actions */}
+          <td className="px-4 py-4">
+            <div className="flex gap-2">
+              <button
+                onClick={() => handleEdit(item)}
+                className="w-10 h-8 flex items-center justify-center rounded-md bg-orange-100 text-orange-500 hover:bg-orange-200 transition-colors"
+                title="Edit"
+              >
+                <Edit size={16} />
+              </button>
+              <button
+                onClick={() => handleDelete(item.id)}
+                className="w-10 h-8 flex items-center justify-center rounded-md bg-gray-100 text-gray-400 hover:bg-red-100 hover:text-red-500 transition-colors"
+                title="Delete"
+              >
+                <Trash2 size={16} />
+              </button>
+            </div>
+          </td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
 
               {filteredEquipment.length === 0 && (
                 <div className="text-center py-10 text-gray-500">
