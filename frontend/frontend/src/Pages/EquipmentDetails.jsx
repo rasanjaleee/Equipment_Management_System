@@ -503,7 +503,7 @@ const handleDeleteAccessory = async (accessory) => {
         {/* Accessories Section */}
 <div className="bg-white rounded-lg shadow-md p-6 mt-6">
 
-  <div className="flex items-center justify-between mb-4">
+  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
     <h2 className="text-xl font-bold text-gray-900">
       Accessories
     </h2>
@@ -522,7 +522,7 @@ const handleDeleteAccessory = async (accessory) => {
 
   setShowAccessoryForm(true);
 }}
-  className="bg-yellow-500 hover:bg-yellow-400 text-black font-semibold px-4 py-2 rounded-lg"
+  className="w-full sm:w-auto bg-yellow-500 hover:bg-yellow-400 text-black font-semibold px-4 py-2 rounded-lg"
 >
   + Add Accessory
 </button>
@@ -798,7 +798,7 @@ const handleDeleteAccessory = async (accessory) => {
         </button>
 
         <div className="bg-white rounded-lg shadow-md overflow-hidden mb-6">
-          <h1 className="text-2xl font-bold text-center pt-6 pb-4">
+          <h1 className="text-xl sm:text-2xl font-bold text-center px-4 pt-6 pb-4 break-words">
             {decodeURIComponent(equipmentName)}
           </h1>
 

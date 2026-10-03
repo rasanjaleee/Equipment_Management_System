@@ -74,11 +74,11 @@ export default function UserManagement() {
   };
 
   return (
-    <div className="bg-gradient-to-br from-gray-50 via-gray-100 to-gray-200 p-8 min-h-full">
+    <div className="bg-gradient-to-br from-gray-50 via-gray-100 to-gray-200 p-3 sm:p-4 lg:p-8 min-h-full">
       <div className="max-w-7xl mx-auto">
         <h1 className="text-2xl font-bold mb-6">User Management</h1>
 
-        <form onSubmit={handleSubmit} className="bg-white p-6 rounded-xl shadow mb-6">
+        <form onSubmit={handleSubmit} className="bg-white p-4 sm:p-6 rounded-xl shadow mb-6">
           <h2 className="font-semibold text-lg mb-4">Create New User</h2>
           <p className="text-sm text-gray-500 mb-4">
             Accounts are created with a temporary password. The user must change it on first login.
@@ -144,11 +144,11 @@ export default function UserManagement() {
           </button>
         </form>
 
-        <div className="bg-white p-6 rounded-xl shadow">
+        <div className="bg-white p-4 sm:p-6 rounded-xl shadow">
           <h2 className="font-semibold text-lg mb-4">All Users</h2>
 
           <div className="overflow-x-auto">
-            <table className="w-full border text-sm">
+            <table className="w-full min-w-[750px] border text-sm">
               <thead>
                 <tr className="bg-gray-200 text-center">
                   <th className="p-3">ID</th>

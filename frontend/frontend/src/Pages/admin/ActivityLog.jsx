@@ -52,7 +52,7 @@ export default function ActivityLog() {
 
   const renderLogTable = (tableLogs, emptyMessage) => (
     <div className="bg-white shadow-2xl overflow-x-auto rounded-lg">
-      <table className="w-full text-sm">
+      <table className="w-full min-w-[900px] text-sm">
         <thead className="bg-yellow-500 text-white">
           <tr>
             <th className="px-4 py-2 text-center">ID</th>

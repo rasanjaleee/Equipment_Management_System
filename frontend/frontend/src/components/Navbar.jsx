@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Bell, MessageSquare, LogOut, User, Check, CheckCheck } from 'lucide-react';
+import { Bell, MessageSquare, LogOut, User, Check, CheckCheck, Menu, X } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import useNotificationSocket from "../services/useNotificationSocket";
 import {
@@ -11,6 +11,7 @@ import {
 const Navbar = () => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [username, setUsername] = useState('');
@@ -137,7 +138,7 @@ const userId = loggedInUser?.id;
   };
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 w-full bg-gradient-to-r from-yellow-500 to-orange-400 px-6 py-1 shadow-md">
+    <nav className="fixed top-0 left-0 right-0 z-50 w-full bg-gradient-to-r from-yellow-500 to-orange-400 px-3 sm:px-6 py-1 shadow-md">
       <div className="max-w-7xl mx-auto flex items-center justify-between">
 
         {/* ================= LEFT LOGO ================= */}
@@ -145,20 +146,20 @@ const userId = loggedInUser?.id;
           <img
             src="/images/home_logo.png"
             alt="University Logo"
-            className="w-24 h-20 object-contain mt-1"
+            className="w-16 h-16 sm:w-24 sm:h-20 object-contain mt-1"
           />
-          <div className="flex flex-col leading-tight -ml-4">
-            <h1 className="text-white font-bold text-xl tracking-wide">
+          <div className="flex flex-col leading-tight -ml-2 sm:-ml-4">
+            <h1 className="text-white font-bold text-xs sm:text-xl tracking-wide whitespace-nowrap">
               FACULTY OF ENGINEERING
             </h1>
-            <p className="text-white text-base font-medium">
+            <p className="text-white text-[10px] sm:text-base font-medium whitespace-nowrap">
               UNIVERSITY OF RUHUNA
             </p>
           </div>
         </div>
 
-        {/* ================= CENTER LINKS ================= */}
-        <div className="flex items-center gap-8">
+        {/* ================= DESKTOP CENTER LINKS ================= */}
+        <div className="hidden md:flex items-center gap-8">
           <Link to="/home" className="text-white font-semibold">HOME</Link>
           <Link to="/equipment" className="text-white font-semibold">EQUIPMENT</Link>
           <Link to="/about" className="text-white font-semibold">ABOUT</Link>
@@ -166,6 +167,16 @@ const userId = loggedInUser?.id;
 
         {/* ================= RIGHT ICONS ================= */}
         <div className="flex items-center gap-4">
+
+          {/* Mobile Menu Button */}
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="md:hidden text-white hover:text-gray-100"
+            aria-label="Toggle navigation menu"
+          >
+            {mobileMenuOpen ? <X size={26} /> : <Menu size={26} />}
+          </button>
 
           {/* ================= NOTIFICATION BELL ================= */}
           <div className="relative" ref={notifRef}>
@@ -313,6 +324,36 @@ const userId = loggedInUser?.id;
 
         </div>
       </div>
+      {/* ================= MOBILE MENU ================= */}
+{mobileMenuOpen && (
+  <div className="md:hidden bg-white border-t border-gray-200 shadow-lg">
+    <div className="flex flex-col px-6 py-3">
+      <Link
+        to="/home"
+        onClick={() => setMobileMenuOpen(false)}
+        className="py-3 text-gray-700 font-semibold border-b border-gray-100 hover:text-yellow-600"
+      >
+        HOME
+      </Link>
+
+      <Link
+        to="/equipment"
+        onClick={() => setMobileMenuOpen(false)}
+        className="py-3 text-gray-700 font-semibold border-b border-gray-100 hover:text-yellow-600"
+      >
+        EQUIPMENT
+      </Link>
+
+      <Link
+        to="/about"
+        onClick={() => setMobileMenuOpen(false)}
+        className="py-3 text-gray-700 font-semibold hover:text-yellow-600"
+      >
+        ABOUT
+      </Link>
+    </div>
+  </div>
+)}
     </nav>
   );
 };

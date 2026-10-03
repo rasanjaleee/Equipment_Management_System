@@ -254,23 +254,23 @@ setTimeout(() => {
 )}
 
       {/* PAGE TITLE + ADD LAB */}
-<div className="flex items-center justify-between px-4 pt-5 pb-3">
-  <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-3 sm:px-4 pt-4 sm:pt-5 pb-3">
+  <h2 className="text-lg sm:text-xl font-bold text-gray-900 flex items-center gap-2">
     <span>⚗</span>
     Laboratory Management
   </h2>
 
   <button
     onClick={() => setIsAddModalOpen(true)}
-    className="bg-red-950 hover:bg-red-900 text-white font-semibold px-5 py-2.5 rounded-lg transition-colors shadow-sm"
+    className="w-full sm:w-auto bg-red-950 hover:bg-red-900 text-white font-semibold px-5 py-2.5 rounded-lg transition-colors shadow-sm"
   >
     + Add Lab
   </button>
 </div>
 
       {/* FILTERS */}
-<div className="mx-4 mb-4 bg-white p-4 rounded-lg shadow-sm">
-  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+<div className="mx-3 sm:mx-4 mb-4 bg-white p-3 sm:p-4 rounded-lg shadow-sm">
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
 
     {/* SEARCH */}
     <div>
@@ -450,7 +450,53 @@ setTimeout(() => {
             </div>
           ) : (
             <div className="border border-gray-200 rounded-lg overflow-hidden">
-              <div className="overflow-x-auto">
+              {/* Mobile Equipment Inventory */}
+<div className="md:hidden space-y-3">
+  {labInventory.length === 0 ? (
+    <div className="text-center py-6 text-gray-500 bg-gray-50 rounded-lg">
+      No equipment found in this laboratory.
+    </div>
+  ) : (
+    labInventory.map((item, index) => (
+      <div
+        key={index}
+        className="border border-gray-200 rounded-lg p-3 bg-white"
+      >
+        <h4 className="font-semibold text-gray-900 break-words mb-3">
+          {item.equipmentName}
+        </h4>
+
+        <div className="grid grid-cols-2 gap-2 text-center">
+          <div className="bg-gray-50 rounded-lg p-2">
+            <p className="text-xs text-gray-500">Total</p>
+            <p className="font-bold text-gray-900">{item.total}</p>
+          </div>
+
+          <div className="bg-green-50 rounded-lg p-2">
+            <p className="text-xs text-gray-500">Available</p>
+            <p className="font-bold text-green-600">{item.available}</p>
+          </div>
+
+          <div className="bg-yellow-50 rounded-lg p-2">
+            <p className="text-xs text-gray-500">Issued</p>
+            <p className="font-bold text-yellow-600">{item.issued}</p>
+          </div>
+
+          <div className="bg-blue-50 rounded-lg p-2">
+            <p className="text-xs text-gray-500">Under Repair</p>
+            <p className="font-bold text-blue-600">{item.underRepair}</p>
+          </div>
+
+          <div className="bg-red-50 rounded-lg p-2 col-span-2">
+            <p className="text-xs text-gray-500">Broken</p>
+            <p className="font-bold text-red-600">{item.broken}</p>
+          </div>
+        </div>
+      </div>
+    ))
+  )}
+</div>
+              <div className="hidden md:block overflow-x-auto">
 
                 <table className="w-full text-sm">
 
@@ -534,7 +580,7 @@ setTimeout(() => {
 )}
 
       {/* TABLE */}
-<div className="p-4">
+<div className="hidden md:block p-4">
   <div className="bg-white rounded-lg shadow overflow-hidden">
     <div className="overflow-x-auto">
       <table className="w-full min-w-[1200px] text-sm">
@@ -647,6 +693,112 @@ setTimeout(() => {
       </table>
     </div>
   </div>
+</div>
+
+{/* Mobile Laboratory Cards */}
+<div className="md:hidden px-3 pb-4 space-y-3">
+  {filteredLabs.length === 0 ? (
+    <div className="bg-white border border-gray-200 rounded-xl p-6 text-center text-gray-500">
+      No laboratories found.
+    </div>
+  ) : (
+    filteredLabs.map((lab) => {
+      const stats = getLabStats(lab.name);
+
+      return (
+        <div
+          key={lab.id}
+          className="bg-white border border-gray-200 rounded-xl shadow-sm p-4"
+        >
+          <div className="mb-3">
+            <h3 className="text-base font-bold text-gray-900 break-words">
+              {lab.name}
+            </h3>
+
+            <p className="text-sm text-gray-500 mt-1 break-words">
+              {lab.department || "-"}
+            </p>
+          </div>
+
+          <div className="space-y-2 text-sm border-t border-gray-100 pt-3">
+            <div>
+              <p className="text-xs text-gray-500">Location</p>
+              <p className="font-medium text-gray-800 break-words">
+                {lab.location || "-"}
+              </p>
+            </div>
+
+            <div>
+              <p className="text-xs text-gray-500">Lab In Charge</p>
+              <p className="font-medium text-gray-800 break-words">
+                {lab.inCharge || "-"}
+              </p>
+            </div>
+
+            <div>
+              <p className="text-xs text-gray-500">
+                Technical Officer In Charge
+              </p>
+              <p className="font-medium text-gray-800 break-words">
+                {lab.technicalOfficerInCharge || "-"}
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 mt-4">
+            <div className="bg-gray-100 rounded-lg p-3 text-center">
+              <p className="text-xs text-gray-500">Total Equipment</p>
+              <p className="text-lg font-bold text-gray-900">
+                {stats.total}
+              </p>
+            </div>
+
+            <div className="bg-green-50 rounded-lg p-3 text-center">
+              <p className="text-xs text-gray-500">Working</p>
+              <p className="text-lg font-bold text-green-600">
+                {stats.working}
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2 mt-4 pt-3 border-t border-gray-100">
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedLab(lab);
+                loadLabInventory(lab.name);
+              }}
+              className="flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg bg-green-50 text-green-700 text-sm font-medium hover:bg-green-100"
+            >
+              <Eye size={16} />
+              View
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setEditLab(lab);
+                setIsEditModalOpen(true);
+              }}
+              className="flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg bg-blue-50 text-blue-700 text-sm font-medium hover:bg-blue-100"
+            >
+              <Edit size={16} />
+              Edit
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleDelete(lab.id)}
+              className="flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg bg-red-50 text-red-700 text-sm font-medium hover:bg-red-100"
+            >
+              <Trash2 size={16} />
+              Delete
+            </button>
+          </div>
+        </div>
+      );
+    })
+  )}
 </div>
 
       {/* ================= ADD MODAL ================= */}
