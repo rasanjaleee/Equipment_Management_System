@@ -319,6 +319,19 @@ const handleDownloadQR = async (item) => {
   link.click();
 };
 
+const statusStyles = {
+  WORKING: 'bg-green-100 text-green-800',
+  UNDER_REPAIR: 'bg-blue-100 text-blue-800',
+  BROKEN: 'bg-red-100 text-red-800'
+};
+
+const formatStatus = (status) =>
+  (status || '')
+    .toLowerCase()
+    .split('_')
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ');
+
   return (
     <div className="bg-gradient-to-br from-gray-50 via-gray-100 to-gray-200 min-h-full w-full">
       <div className="w-full max-w-none mx-auto px-1 sm:px-2 lg:px-0">
@@ -693,118 +706,119 @@ const handleDownloadQR = async (item) => {
               </div>
             </div>
 
-            <div className="bg-white shadow-2xl overflow-x-auto rounded-lg">
-              <table className="w-full table-fixed text-xs">
-                <thead className="bg-yellow-500 text-white">
-                  <tr>
-                    <th>ID</th>
-                    <th>Photo</th>
-                    <th>Name</th>
-                    <th>Lab</th>
-                    <th>Model</th>
-                    <th>Serial</th>
-                    <th>Cost</th>
-                    <th>Date</th>
-                    <th>Supplier</th>
-                    <th>Status</th>
-                    <th>QR</th>
-                    <th>GRN</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {paginatedEquipment.map(item => (
-                    <tr key={item.id} className="text-center border-b">
-                      <td>{item.id}</td>
+            <div className="bg-white shadow-md border border-gray-100 overflow-x-auto rounded-xl">
+  <table className="w-full text-sm text-gray-800">
+    <thead className="bg-gray-200 text-gray-900">
+      <tr className="text-left">
+        <th className="px-4 py-4 font-bold">Equipment</th>
+        <th className="px-4 py-4 font-bold">Serial</th>
+        <th className="px-4 py-4 font-bold">Cost</th>
+        <th className="px-4 py-4 font-bold">Purchase Date</th>
+        <th className="px-4 py-4 font-bold">Supplier</th>
+        <th className="px-4 py-4 font-bold">GRN</th>
+        <th className="px-4 py-4 font-bold">Status</th>
+        <th className="px-4 py-4 font-bold">QR</th>
+        <th className="px-4 py-4 font-bold">Actions</th>
+      </tr>
+    </thead>
 
-                      <td>
-                        {item.photoPath ? (
-                          <img
-                            src={getImageUrl(item.photoPath)}
-                            alt="equipment"
-                            className="w-16 h-16 object-cover mx-auto rounded"
-                          />
-                        ) : '-'}
-                      </td>
+    <tbody>
+      {paginatedEquipment.map((item) => (
+        <tr key={item.id} className="border-b border-gray-100 hover:bg-gray-50">
+          {/* Equipment: photo + name + sub-line */}
+          <td className="px-4 py-4">
+            <div className="flex items-center gap-3">
+              {item.photoPath ? (
+                <img
+                  src={getImageUrl(item.photoPath)}
+                  alt="equipment"
+                  className="w-12 h-12 object-cover rounded-lg"
+                />
+              ) : (
+                <div className="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400">
+                  <Package size={20} />
+                </div>
+              )}
+              <div>
+                <div className="font-semibold text-gray-900">{item.equipmentName}</div>
+                <div className="text-xs text-gray-500">
+                  ID: {item.id}
+                  {item.laboratory && <> • {item.laboratory}</>}
+                  {item.model && <> • {item.model}</>}
+                </div>
+              </div>
+            </div>
+          </td>
 
-                      <td>{item.equipmentName}</td>
-                      <td>{item.laboratory}</td>
-                      <td>{item.model || '-'}</td>
-                      <td>{item.serialNumber || '-'}</td>
-                      <td>{item.cost ? `$${item.cost}` : '-'}</td>
-                      <td>{item.purchaseDate || '-'}</td>
-                      <td>{item.supplier || '-'}</td>
+          <td className="px-4 py-4">{item.serialNumber || '-'}</td>
+          <td className="px-4 py-4">{item.cost ? `$${item.cost}` : '-'}</td>
+          <td className="px-4 py-4">{item.purchaseDate || '-'}</td>
+          <td className="px-4 py-4">{item.supplier || '-'}</td>
+          <td className="px-4 py-4">{item.grnNumber || '-'}</td>
 
-                      <td>
-                        <span className={`inline-block px-2 py-1 rounded text-white font-semibold ${
-                          item.status === 'WORKING'
-                            ? 'bg-green-500'
-                            : item.status === 'UNDER_REPAIR'
-                            ? 'bg-blue-500'
-                            : item.status === 'BROKEN'
-                            ? 'bg-red-500'
-                            : 'bg-gray-500'
-                        }`}>
-                          {item.status}
-                        </span>
-                      </td>
+          {/* Status pill */}
+          <td className="px-4 py-4">
+            <span
+              className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${
+                statusStyles[item.status] || 'bg-gray-100 text-gray-700'
+              }`}
+            >
+              {formatStatus(item.status)}
+            </span>
+          </td>
 
-                     <td>
-  {item.qrCode ? (
-    <div className="flex flex-col items-center gap-1">
-      
-      {/* QR IMAGE */}
-      <img
-        src={getImageUrl(item.qrCode)}
-        alt="QR code"
-        className="w-16 h-16 object-contain"
-      />
+          {/* QR */}
+          <td className="px-4 py-4">
+            {item.qrCode ? (
+              <div className="flex flex-col items-start gap-1">
+                <img
+                  src={getImageUrl(item.qrCode)}
+                  alt="QR code"
+                  className="w-14 h-14 object-contain"
+                />
+                <div className="flex gap-1">
+                  <button
+                    onClick={() => handlePrintQR(item)}
+                    className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded hover:bg-gray-200"
+                  >
+                    Print
+                  </button>
+                  <button
+                    onClick={() => handleDownloadQR(item)}
+                    className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded hover:bg-gray-200"
+                  >
+                    Download
+                  </button>
+                </div>
+              </div>
+            ) : (
+              '-'
+            )}
+          </td>
 
-      {/* BUTTONS */}
-      <div className="flex gap-1">
-        <button
-          onClick={() => handlePrintQR(item)}
-          className="text-xs bg-gray-500 text-white px-2 py-1 rounded hover:bg-gray-600"
-        >
-          Print
-        </button>
-
-        <button
-          onClick={() => handleDownloadQR(item)}
-          className="text-xs bg-slate-600 text-white px-2 py-1 rounded hover:bg-slate-700"
-        >
-          Download
-        </button>
-      </div>
-
-    </div>
-  ) : '-'}
-</td>
-
-                      <td>{item.grnNumber || '-'}</td>
-
-                      <td className="py-3">
-                        <div className="flex justify-center gap-3">
-                          <button
-                            onClick={() => handleEdit(item)}
-                            className="btn-icon text-blue-600 hover:text-blue-800"
-                            title="Edit"
-                          >
-                            <Edit size={18} />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(item.id)}
-                            className="btn-icon text-red-600 hover:text-red-800"
-                            title="Delete"
-                          >
-                            <Trash2 size={18} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          {/* Actions */}
+          <td className="px-4 py-4">
+            <div className="flex gap-2">
+              <button
+                onClick={() => handleEdit(item)}
+                className="w-10 h-8 flex items-center justify-center rounded-md bg-orange-100 text-orange-500 hover:bg-orange-200 transition-colors"
+                title="Edit"
+              >
+                <Edit size={16} />
+              </button>
+              <button
+                onClick={() => handleDelete(item.id)}
+                className="w-10 h-8 flex items-center justify-center rounded-md bg-gray-100 text-gray-400 hover:bg-red-100 hover:text-red-500 transition-colors"
+                title="Delete"
+              >
+                <Trash2 size={16} />
+              </button>
+            </div>
+          </td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
 
               {filteredEquipment.length === 0 && (
                 <div className="text-center py-10 text-gray-500">

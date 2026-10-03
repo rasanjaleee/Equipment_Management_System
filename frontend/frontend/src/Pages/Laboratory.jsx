@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { API_BASE_URL } from "../services/api";
+import { Eye, Edit, Trash2, FlaskConical } from "lucide-react";
 
 export default function LaboratoryPage() {
   const [labs, setLabs] = useState([]);
@@ -309,91 +310,100 @@ useEffect(() => {
 )}
 
       {/* TABLE */}
-      <div className="p-4">
-        <div className="bg-white rounded-lg shadow overflow-x-auto">
-        <table className="w-full min-w-[1200px] border">
+<div className="p-4">
+  <div className="bg-white shadow-md border border-gray-100 rounded-xl overflow-x-auto">
+    <table className="w-full text-sm text-gray-800">
+      <thead className="bg-gray-200 text-gray-900">
+        <tr className="text-left">
+          <th className="px-4 py-4 font-bold">Laboratory</th>
+          <th className="px-4 py-4 font-bold">Lab In Charge</th>
+          <th className="px-4 py-4 font-bold">Technical Officer In Charge</th>
+          <th className="px-4 py-4 font-bold">Total</th>
+          <th className="px-4 py-4 font-bold">Working</th>
+          <th className="px-4 py-4 font-bold">Actions</th>
+        </tr>
+      </thead>
 
-            <thead className="bg-gray-100">
-              <tr>
-                <th className="p-3 border">Name</th>
-                <th className="p-3 border">Dept</th>
-                <th className="p-3 border">Location</th>
-                <th className="p-3 border">Lab In Charge</th>
-                <th className="p-3 border">Technical Officer In Charge</th>
-                <th className="p-3 border">Total</th>
-                <th className="p-3 border">Working</th>
-                <th className="p-3 border">Actions</th>
-              </tr>
-            </thead>
+      <tbody>
+        {filteredLabs.map((lab) => {
+          const stats = getLabStats(lab.name);
 
-            <tbody>
-              {filteredLabs.map((lab) => {
-                const stats = getLabStats(lab.name);
+          return (
+            <tr
+              key={lab.id}
+              className="border-b border-gray-100 hover:bg-gray-50"
+            >
+              {/* Name + sub-line */}
+              <td className="px-4 py-4">
+                <div className="font-semibold text-gray-900">{lab.name}</div>
+                <div className="text-xs text-gray-500">
+                  ID: {lab.id}
+                  {lab.department && <> • {lab.department}</>}
+                  {lab.location && <> • {lab.location}</>}
+                </div>
+              </td>
 
-                return (
-                  <tr key={lab.id} className="border">
-                <td className="p-3 border">
-                  {lab.name}
-                </td>
+              <td className="px-4 py-4">{lab.inCharge || "-"}</td>
+              <td className="px-4 py-4">
+                {lab.technicalOfficerInCharge || "-"}
+              </td>
 
-                <td className="p-3 border">
-                  {lab.department}
-                </td>
-
-                <td className="p-3 border">
-                  {lab.location}
-                </td>
-
-                <td className="p-3 border">
-                  {lab.inCharge || "-"}
-                </td>
-
-                {/* THIS WAS THE MISSING COLUMN */}
-                <td className="p-3 border">
-                  {lab.technicalOfficerInCharge || "-"}
-                </td>
-
-                <td className="p-3 border text-center">
+              {/* Total pill */}
+              <td className="px-4 py-4">
+                <span className="inline-block px-3 py-1 rounded-full text-sm font-semibold bg-gray-100 text-gray-700">
                   {stats.total}
-                </td>
+                </span>
+              </td>
 
-                <td className="p-3 border text-center text-green-600">
+              {/* Working pill */}
+              <td className="px-4 py-4">
+                <span className="inline-block px-3 py-1 rounded-full text-sm font-semibold bg-green-100 text-green-800">
                   {stats.working}
-                </td>
+                </span>
+              </td>
 
-                <td className="p-3 border text-center space-x-2">
+              {/* Actions */}
+              <td className="px-4 py-4">
+                <div className="flex gap-2">
                   <button
                     onClick={() => setSelectedLab(lab)}
-                    className="text-blue-600 hover:text-blue-800 font-medium"
+                    className="w-10 h-8 flex items-center justify-center rounded-md bg-blue-100 text-blue-500 hover:bg-blue-200 transition-colors"
+                    title="View"
                   >
-                    View
+                    <Eye size={16} />
                   </button>
-
                   <button
                     onClick={() => {
                       setEditLab(lab);
                       setIsEditModalOpen(true);
                     }}
-                    className="text-green-600 hover:text-green-800 font-medium"
+                    className="w-10 h-8 flex items-center justify-center rounded-md bg-orange-100 text-orange-500 hover:bg-orange-200 transition-colors"
+                    title="Edit"
                   >
-                    Edit
+                    <Edit size={16} />
                   </button>
-
                   <button
                     onClick={() => handleDelete(lab.id)}
-                    className="text-red-600 hover:text-red-800 font-medium"
+                    className="w-10 h-8 flex items-center justify-center rounded-md bg-gray-100 text-gray-400 hover:bg-red-100 hover:text-red-500 transition-colors"
+                    title="Delete"
                   >
-                    Delete
+                    <Trash2 size={16} />
                   </button>
-                </td>
-              </tr>
-                );
-              })}
-            </tbody>
+                </div>
+              </td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
 
-          </table>
-        </div>
+    {filteredLabs.length === 0 && (
+      <div className="text-center py-10 text-gray-500">
+        No laboratories found
       </div>
+    )}
+  </div>
+</div>
 
       {/* ================= ADD MODAL ================= */}
       {isAddModalOpen && (
