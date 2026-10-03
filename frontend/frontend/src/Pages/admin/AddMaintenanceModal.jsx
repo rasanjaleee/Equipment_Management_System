@@ -43,14 +43,14 @@ export default function AddMaintenanceModal({ onClose, onSaved, equipment }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4">
-      <div className="bg-gray-200 rounded-lg w-full max-w-3xl p-6">
+    <div className="fixed inset-0 bg-black/40 flex items-start sm:items-center justify-center p-3 sm:p-4 overflow-y-auto z-50">
+      <div className="bg-gray-200 rounded-lg w-full max-w-3xl p-4 sm:p-6 my-4 sm:my-auto">
         <h2 className="text-center font-semibold text-lg mb-4">
           Add Maintenance Record
         </h2>
 
         <form onSubmit={submit} className="grid gap-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Equipment">
               <select
                 name="equipmentId"
@@ -78,7 +78,7 @@ export default function AddMaintenanceModal({ onClose, onSaved, equipment }) {
             </Field>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Priority">
               <select
                 name="priority"
@@ -118,9 +118,9 @@ export default function AddMaintenanceModal({ onClose, onSaved, equipment }) {
             </Field>
           </div>
 
-          <div className="flex justify-center gap-4 mt-2">
+          <div className="flex flex-col-reverse sm:flex-row justify-center gap-3 sm:gap-4 mt-2">
             <button
-              className="bg-yellow-500 px-8 py-2 rounded font-semibold hover:bg-yellow-600 disabled:opacity-50"
+              className="w-full sm:w-auto bg-yellow-500 px-8 py-2 rounded font-semibold hover:bg-yellow-600 disabled:opacity-50"
               disabled={loading}
             >
               {loading ? "Saving..." : "Save"}
@@ -130,7 +130,7 @@ export default function AddMaintenanceModal({ onClose, onSaved, equipment }) {
               type="button"
               onClick={onClose}
               disabled={loading}
-              className="bg-yellow-500/80 px-8 py-2 rounded font-semibold hover:bg-yellow-600/80 disabled:opacity-50"
+              className="w-full sm:w-auto bg-yellow-500/80 px-8 py-2 rounded font-semibold hover:bg-yellow-600/80 disabled:opacity-50"
             >
               Cancel
             </button>

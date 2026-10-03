@@ -28,6 +28,7 @@ export default function TechnicianLayout() {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
 
   const dropdownRef = useRef(null);
@@ -204,12 +205,22 @@ export default function TechnicianLayout() {
 
   return (
     <div className="min-h-screen bg-gray-50 font-sans">
+      {/* Mobile Sidebar Overlay */}
+{mobileSidebarOpen && (
+  <div
+    className="fixed inset-0 bg-black/40 z-40 lg:hidden"
+    onClick={() => setMobileSidebarOpen(false)}
+  />
+)}
       {/* Sidebar */}
       <aside
-        className={`fixed top-0 left-0 h-screen ${
-          sidebarOpen ? "w-56" : "w-20"
-        } bg-white border-r border-gray-200 flex flex-col transition-all duration-300 shadow-sm z-40`}
-      >
+  className={`fixed top-0 left-0 h-screen bg-white border-r border-gray-200 flex flex-col transition-all duration-300 shadow-sm z-50
+    w-64
+    ${mobileSidebarOpen ? "translate-x-0" : "-translate-x-full"}
+    lg:translate-x-0
+    ${sidebarOpen ? "lg:w-56" : "lg:w-20"}
+  `}
+>
         <div
           className="px-3 border-b border-gray-200 h-20 flex items-center"
           style={{ backgroundColor: "#E89B00" }}
@@ -241,6 +252,7 @@ export default function TechnicianLayout() {
               <NavLink
                 key={item.to}
                 to={item.to}
+                onClick={() => setMobileSidebarOpen(false)}
                 className={linkClass}
                 title={!sidebarOpen ? item.label : ""}
               >
@@ -259,6 +271,7 @@ export default function TechnicianLayout() {
               <NavLink
                 key={item.to}
                 to={item.to}
+                onClick={() => setMobileSidebarOpen(false)}
                 className={linkClass}
                 title={!sidebarOpen ? item.label : ""}
               >
@@ -296,17 +309,27 @@ export default function TechnicianLayout() {
 
       {/* Main Container */}
       <div
-        className="min-h-screen flex flex-col transition-all duration-300"
-        style={{ marginLeft: sidebarOpen ? "14rem" : "5rem" }}
-      >
+      className={`min-h-screen flex flex-col transition-all duration-300 ml-0 ${
+        sidebarOpen ? "lg:ml-56" : "lg:ml-20"
+      }`}
+    >
         {/* Header - Ensure overflow is visible for dropdowns */}
-        <header
-          className="fixed top-0 right-0 px-5 h-20 flex justify-between items-center shadow-md gap-4 z-50 overflow-visible"
-          style={{
-            backgroundColor: "#E89B00",
-            left: sidebarOpen ? "14rem" : "5rem",
-          }}
-        >
+       <header
+        className={`fixed top-0 right-0 left-0 ${
+          sidebarOpen ? "lg:left-56" : "lg:left-20"
+        } px-3 sm:px-4 lg:px-5 h-20 flex justify-between items-center shadow-md gap-2 sm:gap-4 z-30`}
+        style={{ backgroundColor: "#E89B00" }}
+      >
+        {/* Mobile Menu Button */}
+<button
+  type="button"
+  onClick={() => setMobileSidebarOpen(true)}
+  className="lg:hidden flex items-center justify-center text-white shrink-0"
+  aria-label="Open menu"
+>
+  <Menu size={28} />
+</button>
+
           <div className="min-w-0 flex-1">
             <h2 className="text-2xl font-bold text-white truncate">
               {currentTitle}

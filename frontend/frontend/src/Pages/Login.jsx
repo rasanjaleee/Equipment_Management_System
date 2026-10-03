@@ -88,7 +88,7 @@ if (mustChangePassword) {
   return (
     <div className="min-h-screen flex">
       {/* Left side - Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center bg-white p-8">
+      <div className="w-full lg:w-1/2 flex items-center justify-center bg-white p-4 sm:p-8">
         <div className="max-w-md w-full">
           {/* Logo and Title */}
           <div className="mb-8">

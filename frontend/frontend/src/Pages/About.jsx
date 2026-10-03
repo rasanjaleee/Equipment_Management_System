@@ -12,7 +12,7 @@ const About = () => {
     <div className="bg-gray-50 text-gray-700">
 
       {/* CONTAINER */}
-      <div className="max-w-[1100px] mx-auto bg-white rounded-xl shadow-md p-8 my-8">
+      <div className="max-w-[1100px] mx-auto bg-white rounded-xl shadow-md p-4 sm:p-6 md:p-8 my-4 sm:my-8">
 
         {/* OVERVIEW */}
         <section className="mb-8">
@@ -136,14 +136,18 @@ const About = () => {
                 Sri Lanka
               </p>
 
-              <h4 className="font-semibold text-sm text-gray-900 mt-4 mb-1">Phone Numbers</h4>
-              <p className="text-gray-600 text-sm">(+94) 912245761, (+94) 912245767, (+94) 913924732, (+94) 912245765/66</p>
+              <h4 className="font-semibold text-sm text-gray-900 mt-4 mb-1">
+              Phone Numbers
+            </h4>
+            <p className="text-gray-600 text-sm break-words">
+              (+94) 912245761, (+94) 912245767, (+94) 913924732, (+94) 912245765/66
+            </p>
 
               <h4 className="font-semibold text-sm text-gray-900 mt-4 mb-1">Fax</h4>
               <p className="text-gray-600 text-sm">+94 912245762</p>
 
               <h4 className="font-semibold text-sm text-gray-900 mt-4 mb-1">E-mail</h4>
-              <p className="text-gray-600 text-sm">
+              <p className="text-gray-600 text-sm break-words">
                 dean@eng.ruh.ac.lk<br />
                 ar@eng.ruh.ac.lk
               </p>

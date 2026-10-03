@@ -724,9 +724,9 @@ const handleDownloadQR = async (item) => {
 
 
 
-        <div className="flex flex-col gap-4 lg:flex-row lg:justify-between lg:items-center mb-6">
+        <div className="flex flex-col gap-3 sm:gap-4 sm:flex-row sm:justify-between sm:items-center mb-4 sm:mb-6">
 
-          <h1 className="text-xl font-bold flex items-center gap-2">
+          <h1 className="text-lg sm:text-xl font-bold flex items-center gap-2 min-w-0">
 
             <Package /> Equipment Management
 
@@ -736,7 +736,7 @@ const handleDownloadQR = async (item) => {
 
           {!showForm && (
 
-            <div className="flex flex-wrap gap-3">
+            <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 sm:gap-3 w-full sm:w-auto">
 
               <button
 
@@ -762,7 +762,7 @@ const handleDownloadQR = async (item) => {
 
                 }}
 
-                className="btn btn-primary"
+                className="btn btn-primary w-full sm:w-auto justify-center text-sm"
 
               >
 
@@ -1192,7 +1192,7 @@ const handleDownloadQR = async (item) => {
 
                       onChange={(e) => setPhoto(e.target.files[0])}
 
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all outline-none file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-yellow-50 file:text-yellow-700 hover:file:bg-yellow-100 cursor-pointer"
+                      className="w-full min-w-0 px-3 sm:px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all outline-none file:mr-2 sm:file:mr-4 file:py-2 file:px-3 sm:file:px-4 file:rounded-lg file:border-0 file:text-xs sm:file:text-sm file:font-semibold file:bg-yellow-50 file:text-yellow-700 hover:file:bg-yellow-100 cursor-pointer text-sm"
 
                     />
 
@@ -1424,7 +1424,7 @@ const handleDownloadQR = async (item) => {
 
 
 
-              <div className="flex items-center justify-between mt-3">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mt-3">
 
                 <p className="text-sm text-gray-600">
 
@@ -1450,7 +1450,7 @@ const handleDownloadQR = async (item) => {
 
                   }}
 
-                  className="text-sm px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700"
+                  className="text-sm px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 self-start sm:self-auto"
 
                 >
 
@@ -1462,9 +1462,162 @@ const handleDownloadQR = async (item) => {
 
             </div>
 
+{/* Mobile Equipment Cards */}
+<div className="md:hidden space-y-3">
+  {paginatedEquipment.map((item) => (
+    <div
+      key={item.id}
+      className="bg-white border border-gray-200 rounded-xl shadow-sm p-4"
+    >
+      {/* Top section */}
+      <div className="flex gap-3">
+        <div className="flex-shrink-0">
+          {item.photoPath ? (
+            <img
+              src={getImageUrl(item.photoPath)}
+              alt={item.equipmentName || 'Equipment'}
+              className="w-20 h-20 object-cover rounded-lg border border-gray-200"
+            />
+          ) : (
+            <div className="w-20 h-20 rounded-lg bg-gray-100 flex items-center justify-center">
+              <Package size={28} className="text-gray-400" />
+            </div>
+          )}
+        </div>
 
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <p className="text-xs text-gray-500">
+                ID #{item.id}
+              </p>
 
-            <div className="bg-white rounded-lg shadow overflow-hidden">
+              <h3 className="font-bold text-gray-900 break-words">
+                {item.equipmentName}
+              </h3>
+            </div>
+
+            <span
+              className={`flex-shrink-0 inline-block px-2 py-1 rounded text-white text-[10px] font-semibold ${
+                item.status === 'WORKING'
+                  ? 'bg-green-500'
+                  : item.status === 'UNDER_REPAIR'
+                  ? 'bg-blue-500'
+                  : item.status === 'BROKEN'
+                  ? 'bg-red-500'
+                  : 'bg-gray-500'
+              }`}
+            >
+              {item.status}
+            </span>
+          </div>
+
+          <p className="text-sm text-gray-600 mt-2 break-words">
+            {item.laboratory || 'No laboratory'}
+          </p>
+        </div>
+      </div>
+
+      {/* Equipment details */}
+      <div className="grid grid-cols-2 gap-x-3 gap-y-2 mt-4 pt-3 border-t border-gray-100 text-sm">
+        <div>
+          <p className="text-xs text-gray-500">Model</p>
+          <p className="font-medium text-gray-800 break-words">
+            {item.model || '-'}
+          </p>
+        </div>
+
+        <div>
+          <p className="text-xs text-gray-500">Serial</p>
+          <p className="font-medium text-gray-800 break-words">
+            {item.serialNumber || '-'}
+          </p>
+        </div>
+
+        <div>
+          <p className="text-xs text-gray-500">Cost</p>
+          <p className="font-medium text-gray-800">
+            {item.cost ? `$${item.cost}` : '-'}
+          </p>
+        </div>
+
+        <div>
+          <p className="text-xs text-gray-500">GRN</p>
+          <p className="font-medium text-gray-800 break-words">
+            {item.grnNumber || '-'}
+          </p>
+        </div>
+      </div>
+
+      {/* QR */}
+      {item.qrCode && (
+        <div className="flex items-center gap-3 mt-4 pt-3 border-t border-gray-100">
+          <img
+            src={getImageUrl(item.qrCode)}
+            alt="QR code"
+            className="w-16 h-16 object-contain flex-shrink-0"
+          />
+
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => handlePrintQR(item)}
+              className="text-xs bg-gray-500 text-white px-3 py-1.5 rounded hover:bg-gray-600"
+            >
+              Print QR
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleDownloadQR(item)}
+              className="text-xs bg-slate-600 text-white px-3 py-1.5 rounded hover:bg-slate-700"
+            >
+              Download
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Actions */}
+      <div className="grid grid-cols-3 gap-2 mt-4 pt-3 border-t border-gray-100">
+        <button
+          type="button"
+          onClick={() => navigate(`/equipment/item/${item.id}`)}
+          className="flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg bg-green-50 text-green-700 text-sm font-medium hover:bg-green-100"
+        >
+          <Eye size={16} />
+          View
+        </button>
+
+        <button
+          type="button"
+          onClick={() => handleEdit(item)}
+          className="flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg bg-blue-50 text-blue-700 text-sm font-medium hover:bg-blue-100"
+        >
+          <Edit size={16} />
+          Edit
+        </button>
+
+        <button
+          type="button"
+          onClick={() => handleDelete(item.id)}
+          className="flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg bg-red-50 text-red-700 text-sm font-medium hover:bg-red-100"
+        >
+          <Trash2 size={16} />
+          Delete
+        </button>
+      </div>
+    </div>
+  ))}
+
+  {filteredEquipment.length === 0 && (
+    <div className="bg-white rounded-xl border border-gray-200 text-center py-10 px-4 text-gray-500">
+      No equipment found
+    </div>
+  )}
+</div>
+
+            <div className="hidden md:block bg-white rounded-lg shadow overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[1500px] text-sm">
                   <thead className="bg-gray-200 text-left">
@@ -1596,47 +1749,49 @@ const handleDownloadQR = async (item) => {
                 </div>
               )}
 
-              {filteredEquipment.length > 0 && (
-                <div className="flex items-center justify-center gap-2 py-4 border-t border-gray-200">
-                  <button
-                    type="button"
-                    onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                    disabled={safeCurrentPage === 1}
-                    className="px-3 py-1.5 rounded border border-gray-300 text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                  >
-                    Previous
-                  </button>
+             </div>
 
-                  {Array.from({ length: totalPages }, (_, index) => index + 1).map((page) => (
-                    <button
-                      key={page}
-                      type="button"
-                      onClick={() => setCurrentPage(page)}
-                      className={`px-3 py-1.5 rounded border text-sm ${
-                        safeCurrentPage === page
-                          ? 'bg-yellow-500 text-white border-yellow-500'
-                          : 'border-gray-300 hover:bg-gray-50'
-                      }`}
-                    >
-                      {page}
-                    </button>
-                  ))}
+{/* Shared Pagination - Mobile + Desktop */}
+{filteredEquipment.length > 0 && totalPages > 1 && (
+  <div className="flex flex-wrap items-center justify-center gap-2 px-2 py-4 mt-3 bg-white rounded-lg shadow-sm">
+    <button
+      type="button"
+      onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+      disabled={safeCurrentPage === 1}
+      className="px-3 py-1.5 rounded border border-gray-300 text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+    >
+      Previous
+    </button>
 
-                  <button
-                    type="button"
-                    onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-                    disabled={safeCurrentPage === totalPages}
-                    className="px-3 py-1.5 rounded border border-gray-300 text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                  >
-                    Next
-                  </button>
-                </div>
-              )}
-            </div>
+    {Array.from({ length: totalPages }, (_, index) => index + 1).map((page) => (
+      <button
+        key={page}
+        type="button"
+        onClick={() => setCurrentPage(page)}
+        className={`px-3 py-1.5 rounded border text-sm ${
+          safeCurrentPage === page
+            ? 'bg-yellow-500 text-white border-yellow-500'
+            : 'border-gray-300 hover:bg-gray-50'
+        }`}
+      >
+        {page}
+      </button>
+    ))}
 
-          </>
+    <button
+      type="button"
+      onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+      disabled={safeCurrentPage === totalPages}
+      className="px-3 py-1.5 rounded border border-gray-300 text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+    >
+      Next
+    </button>
+  </div>
+)}
 
-        )}
+</>
+
+)}
 
       </div>
 

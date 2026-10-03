@@ -40,7 +40,7 @@ export default function AdminLayout() {
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
 
   const dropdownRef = useRef(null);
@@ -291,11 +291,21 @@ export default function AdminLayout() {
 
   return (
     <div className="min-h-screen bg-gray-50 font-sans">
+      {/* Mobile sidebar overlay */}
+{sidebarOpen && (
+  <div
+    className="fixed inset-0 bg-black/40 z-40 lg:hidden"
+    onClick={() => setSidebarOpen(false)}
+  />
+)}
       <aside
-        className={`fixed top-0 left-0 h-screen ${
-          sidebarOpen ? "w-56" : "w-20"
-        } bg-white border-r border-gray-200 flex flex-col transition-all duration-300 shadow-sm z-40`}
-      >
+  className={`fixed top-0 left-0 h-screen bg-white border-r border-gray-200 flex flex-col transition-all duration-300 shadow-sm z-50
+    w-64
+    ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
+    lg:translate-x-0
+    ${sidebarOpen ? "lg:w-56" : "lg:w-20"}
+  `}
+>
         <div
           className="px-3 border-b border-gray-200 h-20 flex items-center"
           style={{ backgroundColor: "#E89B00" }}
@@ -327,11 +337,16 @@ export default function AdminLayout() {
 
             return (
               <NavLink
-                key={item.to}
-                to={item.to}
-                className={linkClass}
-                title={!sidebarOpen ? item.label : ""}
-              >
+  key={item.to}
+  to={item.to}
+  className={linkClass}
+  title={!sidebarOpen ? item.label : ""}
+  onClick={() => {
+    if (window.innerWidth < 1024) {
+      setSidebarOpen(false);
+    }
+  }}
+>
                 <Icon size={20} className="flex-shrink-0" />
 
                 {sidebarOpen && <span>{item.label}</span>}
@@ -346,11 +361,16 @@ export default function AdminLayout() {
 
             return (
               <NavLink
-                key={item.to}
-                to={item.to}
-                className={linkClass}
-                title={!sidebarOpen ? item.label : ""}
-              >
+  key={item.to}
+  to={item.to}
+  className={linkClass}
+  title={!sidebarOpen ? item.label : ""}
+  onClick={() => {
+    if (window.innerWidth < 1024) {
+      setSidebarOpen(false);
+    }
+  }}
+>
                 <Icon size={20} className="flex-shrink-0" />
 
                 {sidebarOpen && <span>{item.label}</span>}
@@ -361,38 +381,61 @@ export default function AdminLayout() {
 
         <div className="p-3 border-t border-gray-200">
           <button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="w-full p-2 hover:bg-gray-100 rounded-lg transition text-gray-600"
-          >
-            {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
-          </button>
+  onClick={() => setSidebarOpen(!sidebarOpen)}
+  className="hidden lg:flex w-full p-2 hover:bg-gray-100 rounded-lg transition text-gray-600 items-center justify-center"
+  aria-label={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
+>
+  {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
+</button>
+
+<button
+  onClick={() => setSidebarOpen(false)}
+  className="lg:hidden w-full p-2 hover:bg-gray-100 rounded-lg transition text-gray-600 flex items-center justify-center gap-2"
+  aria-label="Close menu"
+>
+  <X size={20} />
+  <span className="text-sm font-medium">Close Menu</span>
+</button>
         </div>
       </aside>
 
       <div
-        className="min-h-screen flex flex-col transition-all duration-300"
-        style={{
-          marginLeft: sidebarOpen ? "14rem" : "5rem",
-        }}
-      >
+  className={`min-h-screen flex flex-col transition-all duration-300
+    ml-0
+    ${sidebarOpen ? "lg:ml-56" : "lg:ml-20"}
+  `}
+>
         <header
-          className="fixed top-0 right-0 px-5 h-20 flex justify-between items-center shadow-md gap-4 z-30"
-          style={{
-            backgroundColor: "#E89B00",
-            left: sidebarOpen ? "14rem" : "5rem",
-          }}
-        >
-          <div className="min-w-0 flex-1">
-            <h2 className="text-2xl font-bold text-white truncate">
-              {currentTitle}
-            </h2>
+  className={`fixed top-0 right-0 h-20 flex items-center shadow-md z-30
+    left-0 px-3 sm:px-4 md:px-5
+    ${sidebarOpen ? "lg:left-56" : "lg:left-20"}
+    transition-all duration-300
+  `}
+  style={{ backgroundColor: "#E89B00" }}
+>
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+  {/* Mobile menu button */}
+  <button
+    type="button"
+    onClick={() => setSidebarOpen(true)}
+    className="lg:hidden flex-shrink-0 p-2 text-white hover:bg-white/10 rounded-lg transition"
+    aria-label="Open menu"
+  >
+    <Menu size={24} />
+  </button>
 
-            <p className="text-sm text-gray-100 mt-1">
-              {welcomeText}
-            </p>
-          </div>
+  <div className="min-w-0">
+    <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-white truncate">
+      {currentTitle}
+    </h2>
 
-          <div className="flex items-center gap-4 flex-shrink-0">
+    <p className="hidden sm:block text-xs md:text-sm text-gray-100 mt-1 truncate">
+      {welcomeText}
+    </p>
+  </div>
+</div>
+
+          <div className="flex items-center gap-1 sm:gap-2 md:gap-4 flex-shrink-0">
             <div
               className="relative"
               ref={notificationRef}
@@ -415,7 +458,7 @@ export default function AdminLayout() {
               </button>
 
               {notificationOpen && (
-                <div className="absolute right-0 mt-3 w-96 max-h-[420px] overflow-hidden bg-white border border-gray-200 rounded-xl shadow-lg z-50">
+                <div className="fixed left-3 right-3 top-20 sm:absolute sm:left-auto sm:right-0 sm:top-auto sm:mt-3 sm:w-96 max-h-[420px] overflow-hidden bg-white border border-gray-200 rounded-xl shadow-lg z-50">
                   <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
                     <h3 className="text-sm font-semibold text-gray-800">
                       Notifications
@@ -520,15 +563,15 @@ export default function AdminLayout() {
                 </div>
 
                 <ChevronDown
-                  size={18}
-                  className={`text-white transition-transform ${
-                    dropdownOpen ? "rotate-180" : ""
-                  }`}
-                />
+                size={18}
+                className={`hidden sm:block text-white transition-transform ${
+                  dropdownOpen ? "rotate-180" : ""
+                }`}
+              />
               </button>
 
               {dropdownOpen && (
-                <div className="absolute right-0 mt-3 w-56 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
+                <div className="absolute right-0 mt-3 w-52 sm:w-56 max-w-[calc(100vw-1.5rem)] bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
                   <button
                     onClick={goProfile}
                     className="w-full flex items-center gap-3 px-5 py-3.5 text-sm text-gray-700 transition-colors font-medium border-b border-gray-100"
@@ -559,13 +602,13 @@ export default function AdminLayout() {
           </div>
         </header>
 
-        <div className="flex-1 flex flex-col overflow-y-auto pt-24">
-          <main className="flex-1 p-4 lg:p-5">
-            <Outlet />
-          </main>
+        <div className="flex-1 flex flex-col pt-20 min-w-0">
+        <main className="flex-1 w-full min-w-0 p-3 sm:p-4 lg:p-5">
+          <Outlet />
+        </main>
 
-          <Footer />
-        </div>
+        <Footer />
+      </div>
       </div>
     </div>
   );

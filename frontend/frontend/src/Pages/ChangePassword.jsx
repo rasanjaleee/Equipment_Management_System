@@ -54,8 +54,8 @@ export default function ChangePassword() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 p-6">
-      <div className="bg-white shadow-xl rounded-xl p-8 w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4 sm:p-6">
+  <div className="bg-white shadow-xl rounded-xl p-5 sm:p-8 w-full max-w-md">
         <h1 className="text-2xl font-bold mb-4">Change Temporary Password</h1>
         <p className="text-sm text-gray-600 mb-6">
           You must change your temporary password before continuing.

@@ -238,12 +238,14 @@ function BorrowRequestTable({ requests, filter, onFilterChange, onViewDetails, o
 
   return (
     <section className="rounded-2xl border border-gray-200 bg-white shadow-sm">
-      <div className="border-b px-6 py-5">
+      <div className="border-b px-4 py-4 sm:px-6 sm:py-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <div className="flex items-center gap-2 text-gray-900">
               <ClipboardList size={20} className="text-yellow-600" />
-              <h2 className="text-xl font-bold">Borrow Request Management</h2>
+              <h2 className="text-lg font-bold sm:text-xl">
+  Borrow Request Management
+</h2>
             </div>
             <p className="mt-1 text-sm text-gray-500">Review requests before creating an issuance record.</p>
           </div>

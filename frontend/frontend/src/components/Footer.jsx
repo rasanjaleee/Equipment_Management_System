@@ -5,7 +5,7 @@ import logo from "/images/home_logo.png";
 const Footer = () => {
   return (
     <footer className="bg-[#4b0000] text-white">
-      <div className="max-w-7xl mx-auto px-6 py-5">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-5">
 
         {/* System Title */}
         <div className="text-center mb-3">
