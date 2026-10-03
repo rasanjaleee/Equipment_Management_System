@@ -25,5 +25,21 @@ public interface BorrowRequestRepository extends JpaRepository<BorrowRequest, Lo
             @Param("blockingStatuses") List<String> blockingStatuses
     );
 
+    @Query("""
+        SELECT br
+        FROM BorrowRequest br
+        WHERE br.equipment.id = :equipmentId
+          AND UPPER(br.status) IN :blockingStatuses
+          AND br.borrowStartDate <= :calendarEnd
+          AND br.borrowEndDate >= :calendarStart
+        ORDER BY br.borrowStartDate ASC
+        """)
+    List<BorrowRequest> findBlockingRequestsForCalendar(
+            @Param("equipmentId") Long equipmentId,
+            @Param("calendarStart") LocalDate calendarStart,
+            @Param("calendarEnd") LocalDate calendarEnd,
+            @Param("blockingStatuses") List<String> blockingStatuses
+    );
+
     List<BorrowRequest> findByEmailIgnoreCaseOrderByCreatedAtDesc(String email);
 }

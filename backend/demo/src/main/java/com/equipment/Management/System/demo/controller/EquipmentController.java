@@ -247,6 +247,21 @@ public class EquipmentController {
         ));
     }
 
+    @GetMapping("/{equipmentId}/availability-calendar")
+    public ResponseEntity<?> getAvailabilityCalendar(
+            @PathVariable Long equipmentId,
+            @RequestParam LocalDate startDate,
+            @RequestParam LocalDate endDate) {
+
+        return ResponseEntity.ok(
+                borrowRequestService.getEquipmentCalendar(
+                        equipmentId,
+                        startDate,
+                        endDate
+                )
+        );
+    }
+
     @GetMapping("/bulk-template")
     public ResponseEntity<String> downloadBulkTemplate() {
         String csvTemplate = "equipmentName,laboratory,model,serialNumber,cost,purchaseDate,supplier,status,grnNumber\n";

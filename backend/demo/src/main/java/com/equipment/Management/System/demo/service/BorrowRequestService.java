@@ -14,6 +14,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class BorrowRequestService {
@@ -128,6 +129,48 @@ public class BorrowRequestService {
         );
 
         return conflicts.isEmpty();
+    }
+
+    public List<Map<String, Object>> getEquipmentCalendar(
+            Long equipmentId,
+            LocalDate startDate,
+            LocalDate endDate) {
+
+        if (equipmentId == null || startDate == null || endDate == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Equipment ID, start date and end date are required."
+            );
+        }
+
+        if (endDate.isBefore(startDate)) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Calendar end date must not be before start date."
+            );
+        }
+
+        if (!equipmentRepository.existsById(equipmentId)) {
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "Equipment not found."
+            );
+        }
+
+        return borrowRequestRepository.findBlockingRequestsForCalendar(
+                        equipmentId,
+                        startDate,
+                        endDate,
+                        BLOCKING_STATUSES
+                )
+                .stream()
+                .map(request -> {
+                    Map<String, Object> period = new java.util.HashMap<>();
+                    period.put("startDate", request.getBorrowStartDate());
+                    period.put("endDate", request.getBorrowEndDate());
+                    return period;
+                })
+                .toList();
     }
 
     private void validateRequest(BorrowRequestCreateRequest request) {
