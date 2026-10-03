@@ -20,6 +20,7 @@ import {
   markAsRead as markAsReadApi,
   markAllAsRead as markAllAsReadApi,
 } from "../services/notificationService";
+import { API_BASE_URL } from "../services/api";
 
 export default function TechnicianLayout() {
   const location = useLocation();
@@ -86,7 +87,7 @@ export default function TechnicianLayout() {
   useEffect(() => {
     if (!userId) return;
 
-    const socket = new SockJS("http://localhost:8080/ws");
+    const socket = new SockJS(`${API_BASE_URL}/ws`);
     const client = new Client({
       webSocketFactory: () => socket,
       reconnectDelay: 5000,
