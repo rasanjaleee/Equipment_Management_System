@@ -37,7 +37,8 @@ public class EquipmentService {
     private List<Long> getEquipmentManagers() {
         return userRepository.findAll().stream()
                 .filter(user -> user.getRole() != null &&
-                        (user.getRole().equalsIgnoreCase("ADMIN")
+                        (user.getRole().equalsIgnoreCase("SUPER_ADMIN")
+                                || user.getRole().equalsIgnoreCase("ADMIN")
                                 || user.getRole().equalsIgnoreCase("TECHNICIAN")))
                 .map(User::getId)
                 .collect(Collectors.toList());

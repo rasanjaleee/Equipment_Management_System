@@ -1,6 +1,6 @@
 import { useState } from "react";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { API_BASE_URL } from "../services/api";
 import logo from '/images/logo.jpg';
 import loginpage01 from "/images/loginpage01.png";
@@ -8,6 +8,7 @@ import loginpage01 from "/images/loginpage01.png";
 
 export default function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [form, setForm] = useState({ 
     username: "", 
     password: "" 
@@ -59,6 +60,8 @@ axios.defaults.headers.common.Authorization = `Bearer ${token}`;
 
 if (mustChangePassword) {
   navigate("/change-password");
+} else if (location.state?.from) {
+  navigate(location.state.from);
 } else if (normalizedRole === "SUPER_ADMIN" || normalizedRole === "ADMIN") {
   navigate("/admin/dashboard");
 } else if (normalizedRole === "TECHNICIAN") {

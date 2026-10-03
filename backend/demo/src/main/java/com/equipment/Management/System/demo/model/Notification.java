@@ -18,6 +18,7 @@ public class Notification {
     private Long relatedId;
     private String relatedType;
 
+    private String alertKey;
     private boolean isRead = false;
     private String priority = "NORMAL";
     private LocalDateTime createdAt = LocalDateTime.now();
@@ -102,5 +103,16 @@ public class Notification {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+
+
+
+    public String getAlertKey() {
+        return alertKey;
+    }
+
+    public void setAlertKey(String alertKey) {
+        this.alertKey = alertKey;
     }
 }

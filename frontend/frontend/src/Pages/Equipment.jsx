@@ -418,6 +418,11 @@ const returnedEquipment = myIssuances.filter(
 
               <button
                 onClick={() => {
+                  const token = localStorage.getItem('token');
+                  if (!token) {
+                    navigate('/login', { state: { from: '/equipment' } });
+                    return;
+                  }
                   setSelectedEquipmentForBorrow(null);
                   setIsBorrowModalOpen(true);
                 }}
