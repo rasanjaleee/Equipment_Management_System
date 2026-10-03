@@ -63,8 +63,8 @@ public class SecurityConfig {
                         // ADMIN
                         .requestMatchers("/api/admin/**").hasAnyRole("SUPER_ADMIN", "ADMIN")
 
-                        // EQUIPMENT
-                        .requestMatchers(HttpMethod.GET, "/api/equipment/**").authenticated()
+                        // EQUIPMENT (Public read for QR scans/catalog, restricted write)
+                        .requestMatchers(HttpMethod.GET, "/api/equipment/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/equipment/**").hasAnyRole("SUPER_ADMIN", "ADMIN", "TECHNICIAN")
                         .requestMatchers(HttpMethod.PUT, "/api/equipment/**").hasAnyRole("SUPER_ADMIN", "ADMIN", "TECHNICIAN")
                         .requestMatchers(HttpMethod.DELETE, "/api/equipment/**").hasAnyRole("SUPER_ADMIN", "ADMIN", "TECHNICIAN")
@@ -148,7 +148,9 @@ public class SecurityConfig {
         configuration.setAllowedOriginPatterns(List.of(
                 "http://localhost:*",
                 "https://*.choreoapps.dev",
-                "https://*.choreo.org"
+                "https://*.choreo.org",
+                "https://*.vercel.app",
+                "https://*.onrender.com"
         ));
 
         configuration.setAllowedMethods(List.of(

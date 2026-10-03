@@ -17,7 +17,9 @@ public class CorsConfig {
                         .allowedOriginPatterns(
                                 "http://localhost:*",
                                 "https://*.choreoapps.dev",
-                                "https://*.choreo.org"
+                                "https://*.choreo.org",
+                                "https://*.vercel.app",
+                                "https://*.onrender.com"
                         )
                         .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
                         .allowedHeaders("*")

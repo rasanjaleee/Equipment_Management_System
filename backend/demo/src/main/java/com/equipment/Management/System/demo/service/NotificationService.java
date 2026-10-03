@@ -53,12 +53,32 @@ public class NotificationService {
 
         Notification saved = notificationRepository.save(notification);
 
-        NotificationMessage msg = new NotificationMessage();
-        msg.setTitle(title);
-        msg.setMessage(message);
-        msg.setType(type);
+        System.out.println("======================================");
+        System.out.println("NOTIFICATION SAVED");
+        System.out.println("Notification ID: " + saved.getId());
+        System.out.println("Target User ID: " + targetUserId);
+        System.out.println("Title: " + saved.getTitle());
+        System.out.println("WebSocket destination: /topic/notifications/" + targetUserId);
+        System.out.println("======================================");
 
-        messagingTemplate.convertAndSend("/topic/notifications/" + targetUserId, msg);
+        NotificationMessage msg = new NotificationMessage();
+
+        msg.setId(saved.getId());
+        msg.setTitle(saved.getTitle());
+        msg.setMessage(saved.getMessage());
+        msg.setType(saved.getType());
+        msg.setRelatedId(saved.getRelatedId());
+        msg.setRelatedType(saved.getRelatedType());
+        msg.setPriority(saved.getPriority());
+        msg.setRead(saved.isRead());
+        msg.setCreatedAt(saved.getCreatedAt());
+
+        System.out.println("SENDING WEBSOCKET MESSAGE...");
+
+        messagingTemplate.convertAndSend(
+                "/topic/notifications/" + targetUserId,
+                msg
+        );
 
         return saved;
     }
@@ -118,5 +138,186 @@ public class NotificationService {
                 .orElseThrow(() -> new RuntimeException("Authenticated user not found: " + username));
 
         return user.getId();
+    }
+    // ================= MARK AS UNREAD =================
+    public void markAsUnread(Long id) {
+        Notification notification = notificationRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Notification not found"));
+
+        Long currentUserId = getCurrentUserId();
+
+        // Security check: user can modify only their own notification
+        if (!notification.getUserId().equals(currentUserId)) {
+            throw new RuntimeException("You are not allowed to modify this notification");
+        }
+
+        notification.setRead(false);
+        notificationRepository.save(notification);
+    }
+
+
+    // ================= MARK ALL AS READ =================
+    public void markAllAsRead(Long userId) {
+
+        Long currentUserId = getCurrentUserId();
+
+        // Security check
+        if (!userId.equals(currentUserId)) {
+            throw new RuntimeException("You are not allowed to modify these notifications");
+        }
+
+        List<Notification> notifications =
+                notificationRepository.findByUserIdOrderByCreatedAtDesc(userId);
+
+        for (Notification notification : notifications) {
+            notification.setRead(true);
+        }
+
+        notificationRepository.saveAll(notifications);
+    }
+
+
+    // ================= MARK ALL AS UNREAD =================
+    public void markAllAsUnread(Long userId) {
+
+        Long currentUserId = getCurrentUserId();
+
+        // Security check
+        if (!userId.equals(currentUserId)) {
+            throw new RuntimeException("You are not allowed to modify these notifications");
+        }
+
+        List<Notification> notifications =
+                notificationRepository.findByUserIdOrderByCreatedAtDesc(userId);
+
+        for (Notification notification : notifications) {
+            notification.setRead(false);
+        }
+
+        notificationRepository.saveAll(notifications);
+    }
+
+
+    // ================= DELETE ONE =================
+    public void deleteNotification(Long id) {
+
+        Notification notification = notificationRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Notification not found"));
+
+        Long currentUserId = getCurrentUserId();
+
+        // Security check
+        if (!notification.getUserId().equals(currentUserId)) {
+            throw new RuntimeException("You are not allowed to delete this notification");
+        }
+
+        notificationRepository.delete(notification);
+    }
+
+
+    // ================= DELETE ALL =================
+    public void clearAllNotifications(Long userId) {
+
+        Long currentUserId = getCurrentUserId();
+
+        // Security check
+        if (!userId.equals(currentUserId)) {
+            throw new RuntimeException("You are not allowed to delete these notifications");
+        }
+
+        List<Notification> notifications =
+                notificationRepository.findByUserIdOrderByCreatedAtDesc(userId);
+
+        notificationRepository.deleteAll(notifications);
+    }
+
+    // ================= MAINTENANCE DUE NOTIFICATION =================
+
+    public Notification createMaintenanceDueNotification(
+            Long targetUserId,
+            String title,
+            String message,
+            Long maintenanceId,
+            String alertKey,
+            String priority
+    ) {
+
+        if (targetUserId == null) {
+            throw new RuntimeException("Target userId cannot be null");
+        }
+
+        // Prevent duplicate automatic alerts
+        boolean alreadyExists =
+                notificationRepository
+                        .existsByUserIdAndTypeAndRelatedIdAndAlertKey(
+                                targetUserId,
+                                "MAINTENANCE_DUE",
+                                maintenanceId,
+                                alertKey
+                        );
+
+        if (alreadyExists) {
+            System.out.println(
+                    "Maintenance alert already exists: " + alertKey +
+                            " for user: " + targetUserId
+            );
+
+            return null;
+        }
+
+        User targetUser = userRepository.findById(targetUserId)
+                .orElseThrow(() ->
+                        new RuntimeException(
+                                "Target user not found with id: " + targetUserId
+                        )
+                );
+
+        Notification notification = new Notification();
+
+        notification.setUserId(targetUser.getId());
+        notification.setTitle(title);
+        notification.setMessage(message);
+        notification.setType("MAINTENANCE_DUE");
+        notification.setRelatedId(maintenanceId);
+        notification.setRelatedType("MAINTENANCE");
+        notification.setAlertKey(alertKey);
+        notification.setPriority(priority);
+        notification.setRead(false);
+        notification.setCreatedAt(LocalDateTime.now());
+
+        Notification saved =
+                notificationRepository.save(notification);
+
+        System.out.println("======================================");
+        System.out.println("MAINTENANCE DUE NOTIFICATION SAVED");
+        System.out.println("Notification ID: " + saved.getId());
+        System.out.println("Maintenance ID: " + maintenanceId);
+        System.out.println("Alert Key: " + alertKey);
+        System.out.println("Target User ID: " + targetUserId);
+        System.out.println("Title: " + saved.getTitle());
+        System.out.println(
+                "WebSocket destination: /topic/notifications/"
+                        + targetUserId
+        );
+        System.out.println("======================================");
+
+        NotificationMessage msg = new NotificationMessage();
+
+        msg.setId(saved.getId());
+        msg.setTitle(saved.getTitle());
+        msg.setMessage(saved.getMessage());
+        msg.setType(saved.getType());
+        msg.setRelatedId(saved.getRelatedId());
+        msg.setRelatedType(saved.getRelatedType());
+        msg.setPriority(saved.getPriority());
+        msg.setRead(saved.isRead());
+        msg.setCreatedAt(saved.getCreatedAt());
+
+        messagingTemplate.convertAndSend(
+                "/topic/notifications/" + targetUserId,
+                msg
+        );
+
+        return saved;
     }
 }
