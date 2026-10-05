@@ -17,13 +17,10 @@ export const getImageUrl = (path) => {
   return `${API_BASE_URL}/${path}`;
 };
 
-import { setupAxiosCache } from './apiCache';
-
 // Pre-configured Axios instance with Base URL
 const api = axios.create({
   baseURL: API_BASE_URL,
 });
-setupAxiosCache(api);
 
 // Automatically attach JWT token to every outgoing request if present
 api.interceptors.request.use(
