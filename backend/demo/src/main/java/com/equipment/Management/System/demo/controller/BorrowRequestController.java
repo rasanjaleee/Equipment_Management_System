@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import java.time.LocalDate;
 
 @RestController
 @RequestMapping("/api/borrow-requests")
@@ -23,6 +24,16 @@ public class BorrowRequestController {
     @GetMapping
     public ResponseEntity<List<BorrowRequestResponse>> getAllRequests() {
         return ResponseEntity.ok(borrowRequestService.getAllBorrowRequests());
+    }
+
+    @GetMapping("/calendar")
+    public ResponseEntity<List<BorrowRequestResponse>> getCalendarRequests(
+            @RequestParam LocalDate startDate,
+            @RequestParam LocalDate endDate) {
+
+        return ResponseEntity.ok(
+                borrowRequestService.getCalendarBorrowRequests(startDate, endDate)
+        );
     }
 
     @GetMapping("/my")
