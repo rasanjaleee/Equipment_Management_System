@@ -2,7 +2,7 @@ import {Search,ChevronDown,X,ClipboardList,Clock,CheckCircle,Package,RotateCcw} 
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { API_BASE_URL, getImageUrl } from '../services/api';
+import { API_BASE_URL, getImageUrl, getCachedEquipment, hasCachedEquipment } from '../services/api';
 import image from '/images/1.webp';
 import BorrowRequestForm from '../components/BorrowRequestForm';
 
@@ -21,7 +21,7 @@ const Equipment = () => {
   const [showDeptDropdown, setShowDeptDropdown] = useState(false);
   const [showLabDropdown, setShowLabDropdown] = useState(false);
   const [equipmentList, setEquipmentList] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!hasCachedEquipment());
   const [error, setError] = useState('');
   const [isBorrowModalOpen, setIsBorrowModalOpen] = useState(false);
   const [selectedEquipmentForBorrow, setSelectedEquipmentForBorrow] = useState(null);
@@ -53,16 +53,13 @@ const [myEquipmentError, setMyEquipmentError] = useState('');
     fetchEquipment();
   }, []);
 
-  const fetchEquipment = async () => {
+  const fetchEquipment = async (forceRefresh = false) => {
     try {
-      setLoading(true);
-      const token = localStorage.getItem('token');
-
-      const res = await axios.get(`${API_BASE_URL}/api/equipment/all`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {}
-      });
-
-      setEquipmentList(Array.isArray(res.data) ? res.data : []);
+      if (!hasCachedEquipment() || forceRefresh) {
+        setLoading(true);
+      }
+      const data = await getCachedEquipment(forceRefresh);
+      setEquipmentList(data);
       setError('');
     } catch (err) {
       console.error('Failed to fetch equipment:', err);
