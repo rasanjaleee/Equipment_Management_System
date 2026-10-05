@@ -2,13 +2,10 @@
 import axios from "axios";
 import { API_BASE_URL } from "../services/api";
 
-import { setupAxiosCache } from "../services/apiCache";
-
 const api = axios.create({
   baseURL: API_BASE_URL,
   withCredentials: false, // ✅ JWT doesn't use cookies
 });
-setupAxiosCache(api);
 
 // ✅ Interceptor: Add JWT token from localStorage to every request
 api.interceptors.request.use(
