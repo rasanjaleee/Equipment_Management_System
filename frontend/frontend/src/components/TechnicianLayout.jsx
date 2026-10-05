@@ -14,6 +14,7 @@ import {
   Menu,
   X,
   Bell,
+  CalendarDays,
 } from "lucide-react";
 import {
   getNotifications,
@@ -157,6 +158,7 @@ export default function TechnicianLayout() {
     { to: "/technician/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { to: "/technician/equipment", label: "Equipment Status", icon: Wrench },
     { to: "/technician/maintenance", label: "Maintenance", icon: History },
+    { to: "/technician/calendar", label: "Equipment Calendar", icon: CalendarDays },
     { to: "/technician/activity-log", label: "My Activity", icon: ClipboardList },
   ];
 
@@ -173,6 +175,7 @@ export default function TechnicianLayout() {
     "/technician/dashboard": "Technician Dashboard",
     "/technician/equipment": "Equipment Status",
     "/technician/maintenance": "Maintenance",
+    "/technician/calendar": "Equipment Calendar",
     "/technician/activity-log": "My Activity",
     "/technician/notifications": "Notifications",
     "/technician/profile": "Profile",

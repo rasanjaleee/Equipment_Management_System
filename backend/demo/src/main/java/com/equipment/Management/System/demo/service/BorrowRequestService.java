@@ -173,6 +173,31 @@ public class BorrowRequestService {
                 .toList();
     }
 
+    public List<BorrowRequestResponse> getCalendarBorrowRequests(
+            LocalDate startDate,
+            LocalDate endDate) {
+
+        if (startDate == null || endDate == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Calendar start date and end date are required."
+            );
+        }
+
+        if (endDate.isBefore(startDate)) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Calendar end date must not be before start date."
+            );
+        }
+
+        return borrowRequestRepository
+                .findCalendarRequests(startDate, endDate)
+                .stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
     private void validateRequest(BorrowRequestCreateRequest request) {
         if (request.getEquipmentId() == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Equipment is required.");
