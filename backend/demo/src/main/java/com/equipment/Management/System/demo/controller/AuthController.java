@@ -105,13 +105,13 @@ public class AuthController {
             ));
         }
 
-        // 2️⃣ Verify username & password
-        boolean success = userService.verifyUser(
+        // 2️⃣ Verify username & password and retrieve user in a single database lookup
+        java.util.Optional<User> userOpt = userService.authenticateUser(
                 loginRequest.getUsername(),
                 loginRequest.getPassword()
         );
 
-        if (!success) {
+        if (userOpt.isEmpty()) {
             loginAttemptService.loginFailed(key);
             return ResponseEntity
                     .status(HttpStatus.UNAUTHORIZED)
@@ -121,15 +121,13 @@ public class AuthController {
         // 3️⃣ Successful login → reset failed attempts
         loginAttemptService.loginSucceeded(key);
 
-        User user = userService
-                .getUserByUsername(loginRequest.getUsername())
-                .orElseThrow();
+        User user = userOpt.get();
 
-// Save successful login time
+        // Save successful login time
         user.setLastLogin(LocalDateTime.now());
         userService.saveUser(user);
 
-// Generate JWT
+        // Generate JWT
         String token = jwtUtil.generateToken(user.getUsername(), user.getRole());
 
         return ResponseEntity.ok(Map.of(
@@ -171,6 +169,11 @@ public class AuthController {
                     "message", "Failed to change password: " + e.getMessage()
             ));
         }
+    }
+
+    @GetMapping("/ping")
+    public ResponseEntity<?> ping() {
+        return ResponseEntity.ok(Map.of("status", "UP", "message", "Backend service is active"));
     }
 
 }

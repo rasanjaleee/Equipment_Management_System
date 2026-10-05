@@ -42,17 +42,19 @@ public class UserService {
         return userRepository.save(user);
     }
 
-    // ✅ Login verification with normalized username
-    public boolean verifyUser(String username, String password) {
-
+    // ✅ Login verification and retrieval in a single DB query
+    public Optional<User> authenticateUser(String username, String password) {
         String normalizedUsername = username.trim().toLowerCase();
-
         Optional<User> userOptional = userRepository.findByUsername(normalizedUsername);
-        if (userOptional.isPresent()) {
-            User user = userOptional.get();
-            return passwordEncoder.matches(password, user.getPassword());
+        if (userOptional.isPresent() && passwordEncoder.matches(password, userOptional.get().getPassword())) {
+            return userOptional;
         }
-        return false;
+        return Optional.empty();
+    }
+
+    // ✅ Backwards compatible verifyUser
+    public boolean verifyUser(String username, String password) {
+        return authenticateUser(username, password).isPresent();
     }
 
     public Optional<User> getUserByUsername(String username) {

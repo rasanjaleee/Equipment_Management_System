@@ -35,3 +35,56 @@ api.interceptors.request.use(
 );
 
 export default api;
+
+// ==========================================
+// 🛡️ SAFE IN-MEMORY DATA CACHING
+// Keeps data in memory so navigating back and forth is INSTANT (0ms)
+// Zero external libraries, zero modification to Axios internals
+// ==========================================
+const cacheStore = new Map();
+const DEFAULT_TTL = 3 * 60 * 1000; // 3 minutes
+
+export const getCachedData = async (cacheKey, fetchFn, ttl = DEFAULT_TTL, forceRefresh = false) => {
+  const now = Date.now();
+  if (!forceRefresh && cacheStore.has(cacheKey)) {
+    const entry = cacheStore.get(cacheKey);
+    if (now - entry.timestamp < ttl) {
+      return entry.data;
+    }
+  }
+  const data = await fetchFn();
+  cacheStore.set(cacheKey, { data, timestamp: now });
+  return data;
+};
+
+export const hasCachedData = (cacheKey, ttl = DEFAULT_TTL) => {
+  if (!cacheStore.has(cacheKey)) return false;
+  return Date.now() - cacheStore.get(cacheKey).timestamp < ttl;
+};
+
+export const invalidateCache = (cacheKey) => {
+  if (cacheKey) {
+    cacheStore.delete(cacheKey);
+  } else {
+    cacheStore.clear();
+  }
+};
+
+// Specialized helpers for equipment
+export const getCachedEquipment = async (forceRefresh = false) => {
+  return getCachedData(
+    'equipment_all',
+    async () => {
+      const token = localStorage.getItem('token');
+      const res = await axios.get(`${API_BASE_URL}/api/equipment/all`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
+      return Array.isArray(res.data) ? res.data : [];
+    },
+    DEFAULT_TTL,
+    forceRefresh
+  );
+};
+
+export const hasCachedEquipment = () => hasCachedData('equipment_all');
+export const clearEquipmentCache = () => invalidateCache('equipment_all');
