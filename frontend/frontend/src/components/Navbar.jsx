@@ -164,21 +164,21 @@ const Navbar = () => {
   };
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 w-full bg-gradient-to-r from-yellow-500 to-orange-400 px-3 sm:px-6 py-1 shadow-md">
-      <div className="max-w-7xl mx-auto flex items-center justify-between">
+    <nav className="fixed top-0 left-0 right-0 z-50 w-full bg-gradient-to-r from-yellow-500 to-orange-400 px-2 sm:px-6 py-1 shadow-md">
+  <div className="max-w-7xl mx-auto flex items-center justify-between gap-2">
 
         {/* ================= LEFT LOGO ================= */}
-        <div className="flex items-center gap-0">
+        <div className="flex items-center min-w-0 flex-1 md:flex-none">
           <img
             src="/images/home_logo.png"
             alt="University Logo"
-            className="w-16 h-16 sm:w-24 sm:h-20 object-contain mt-1"
+            className="w-12 h-14 sm:w-24 sm:h-20 object-contain shrink-0 mt-1"
           />
-          <div className="flex flex-col leading-tight -ml-2 sm:-ml-4">
-            <h1 className="text-white font-bold text-xs sm:text-xl tracking-wide whitespace-nowrap">
+          <div className="flex flex-col leading-tight min-w-0 -ml-1 sm:-ml-4">
+            <h1 className="text-white font-bold text-[11px] sm:text-xl tracking-wide leading-tight md:whitespace-nowrap">
               FACULTY OF ENGINEERING
             </h1>
-            <p className="text-white text-[10px] sm:text-base font-medium whitespace-nowrap">
+            <p className="text-white text-[9px] sm:text-base font-medium leading-tight md:whitespace-nowrap">
               UNIVERSITY OF RUHUNA
             </p>
           </div>
@@ -208,7 +208,7 @@ const Navbar = () => {
         </div>
 
         {/* ================= RIGHT ICONS ================= */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4 shrink-0">
 
           {/* Mobile Menu Button */}
           <button
