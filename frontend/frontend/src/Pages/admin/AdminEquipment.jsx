@@ -116,7 +116,11 @@ export default function AdminEquipment() {
 
     (value || '').trim().replace(/\s+/g, ' ').toLowerCase();
 
-
+  const formatCost = (val) => {
+    if (val === null || val === undefined || val === '') return '-';
+    const num = Number(val);
+    return isNaN(num) ? `Rs. ${val}` : `Rs. ${num.toLocaleString()}`;
+  };
 
   const equipmentNamesMap = [...sampleEquipmentNames, ...equipmentList.map((item) => item.equipmentName)]
 
@@ -1043,7 +1047,7 @@ const formatStatus = (status) =>
 
                   <div>
 
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Cost ($)</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Cost (Rs.)</label>
 
                     <input
 
@@ -1051,7 +1055,7 @@ const formatStatus = (status) =>
 
                       name="cost"
 
-                      placeholder="Enter cost"
+                      placeholder="Enter cost (e.g. 50000)"
 
                       value={formData.cost}
 
@@ -1534,7 +1538,7 @@ const formatStatus = (status) =>
         <div>
           <p className="text-xs text-gray-500">Cost</p>
           <p className="font-medium text-gray-800">
-            {item.cost ? `$${item.cost}` : '-'}
+            {formatCost(item.cost)}
           </p>
         </div>
 
@@ -1667,7 +1671,7 @@ const formatStatus = (status) =>
 
         <td className="px-4 py-4">{item.serialNumber || '-'}</td>
         <td className="px-4 py-4">
-          {item.cost ? `$${item.cost}` : '-'}
+          {formatCost(item.cost)}
         </td>
         <td className="px-4 py-4">{item.purchaseDate || '-'}</td>
         <td className="px-4 py-4">{item.supplier || '-'}</td>

@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useState } from "react";
-import axios from "axios";
 import {
   CalendarDays,
   ChevronLeft,
@@ -8,20 +7,24 @@ import {
   MapPin,
   User,
 } from "lucide-react";
-import { API_BASE_URL } from "../../services/api";
+import { useData } from "../../context/DataContext";
 
 export default function TechnicianCalendar() {
+  const { calendarCache, refreshCalendar } = useData();
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [requests, setRequests] = useState([]);
-  const [loading, setLoading] = useState(false);
+
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
+  const cacheKey = `${year}-${month}`;
+  const cachedForCurrentMonth = calendarCache?.[cacheKey];
+
+  const [requests, setRequests] = useState(cachedForCurrentMonth || []);
+  const [loading, setLoading] = useState(!cachedForCurrentMonth);
   const [error, setError] = useState("");
 
   const [selectedLaboratory, setSelectedLaboratory] = useState("ALL");
   const [selectedEquipment, setSelectedEquipment] = useState("ALL");
   const [selectedRequest, setSelectedRequest] = useState(null);
-
-  const year = currentDate.getFullYear();
-  const month = currentDate.getMonth();
 
   const formatLocalDate = (date) => {
     const y = date.getFullYear();
@@ -40,48 +43,39 @@ export default function TechnicianCalendar() {
     });
   };
 
-  const loadCalendar = async () => {
-    try {
-      setLoading(true);
-      setError("");
-
-      const firstDay = new Date(year, month, 1);
-      const lastDay = new Date(year, month + 1, 0);
-
-      const token = localStorage.getItem("token");
-
-      const response = await axios.get(
-        `${API_BASE_URL}/api/borrow-requests/calendar`,
-        {
-          params: {
-            startDate: formatLocalDate(firstDay),
-            endDate: formatLocalDate(lastDay),
-          },
-          headers: token
-            ? {
-                Authorization: `Bearer ${token}`,
-              }
-            : {},
-        }
-      );
-
-      setRequests(Array.isArray(response.data) ? response.data : []);
-    } catch (err) {
-      console.error("Failed to load technician calendar:", err);
-
-      setRequests([]);
-      setError(
-        err.response?.data?.message ||
-          "Unable to load equipment calendar."
-      );
-    } finally {
+  useEffect(() => {
+    if (calendarCache?.[cacheKey]) {
+      setRequests(calendarCache[cacheKey]);
       setLoading(false);
     }
-  };
+  }, [calendarCache, cacheKey]);
 
   useEffect(() => {
-    loadCalendar();
-  }, [year, month]);
+    const fetchMonth = async () => {
+      if (!calendarCache?.[cacheKey]) {
+        setLoading(true);
+      }
+      try {
+        setError("");
+        const data = await refreshCalendar(year, month, false);
+        if (Array.isArray(data)) {
+          setRequests(data);
+        }
+      } catch (err) {
+        console.error("Failed to load technician calendar:", err);
+        if (!calendarCache?.[cacheKey]) {
+          setError(
+            err.response?.data?.message ||
+              "Unable to load equipment calendar."
+          );
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchMonth();
+  }, [year, month, cacheKey, refreshCalendar]);
 
   const laboratories = useMemo(() => {
     return [

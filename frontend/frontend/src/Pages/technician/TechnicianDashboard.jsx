@@ -1,26 +1,20 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
-import { API_BASE_URL } from "../../services/api";
 import { Package, CheckCircle, Wrench, XCircle } from "lucide-react";
+import { useData } from "../../context/DataContext";
 
 export default function TechnicianDashboard() {
-  const [equipmentList, setEquipmentList] = useState([]);
+  const { equipmentList: cachedEquipment, refreshEquipment } = useData();
+  const [equipmentList, setEquipmentList] = useState(cachedEquipment || []);
 
   useEffect(() => {
-    fetchEquipment();
-  }, []);
-
-  const fetchEquipment = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      const res = await axios.get(`${API_BASE_URL}/api/equipment/all`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setEquipmentList(res.data);
-    } catch (err) {
-      console.error("Failed to fetch equipment:", err);
+    if (cachedEquipment && cachedEquipment.length > 0) {
+      setEquipmentList(cachedEquipment);
     }
-  };
+  }, [cachedEquipment]);
+
+  useEffect(() => {
+    refreshEquipment(false);
+  }, [refreshEquipment]);
 
   const total = equipmentList.length;
   const working = equipmentList.filter((e) => e.status === "WORKING").length;

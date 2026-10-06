@@ -227,17 +227,120 @@ export const DataProvider = ({ children }) => {
     }
   }, []);
 
+  // 10. Fetch Calendar
+  const [calendarCache, setCalendarCache] = useState({});
+  const refreshCalendar = useCallback(async (year, month, showLoading = false) => {
+    const key = `${year}-${month}`;
+    try {
+      const firstDay = new Date(year, month, 1);
+      const lastDay = new Date(year, month + 1, 0);
+      const y = firstDay.getFullYear();
+      const m1 = String(firstDay.getMonth() + 1).padStart(2, "0");
+      const d1 = String(firstDay.getDate()).padStart(2, "0");
+      const m2 = String(lastDay.getMonth() + 1).padStart(2, "0");
+      const d2 = String(lastDay.getDate()).padStart(2, "0");
+
+      const res = await axios.get(`${API_BASE_URL}/api/borrow-requests/calendar`, {
+        params: {
+          startDate: `${y}-${m1}-${d1}`,
+          endDate: `${y}-${m2}-${d2}`,
+        },
+        headers: getHeaders(),
+      });
+      const data = Array.isArray(res.data) ? res.data : [];
+      setCalendarCache((prev) => ({ ...prev, [key]: data }));
+      return data;
+    } catch (err) {
+      console.error('Failed to load calendar:', err);
+      return [];
+    }
+  }, []);
+
+  // 11. Fetch User Activity Logs
+  const [userActivityLogs, setUserActivityLogs] = useState([]);
+  const [loadingUserActivityLogs, setLoadingUserActivityLogs] = useState(false);
+
+  const refreshUserActivityLogs = useCallback(async (username, showLoading = false) => {
+    if (!username) return [];
+    if (showLoading) setLoadingUserActivityLogs(true);
+    try {
+      const res = await axios.get(
+        `${API_BASE_URL}/api/activity-logs/user/${username}`,
+        {
+          headers: getHeaders(),
+        }
+      );
+      const data = Array.isArray(res.data) ? res.data : [];
+      setUserActivityLogs(data);
+      return data;
+    } catch (err) {
+      console.error('Failed to load user activity logs:', err);
+      return [];
+    } finally {
+      setLoadingUserActivityLogs(false);
+    }
+  }, []);
+
+  // 12. Fetch Student / My Equipment
+  const [myRequests, setMyRequests] = useState([]);
+  const [myIssuances, setMyIssuances] = useState([]);
+  const [loadingMyEquipment, setLoadingMyEquipment] = useState(false);
+
+  const refreshMyEquipment = useCallback(async (showLoading = false) => {
+    const token = localStorage.getItem('token');
+    if (!token) return { requests: [], issuances: [] };
+    if (showLoading) setLoadingMyEquipment(true);
+    try {
+      const headers = { Authorization: `Bearer ${token}` };
+      const [reqRes, issRes] = await Promise.all([
+        axios.get(`${API_BASE_URL}/api/borrow-requests/my`, { headers }).catch(() => ({ data: [] })),
+        axios.get(`${API_BASE_URL}/api/issuances/my`, { headers }).catch(() => ({ data: [] })),
+      ]);
+      const reqData = Array.isArray(reqRes.data) ? reqRes.data : [];
+      const issData = Array.isArray(issRes.data) ? issRes.data : [];
+      setMyRequests(reqData);
+      setMyIssuances(issData);
+      return { requests: reqData, issuances: issData };
+    } catch (err) {
+      console.error('Failed to load my equipment:', err);
+      return { requests: [], issuances: [] };
+    } finally {
+      setLoadingMyEquipment(false);
+    }
+  }, []);
+
   // Initial load when provider mounts
   useEffect(() => {
     refreshEquipment(true);
     refreshLaboratories(false);
     const token = localStorage.getItem('token');
     if (token) {
+      let role = '';
+      try {
+        const u = JSON.parse(localStorage.getItem('user'));
+        role = String(u?.role || '').replace(/^ROLE_/i, '').toUpperCase();
+      } catch {}
+      const isAdmin = role === 'ADMIN' || role === 'SUPER_ADMIN';
+      const isTech = role === 'TECHNICIAN';
+
       refreshMaintenance(false);
-      refreshBorrowRequests();
-      refreshIssuances(false);
+      if (isAdmin) {
+        refreshBorrowRequests();
+        refreshIssuances(false);
+      }
+      refreshMyEquipment(false);
+      if (isAdmin || isTech) {
+        const now = new Date();
+        refreshCalendar(now.getFullYear(), now.getMonth());
+      }
+      try {
+        const u = JSON.parse(localStorage.getItem('user'));
+        if (u?.username && (isAdmin || isTech)) {
+          refreshUserActivityLogs(u.username);
+        }
+      } catch {}
     }
-  }, [refreshEquipment, refreshLaboratories, refreshMaintenance, refreshBorrowRequests, refreshIssuances]);
+  }, [refreshEquipment, refreshLaboratories, refreshMaintenance, refreshBorrowRequests, refreshIssuances, refreshCalendar, refreshUserActivityLogs, refreshMyEquipment]);
 
   const value = {
     equipmentList,
@@ -286,6 +389,22 @@ export const DataProvider = ({ children }) => {
     setGrnData,
     loadingGrn,
     refreshGrn,
+
+    calendarCache,
+    setCalendarCache,
+    refreshCalendar,
+
+    userActivityLogs,
+    setUserActivityLogs,
+    loadingUserActivityLogs,
+    refreshUserActivityLogs,
+
+    myRequests,
+    setMyRequests,
+    myIssuances,
+    setMyIssuances,
+    loadingMyEquipment,
+    refreshMyEquipment,
   };
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
@@ -323,6 +442,19 @@ export const useData = () => {
       grnData: [],
       loadingGrn: false,
       refreshGrn: async () => [],
+      calendarCache: {},
+      setCalendarCache: () => {},
+      refreshCalendar: async () => [],
+      userActivityLogs: [],
+      setUserActivityLogs: () => {},
+      loadingUserActivityLogs: false,
+      refreshUserActivityLogs: async () => [],
+      myRequests: [],
+      setMyRequests: () => {},
+      myIssuances: [],
+      setMyIssuances: () => {},
+      loadingMyEquipment: false,
+      refreshMyEquipment: async () => ({ requests: [], issuances: [] }),
     };
   }
   return context;

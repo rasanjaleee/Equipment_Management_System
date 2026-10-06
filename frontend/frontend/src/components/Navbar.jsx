@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Bell, MessageSquare, LogOut, User, Check, CheckCheck, Menu, X } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import useNotificationSocket from "../services/useNotificationSocket";
 import {
   getNotifications,
@@ -8,29 +8,52 @@ import {
   markAsRead
 } from "../services/notificationService";
 
+import { useData } from '../context/DataContext';
+
 const Navbar = () => {
+  const { notifications: cachedNotifs, setNotifications: setCachedNotifs } = useData();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [notifications, setNotifications] = useState([]);
-  const [unreadCount, setUnreadCount] = useState(0);
+  const [notifications, setNotifications] = useState(cachedNotifs || []);
+  const [unreadCount, setUnreadCount] = useState(() => (cachedNotifs || []).filter(n => !n.read).length);
   const [username, setUsername] = useState('');
   const [userInitials, setUserInitials] = useState('?');
 
   const dropdownRef = useRef(null);
   const notifRef = useRef(null);
   const navigate = useNavigate();
+  const location = useLocation();
 
+  const navItems = [
+    { name: 'HOME', path: '/home' },
+    { name: 'EQUIPMENT', path: '/equipment' },
+    { name: 'ABOUT', path: '/about' },
+  ];
+
+  const isItemActive = (path) => {
+    if (path === '/home') {
+      return location.pathname === '/home' || location.pathname === '/';
+    }
+    return location.pathname.startsWith(path);
+  };
 
   const loggedInUser = (() => {
-  try {
-    return JSON.parse(localStorage.getItem("user"));
-  } catch {
-    return null;
-  }
+    try {
+      return JSON.parse(localStorage.getItem("user"));
+    } catch {
+      return null;
+    }
   })();
 
-const userId = loggedInUser?.id;
+  const userId = loggedInUser?.id;
+
+  useEffect(() => {
+    if (cachedNotifs && cachedNotifs.length > 0) {
+      setNotifications(cachedNotifs);
+      setUnreadCount(cachedNotifs.filter(n => !n.read).length);
+    }
+  }, [cachedNotifs]);
   // ================= FETCH USERNAME FROM LOCALSTORAGE / JWT =================
   useEffect(() => {
     // Try to get username from localStorage (set during login)
@@ -79,10 +102,13 @@ const userId = loggedInUser?.id;
 
   // ================= LOAD NOTIFICATIONS =================
   const loadNotifications = async () => {
+    if (!userId) return;
     try {
       const res1 = await getNotifications(userId);
       const res2 = await getUnreadCount(userId);
-      setNotifications(res1.data);
+      const list = Array.isArray(res1.data) ? res1.data : [];
+      setNotifications(list);
+      setCachedNotifs(list);
       setUnreadCount(res2.data);
     } catch (error) {
       console.error("Notification load error", error);
@@ -160,9 +186,25 @@ const userId = loggedInUser?.id;
 
         {/* ================= DESKTOP CENTER LINKS ================= */}
         <div className="hidden md:flex items-center gap-8">
-          <Link to="/home" className="text-white font-semibold">HOME</Link>
-          <Link to="/equipment" className="text-white font-semibold">EQUIPMENT</Link>
-          <Link to="/about" className="text-white font-semibold">ABOUT</Link>
+          {navItems.map((item) => {
+            const active = isItemActive(item.path);
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`relative py-1 text-sm tracking-wider uppercase font-semibold transition-all duration-200 ${
+                  active
+                    ? 'text-white font-bold drop-shadow-sm'
+                    : 'text-white/80 hover:text-white'
+                }`}
+              >
+                {item.name}
+                {active && (
+                  <span className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-white rounded-full shadow-sm animate-in fade-in duration-200" />
+                )}
+              </Link>
+            );
+          })}
         </div>
 
         {/* ================= RIGHT ICONS ================= */}
@@ -328,29 +370,26 @@ const userId = loggedInUser?.id;
 {mobileMenuOpen && (
   <div className="md:hidden bg-white border-t border-gray-200 shadow-lg">
     <div className="flex flex-col px-6 py-3">
-      <Link
-        to="/home"
-        onClick={() => setMobileMenuOpen(false)}
-        className="py-3 text-gray-700 font-semibold border-b border-gray-100 hover:text-yellow-600"
-      >
-        HOME
-      </Link>
-
-      <Link
-        to="/equipment"
-        onClick={() => setMobileMenuOpen(false)}
-        className="py-3 text-gray-700 font-semibold border-b border-gray-100 hover:text-yellow-600"
-      >
-        EQUIPMENT
-      </Link>
-
-      <Link
-        to="/about"
-        onClick={() => setMobileMenuOpen(false)}
-        className="py-3 text-gray-700 font-semibold hover:text-yellow-600"
-      >
-        ABOUT
-      </Link>
+      {navItems.map((item) => {
+        const active = isItemActive(item.path);
+        return (
+          <Link
+            key={item.path}
+            to={item.path}
+            onClick={() => setMobileMenuOpen(false)}
+            className={`py-3 text-sm font-semibold transition-colors border-b border-gray-100 last:border-b-0 flex items-center justify-between ${
+              active
+                ? 'text-yellow-600 font-bold border-l-4 border-yellow-500 pl-3 bg-yellow-50/70'
+                : 'text-gray-700 pl-2 hover:text-yellow-600 hover:bg-gray-50'
+            }`}
+          >
+            <span>{item.name}</span>
+            {active && (
+              <span className="w-2 h-2 rounded-full bg-yellow-500 mr-2" />
+            )}
+          </Link>
+        );
+      })}
     </div>
   </div>
 )}

@@ -4,15 +4,38 @@ import axios from 'axios';
 import { API_BASE_URL, getImageUrl } from '../services/api';
 import { ArrowLeft, Loader, Edit, Trash2, Calendar } from 'lucide-react';
 import BorrowRequestForm from '../components/BorrowRequestForm';
+import { useData } from '../context/DataContext';
 
 const EquipmentDetails = () => {
   const { id, equipmentName, laboratory } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [equipment, setEquipment] = useState(null);
-  const [equipmentList, setEquipmentList] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const normalizeValue = (value) =>
+    (value || '').trim().replace(/\s+/g, ' ').toLowerCase();
+
+  const { equipmentList: cachedAllEquipment, refreshEquipment } = useData();
+
+  const selectedName = decodeURIComponent(equipmentName || '');
+  const selectedLab = decodeURIComponent(laboratory || '');
+
+  const cachedSingle = id
+    ? cachedAllEquipment?.find((item) => String(item.id) === String(id)) || null
+    : null;
+
+  const cachedGrouped = !id && equipmentName && laboratory && cachedAllEquipment?.length > 0
+    ? cachedAllEquipment.filter(
+        (item) =>
+          normalizeValue(item.equipmentName) === normalizeValue(selectedName) &&
+          normalizeValue(item.laboratory) === normalizeValue(selectedLab)
+      )
+    : [];
+
+  const [equipment, setEquipment] = useState(cachedSingle);
+  const [equipmentList, setEquipmentList] = useState(cachedGrouped);
+  const [loading, setLoading] = useState(
+    id ? !cachedSingle : cachedGrouped.length === 0
+  );
   const [error, setError] = useState('');
   const [isBorrowModalOpen, setIsBorrowModalOpen] = useState(false);
   const [selectedEquipmentForBorrow, setSelectedEquipmentForBorrow] = useState(null);
@@ -36,15 +59,12 @@ const EquipmentDetails = () => {
 
   const [editingAccessoryId, setEditingAccessoryId] = useState(null);
 
-const [accessoryForm, setAccessoryForm] = useState({
-  accessoryName: '',
-  quantity: 1,
-  status: 'AVAILABLE',
-  description: ''
-});
-
-  const normalizeValue = (value) =>
-    (value || '').trim().replace(/\s+/g, ' ').toLowerCase();
+  const [accessoryForm, setAccessoryForm] = useState({
+    accessoryName: '',
+    quantity: 1,
+    status: 'AVAILABLE',
+    description: ''
+  });
 
   useEffect(() => {
     if (id) {
@@ -56,7 +76,9 @@ const [accessoryForm, setAccessoryForm] = useState({
 
   const fetchSingleEquipment = async () => {
     try {
-      setLoading(true);
+      if (!equipment && !cachedSingle) {
+        setLoading(true);
+      }
       const token = localStorage.getItem('token');
 
       const res = await axios.get(`${API_BASE_URL}/api/equipment/${id}`, {
@@ -64,15 +86,17 @@ const [accessoryForm, setAccessoryForm] = useState({
       });
 
       setEquipment(res.data);
-setError('');
+      setError('');
 
-await Promise.all([
-  fetchAccessories(res.data.id),
-  fetchCurrentIssuance(res.data.id)
-]);
+      await Promise.all([
+        fetchAccessories(res.data.id),
+        fetchCurrentIssuance(res.data.id)
+      ]);
     } catch (err) {
       console.error('Failed to fetch single equipment:', err);
-      setError('Failed to load equipment details. Please try again later.');
+      if (!equipment && !cachedSingle) {
+        setError('Failed to load equipment details. Please try again later.');
+      }
     } finally {
       setLoading(false);
     }
@@ -269,17 +293,16 @@ const handleDeleteAccessory = async (accessory) => {
 
   const fetchGroupedEquipmentDetails = async () => {
     try {
-      setLoading(true);
-      const token = localStorage.getItem('token');
-
-      const res = await axios.get(`${API_BASE_URL}/api/equipment/all`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {}
-      });
+      if (equipmentList.length === 0 && cachedGrouped.length === 0) {
+        setLoading(true);
+      }
+      const data = await refreshEquipment(false);
+      const listToFilter = Array.isArray(data) && data.length > 0 ? data : cachedAllEquipment;
 
       const selectedName = decodeURIComponent(equipmentName || '');
       const selectedLab = decodeURIComponent(laboratory || '');
 
-      const filtered = res.data.filter(
+      const filtered = listToFilter.filter(
         (item) =>
           normalizeValue(item.equipmentName) === normalizeValue(selectedName) &&
           normalizeValue(item.laboratory) === normalizeValue(selectedLab)
@@ -289,7 +312,9 @@ const handleDeleteAccessory = async (accessory) => {
       setError('');
     } catch (err) {
       console.error('Failed to fetch equipment details:', err);
-      setError('Failed to load equipment details. Please try again later.');
+      if (equipmentList.length === 0 && cachedGrouped.length === 0) {
+        setError('Failed to load equipment details. Please try again later.');
+      }
     } finally {
       setLoading(false);
     }
