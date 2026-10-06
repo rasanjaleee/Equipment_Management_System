@@ -3,9 +3,11 @@ import { Upload, Download, ArrowLeft, FileText, AlertCircle, CheckCircle2 } from
 import axios from 'axios';
 import { API_BASE_URL } from '../../services/api';
 import { useNavigate } from 'react-router-dom';
+import { useData } from '../../context/DataContext';
 
 export default function BulkUploadEquipment() {
   const navigate = useNavigate();
+  const { refreshEquipment } = useData();
 
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -86,6 +88,7 @@ export default function BulkUploadEquipment() {
 
       setResult(response.data);
       setMessage('Bulk upload completed successfully.');
+      refreshEquipment(true);
     } catch (err) {
       setError(
         err.response?.data?.message ||

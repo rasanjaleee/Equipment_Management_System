@@ -1,16 +1,30 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { API_BASE_URL } from "../../services/api";
+import { useData } from "../../context/DataContext";
 
 export default function ReportsPage() {
+  const {
+    grnData: cachedGrn,
+    setGrnData: setCachedGrn,
+    refreshGrn,
+  } = useData();
+
   const [activeTab, setActiveTab] = useState("grn");
-  const [grnData, setGrnData] = useState([]);
+  const [grnData, setGrnData] = useState(cachedGrn || []);
   const [inventorySummary, setInventorySummary] = useState(null);
   const [inventoryList, setInventoryList] = useState([]);
   const [laboratoryFilter, setLaboratoryFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [allLaboratories, setAllLaboratories] = useState([]);
   const [error, setError] = useState("");
+
+  // Sync GRN from context
+  useEffect(() => {
+    if (cachedGrn && cachedGrn.length > 0) {
+      setGrnData(cachedGrn);
+    }
+  }, [cachedGrn]);
 
   useEffect(() => {
     fetchGrnReport();
@@ -29,10 +43,10 @@ export default function ReportsPage() {
 
   const fetchGrnReport = async () => {
     try {
-      const res = await axios.get(`${API_BASE_URL}/api/reports/grn`, {
-        headers: getHeaders(),
-      });
-      setGrnData(res.data || []);
+      const data = await refreshGrn(false);
+      if (Array.isArray(data)) {
+        setGrnData(data);
+      }
     } catch (err) {
       console.error(err);
       setError("Failed to load GRN report");

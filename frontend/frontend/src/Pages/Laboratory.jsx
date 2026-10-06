@@ -3,11 +3,20 @@ import axios from "axios";
 import Swal from "sweetalert2";
 import { API_BASE_URL } from "../services/api";
 import { Eye, Edit, Trash2, FlaskConical } from "lucide-react";
+import { useData } from "../context/DataContext";
 
 
 export default function LaboratoryPage() {
-  const [labs, setLabs] = useState([]);
-  const [equipmentList, setEquipmentList] = useState([]);
+  const {
+    laboratories: cachedLabs,
+    setLaboratories: setCachedLabs,
+    refreshLaboratories,
+    equipmentList: cachedEquipment,
+    refreshEquipment,
+  } = useData();
+
+  const [labs, setLabs] = useState(cachedLabs || []);
+  const [equipmentList, setEquipmentList] = useState(cachedEquipment || []);
 
   const [selectedLab, setSelectedLab] = useState(null);
   const [labInventory, setLabInventory] = useState([]);
@@ -34,50 +43,24 @@ export default function LaboratoryPage() {
     underRepairEquipment: "",
   });
 
-  // LOAD LABORATORIES
-useEffect(() => {
-  const token = localStorage.getItem("token");
+  // Sync with context if already present or updated
+  useEffect(() => {
+    if (cachedLabs && cachedLabs.length > 0) {
+      setLabs(cachedLabs);
+    }
+  }, [cachedLabs]);
 
-  axios
-    .get(`${API_BASE_URL}/api/lab`, {
-      headers: token
-        ? { Authorization: `Bearer ${token}` }
-        : {},
-    })
-    .then((res) => {
-      setLabs(Array.isArray(res.data) ? res.data : []);
-    })
-    .catch((err) => {
-      console.log(
-        "LAB ERROR:",
-        err.response?.data || err.message
-      );
-      setLabs([]);
-    });
-}, []);
+  useEffect(() => {
+    if (cachedEquipment && cachedEquipment.length > 0) {
+      setEquipmentList(cachedEquipment);
+    }
+  }, [cachedEquipment]);
 
-
-// LOAD EQUIPMENT
-useEffect(() => {
-  const token = localStorage.getItem("token");
-
-  axios
-    .get(`${API_BASE_URL}/api/equipment/all`, {
-      headers: token
-        ? { Authorization: `Bearer ${token}` }
-        : {},
-    })
-    .then((res) => {
-      setEquipmentList(Array.isArray(res.data) ? res.data : []);
-    })
-    .catch((err) => {
-      console.log(
-        "EQUIPMENT ERROR:",
-        err.response?.data || err.message
-      );
-      setEquipmentList([]);
-    });
-}, []);
+  // LOAD / SILENT REVALIDATE LABORATORIES & EQUIPMENT
+  useEffect(() => {
+    refreshLaboratories(false);
+    refreshEquipment(false);
+  }, [refreshLaboratories, refreshEquipment]);
 
 const loadLabInventory = async (labName) => {
   if (!labName) return;
@@ -152,6 +135,7 @@ const loadLabInventory = async (labName) => {
     const res = await axios.post(`${API_BASE_URL}/api/lab`, payload);
 
     setLabs((prev) => [...prev, res.data]);
+    setCachedLabs((prev) => [...prev, res.data]);
     setIsAddModalOpen(false);
 
     setNewLab({
@@ -198,6 +182,7 @@ const loadLabInventory = async (labName) => {
     });
 
     setLabs((prev) => prev.filter((item) => item.id !== id));
+    setCachedLabs((prev) => prev.filter((item) => item.id !== id));
 
     setSuccessMessage("Laboratory deleted successfully.");
 
@@ -239,6 +224,7 @@ setTimeout(() => {
     );
 
     setLabs(labs.map((lab) => (lab.id === editLab.id ? res.data : lab)));
+    setCachedLabs((prev) => prev.map((lab) => (lab.id === editLab.id ? res.data : lab)));
 
     setIsEditModalOpen(false);
     setEditLab(null);

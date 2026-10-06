@@ -1,10 +1,18 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { Bell, Trash2, CheckCircle, Clock, AlertCircle, Info } from "lucide-react";
+import { API_BASE_URL } from "../../services/api";
+import { useData } from "../../context/DataContext";
 
 export default function NotificationPage() {
-  const [notifications, setNotifications] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const {
+    notifications: cachedNotifs,
+    setNotifications: setCachedNotifs,
+    refreshNotifications,
+  } = useData();
+
+  const [notifications, setNotifications] = useState(cachedNotifs || []);
+  const [loading, setLoading] = useState(cachedNotifs && cachedNotifs.length > 0 ? false : true);
   const [error, setError] = useState("");
   const [filter, setFilter] = useState("all"); // all, unread, read
   const [sorting, setSorting] = useState("newest");
@@ -14,6 +22,14 @@ export default function NotificationPage() {
     catch { return null; }
   })();
   const userId = loggedInUser?.id;
+
+  // Sync with context
+  useEffect(() => {
+    if (cachedNotifs && cachedNotifs.length > 0) {
+      setNotifications(cachedNotifs);
+      setLoading(false);
+    }
+  }, [cachedNotifs]);
 
   useEffect(() => {
     fetchNotifications();
@@ -31,28 +47,14 @@ export default function NotificationPage() {
       return;
     }
 
-    setLoading(true);
-    setError("");
-
     try {
-      const res = await axios.get(`/api/notifications/${userId}`, {
-        headers: getAuthHeaders(),
-      });
-
-      if (Array.isArray(res.data)) {
-        setNotifications(res.data);
-      } else if (res.data?.notifications && Array.isArray(res.data.notifications)) {
-        setNotifications(res.data.notifications);
-      } else {
-        setNotifications([]);
+      const data = await refreshNotifications(userId, false);
+      if (Array.isArray(data)) {
+        setNotifications(data);
       }
     } catch (err) {
       console.error("Failed to fetch notifications:", err);
-      setError(
-        err?.response?.data?.message ||
-          err?.message ||
-          "Failed to load notifications"
-      );
+      setError("Failed to load notifications");
     } finally {
       setLoading(false);
     }
@@ -62,18 +64,19 @@ export default function NotificationPage() {
   const handleToggleRead = async (notificationId, currentReadState) => {
     try {
       const endpoint = currentReadState
-        ? `/api/notifications/mark-as-unread/${notificationId}`
-        : `/api/notifications/mark-as-read/${notificationId}`;
+        ? `${API_BASE_URL}/api/notifications/mark-as-unread/${notificationId}`
+        : `${API_BASE_URL}/api/notifications/mark-as-read/${notificationId}`;
 
       await axios.put(endpoint, {}, { headers: getAuthHeaders() });
 
-      setNotifications((prev) =>
+      const updater = (prev) =>
         prev.map((notif) =>
           notif.id === notificationId
             ? { ...notif, read: !currentReadState }
             : notif
-        )
-      );
+        );
+      setNotifications(updater);
+      setCachedNotifs(updater);
     } catch (err) {
       console.error("Failed to toggle read state:", err);
       setError("Failed to update notification. Please try again.");
@@ -83,10 +86,9 @@ export default function NotificationPage() {
   // Mark ALL as read
   const handleMarkAllAsRead = async () => {
     try {
-      // Use bulk endpoint if available, otherwise loop
       try {
         await axios.put(
-          `/api/notifications/mark-as-read/all/${userId}`,
+          `${API_BASE_URL}/api/notifications/mark-as-read/all/${userId}`,
           {},
           { headers: getAuthHeaders() }
         );
@@ -95,7 +97,7 @@ export default function NotificationPage() {
         await Promise.all(
           unread.map((notif) =>
             axios.put(
-              `/api/notifications/mark-as-read/${notif.id}`,
+              `${API_BASE_URL}/api/notifications/mark-as-read/${notif.id}`,
               {},
               { headers: getAuthHeaders() }
             )
@@ -103,9 +105,8 @@ export default function NotificationPage() {
         );
       }
 
-      setNotifications((prev) =>
-        prev.map((notif) => ({ ...notif, read: true }))
-      );
+      setNotifications((prev) => prev.map((notif) => ({ ...notif, read: true })));
+      setCachedNotifs((prev) => prev.map((notif) => ({ ...notif, read: true })));
     } catch (err) {
       console.error("Failed to mark all as read:", err);
       setError("Failed to mark all as read. Please try again.");
@@ -115,10 +116,9 @@ export default function NotificationPage() {
   // Mark ALL as unread
   const handleMarkAllAsUnread = async () => {
     try {
-      // Use bulk endpoint if available, otherwise loop
       try {
         await axios.put(
-          `/api/notifications/mark-as-unread/all/${userId}`,
+          `${API_BASE_URL}/api/notifications/mark-as-unread/all/${userId}`,
           {},
           { headers: getAuthHeaders() }
         );
@@ -127,7 +127,7 @@ export default function NotificationPage() {
         await Promise.all(
           read.map((notif) =>
             axios.put(
-              `/api/notifications/mark-as-unread/${notif.id}`,
+              `${API_BASE_URL}/api/notifications/mark-as-unread/${notif.id}`,
               {},
               { headers: getAuthHeaders() }
             )
@@ -135,9 +135,8 @@ export default function NotificationPage() {
         );
       }
 
-      setNotifications((prev) =>
-        prev.map((notif) => ({ ...notif, read: false }))
-      );
+      setNotifications((prev) => prev.map((notif) => ({ ...notif, read: false })));
+      setCachedNotifs((prev) => prev.map((notif) => ({ ...notif, read: false })));
     } catch (err) {
       console.error("Failed to mark all as unread:", err);
       setError("Failed to mark all as unread. Please try again.");
@@ -146,13 +145,12 @@ export default function NotificationPage() {
 
   const handleDelete = async (notificationId) => {
     try {
-      await axios.delete(`/api/notifications/${notificationId}`, {
+      await axios.delete(`${API_BASE_URL}/api/notifications/${notificationId}`, {
         headers: getAuthHeaders(),
       });
 
-      setNotifications((prev) =>
-        prev.filter((notif) => notif.id !== notificationId)
-      );
+      setNotifications((prev) => prev.filter((notif) => notif.id !== notificationId));
+      setCachedNotifs((prev) => prev.filter((notif) => notif.id !== notificationId));
     } catch (err) {
       console.error("Failed to delete notification:", err);
       setError("Failed to delete notification. Please try again.");
@@ -163,15 +161,14 @@ export default function NotificationPage() {
     if (!window.confirm("Are you sure you want to delete all notifications?")) return;
 
     try {
-      // Use bulk endpoint if available, otherwise loop
       try {
-        await axios.delete(`/api/notifications/clear-all/${userId}`, {
+        await axios.delete(`${API_BASE_URL}/api/notifications/clear-all/${userId}`, {
           headers: getAuthHeaders(),
         });
       } catch {
         await Promise.all(
           notifications.map((notif) =>
-            axios.delete(`/api/notifications/${notif.id}`, {
+            axios.delete(`${API_BASE_URL}/api/notifications/${notif.id}`, {
               headers: getAuthHeaders(),
             })
           )
@@ -179,6 +176,7 @@ export default function NotificationPage() {
       }
 
       setNotifications([]);
+      setCachedNotifs([]);
     } catch (err) {
       console.error("Failed to clear notifications:", err);
       setError("Failed to clear notifications. Please try again.");
