@@ -53,7 +53,19 @@ const [calendarEndDate, setCalendarEndDate] = useState('');
       setSelectedEquipmentId('');
     }
 
-    setFormData(initialForm);
+    let loggedInEmail = '';
+
+try {
+  const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+  loggedInEmail = storedUser?.email || '';
+} catch {
+  loggedInEmail = '';
+}
+
+setFormData({
+  ...initialForm,
+  email: loggedInEmail
+});
     setErrors({});
     setSubmitError('');
     setSuccessMessage('');
@@ -411,7 +423,10 @@ if (!result.isConfirmed) {
       });
 
       setSuccessMessage('Borrow request submitted successfully.');
-      setFormData(initialForm);
+      setFormData((prev) => ({
+  ...initialForm,
+  email: prev.email
+}));
       setErrors({});
 
       setTimeout(() => {
@@ -504,7 +519,12 @@ if (!result.isConfirmed) {
               <Field label="Student/Staff Name" value={formData.applicantName} onChange={updateField('applicantName')} error={errors.applicantName} />
               <Field label="Registration Number / Staff ID" value={formData.registrationOrStaffId} onChange={updateField('registrationOrStaffId')} error={errors.registrationOrStaffId} />
               <Field label="Department" value={formData.department} onChange={updateField('department')} error={errors.department} />
-              <Field label="Email" type="email" value={formData.email} onChange={updateField('email')} error={errors.email} />
+              <Field
+              label="Email"
+              type="email"
+              value={formData.email}
+              readOnly
+              error={errors.email}/>
               <Field label="Contact Number" value={formData.contactNumber} onChange={updateField('contactNumber')} error={errors.contactNumber} />
             </div>
           </section>
@@ -620,16 +640,19 @@ function ReadOnly({ label, value }) {
   );
 }
 
-function Field({ label, error, type = 'text', value, onChange }) {
+function Field({ label, error, type = 'text', value, onChange, readOnly = false }) {
   return (
     <div>
       <label className="mb-1 block text-sm font-medium text-gray-700">{label}</label>
       <input
-        type={type}
-        value={value}
-        onChange={onChange}
-        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-yellow-500 focus:outline-none focus:ring-1 focus:ring-yellow-500"
-      />
+  type={type}
+  value={value}
+  onChange={onChange}
+  readOnly={readOnly}
+  className={`w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-yellow-500 focus:outline-none focus:ring-1 focus:ring-yellow-500 ${
+    readOnly ? 'cursor-not-allowed bg-gray-100 text-gray-600' : ''
+  }`}
+/>
       {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
     </div>
   );
