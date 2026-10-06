@@ -26,7 +26,7 @@ const Equipment = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [selectedDepartment, setSelectedDepartment] = useState('');
-  const [selectedLaboratory, setSelectedLaboratory] = useState('');
+  const [selectedLaboratory, setSelectedLaboratory] = useState(searchParams.get('lab') || '');
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
   const [showDeptDropdown, setShowDeptDropdown] = useState(false);
   const [showLabDropdown, setShowLabDropdown] = useState(false);
@@ -84,6 +84,10 @@ const Equipment = () => {
     const q = searchParams.get('search');
     if (q !== null && q !== undefined) {
       setSearchQuery(q);
+    }
+    const lab = searchParams.get('lab');
+    if (lab !== null && lab !== undefined) {
+      setSelectedLaboratory(lab);
     }
     const view = searchParams.get('view');
     if (view === 'my-equipment') {
