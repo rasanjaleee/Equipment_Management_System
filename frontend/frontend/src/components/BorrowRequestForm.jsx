@@ -518,7 +518,42 @@ if (!result.isConfirmed) {
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <Field label="Student/Staff Name" value={formData.applicantName} onChange={updateField('applicantName')} error={errors.applicantName} />
               <Field label="Registration Number / Staff ID" value={formData.registrationOrStaffId} onChange={updateField('registrationOrStaffId')} error={errors.registrationOrStaffId} />
-              <Field label="Department" value={formData.department} onChange={updateField('department')} error={errors.department} />
+              <div>
+  <label className="mb-1 block text-sm font-medium text-slate-800">
+    Department
+  </label>
+
+  <select
+    value={formData.department}
+    onChange={updateField('department')}
+    className={`w-full rounded-lg border px-3 py-2 text-sm focus:border-yellow-500 focus:outline-none focus:ring-1 focus:ring-yellow-500 ${
+      errors.department ? 'border-red-500' : 'border-gray-300'
+    }`}
+  >
+    <option value="">Select Department</option>
+    <option value="Department of Electrical and Information Engineering">
+      Department of Electrical and Information Engineering
+    </option>
+    <option value="Department of Mechanical and Manufacturing Engineering">
+      Department of Mechanical and Manufacturing Engineering
+    </option>
+    <option value="Department of Civil and Environmental Engineering">
+      Department of Civil and Environmental Engineering
+    </option>
+    <option value="Department of Materials and Mechanical Engineering">
+      Department of Materials and Mechanical Engineering
+    </option>
+    <option value="Department of Interdisciplinary Studies">
+      Department of Interdisciplinary Studies
+    </option>
+  </select>
+
+  {errors.department && (
+    <p className="mt-1 text-xs text-red-600">
+      {errors.department}
+    </p>
+  )}
+</div>
               <Field
               label="Email"
               type="email"
