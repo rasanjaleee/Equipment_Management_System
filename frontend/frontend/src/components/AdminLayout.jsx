@@ -24,6 +24,7 @@ import {
   getNotifications,
   markAllAsRead as markAllAsReadApi,
 } from "../services/notificationService";
+import { useData } from "../context/DataContext";
 
 export default function AdminLayout() {
   const location = useLocation();
@@ -38,13 +39,24 @@ export default function AdminLayout() {
   const username = loggedInUser?.username || "User";
   const userId = loggedInUser?.id;
 
+  const {
+    notifications: cachedNotifs,
+    setNotifications: setCachedNotifs,
+  } = useData();
+
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [notifications, setNotifications] = useState([]);
+  const [notifications, setNotifications] = useState(cachedNotifs || []);
 
   const dropdownRef = useRef(null);
   const notificationRef = useRef(null);
+
+  useEffect(() => {
+    if (cachedNotifs && cachedNotifs.length > 0) {
+      setNotifications(cachedNotifs);
+    }
+  }, [cachedNotifs]);
 
   // 1. Initial Fetch of Navbar Notifications
   useEffect(() => {
@@ -52,8 +64,9 @@ export default function AdminLayout() {
 
     getNotifications(userId)
       .then((response) => {
-        console.log("Navbar notifications loaded:", response.data);
-        setNotifications(response.data);
+        const list = Array.isArray(response.data) ? response.data : [];
+        setNotifications(list);
+        setCachedNotifs(list);
       })
       .catch((error) => {
         console.error("Failed to load navbar notifications:", error);
@@ -168,14 +181,14 @@ export default function AdminLayout() {
   const handleMarkAllAsRead = () => {
     if (!userId || unreadCount === 0) return;
 
-    // Optimistic state update
-    setNotifications((prev) =>
+    const markAllReadUpdater = (prev) =>
       prev.map((notification) => ({
         ...notification,
         read: true,
         status: "READ",
-      }))
-    );
+      }));
+    setNotifications(markAllReadUpdater);
+    setCachedNotifs(markAllReadUpdater);
 
     // Backend sync
     markAllAsReadApi(userId).catch((error) => {

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
-import axios from "axios";
-import { API_BASE_URL, getCachedData, hasCachedData, getCachedEquipment } from "../../services/api";
+import { API_BASE_URL } from "../../services/api";
+import { useData } from "../../context/DataContext";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -27,11 +27,18 @@ import {
 } from "recharts";
 
 export default function AdminDashboard() {
-  const [equipment, setEquipment] = useState([]);
-  const [maintenance, setMaintenance] = useState([]);
-  const [activityLogs, setActivityLogs] = useState([]);
-  const [laboratories, setLaboratories] = useState([]);
-  const [loading, setLoading] = useState(!hasCachedData("dashboard_maintenance"));
+  const {
+    equipmentList: equipment,
+    laboratories,
+    maintenanceList: maintenance,
+    activityLogs,
+    refreshEquipment,
+    refreshLaboratories,
+    refreshMaintenance,
+    refreshActivityLogs,
+  } = useData();
+
+  const [loading, setLoading] = useState(equipment.length === 0);
   const [error, setError] = useState("");
 
   const getErrorMessage = (err, fallback = "Failed to load dashboard") => {
@@ -49,43 +56,18 @@ export default function AdminDashboard() {
   }, []);
 
   const fetchDashboardData = async (forceRefresh = false) => {
-    if (!hasCachedData("dashboard_maintenance") || forceRefresh) {
+    if (equipment.length === 0 || forceRefresh) {
       setLoading(true);
     }
     setError("");
 
     try {
-      const token = localStorage.getItem("token");
-      const headers = {
-        Authorization: `Bearer ${token}`,
-      };
-
-      const [equipmentData, maintenanceData, activityData, labData] = await Promise.all([
-        getCachedEquipment(forceRefresh),
-        getCachedData(
-          "dashboard_maintenance",
-          async () => (await axios.get(`${API_BASE_URL}/api/maintenance`, { headers })).data,
-          2 * 60 * 1000,
-          forceRefresh
-        ),
-        getCachedData(
-          "dashboard_activity",
-          async () => (await axios.get(`${API_BASE_URL}/api/activity-logs`, { headers })).data,
-          2 * 60 * 1000,
-          forceRefresh
-        ),
-        getCachedData(
-          "dashboard_labs",
-          async () => (await axios.get(`${API_BASE_URL}/api/laboratories`, { headers })).data,
-          5 * 60 * 1000,
-          forceRefresh
-        ),
+      await Promise.all([
+        refreshEquipment(forceRefresh),
+        refreshMaintenance(forceRefresh),
+        refreshActivityLogs(forceRefresh),
+        refreshLaboratories(forceRefresh),
       ]);
-
-      setEquipment(Array.isArray(equipmentData) ? equipmentData : []);
-      setMaintenance(Array.isArray(maintenanceData) ? maintenanceData : []);
-      setActivityLogs(Array.isArray(activityData) ? activityData : []);
-      setLaboratories(Array.isArray(labData) ? labData : []);
     } catch (err) {
       console.error("Dashboard load failed:", err);
       setError(getErrorMessage(err));
