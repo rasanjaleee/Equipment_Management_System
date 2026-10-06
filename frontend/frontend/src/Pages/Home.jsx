@@ -1,67 +1,84 @@
 
 import React, { useState, useEffect } from "react";
-import axios from "axios";
-import { API_BASE_URL } from "../services/api";
+import { useNavigate } from "react-router-dom";
+import { useData } from "../context/DataContext";
 
 export default function HomePage() {
-  const [totalEquipment, setTotalEquipment] = useState(0);
-  const [borrowedItems, setBorrowedItems] = useState(0);
-  const [pendingRequests, setPendingRequests] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+
+  const {
+    equipmentList,
+    refreshEquipment,
+    issuances,
+    borrowRequests,
+    myIssuances,
+    myRequests,
+    refreshMyEquipment,
+    refreshIssuances,
+    refreshBorrowRequests,
+  } = useData();
+
+  const user = (() => {
+    try {
+      return JSON.parse(localStorage.getItem('user'));
+    } catch {
+      return null;
+    }
+  })();
+
+  const role = String(user?.role || '').replace(/^ROLE_/i, '').toUpperCase();
+  const isAdmin = role === 'ADMIN' || role === 'SUPER_ADMIN';
+  const isLoggedIn = !!localStorage.getItem('token');
+
+  const normalize = (v) => String(v || '').toLowerCase().trim();
+
+  // If Admin: calculate from system-wide issuances and borrow requests
+  // If Student/Technician: calculate from user's personal issuances and requests
+  const activeBorrowedList = isAdmin && Array.isArray(issuances) && issuances.length > 0
+    ? issuances.filter((i) => normalize(i.status) === 'issued')
+    : Array.isArray(myIssuances)
+    ? myIssuances.filter((i) => normalize(i.status) === 'issued')
+    : [];
+
+  const pendingRequestsList = isAdmin && Array.isArray(borrowRequests) && borrowRequests.length > 0
+    ? borrowRequests.filter((r) => normalize(r.status) === 'pending')
+    : Array.isArray(myRequests)
+    ? myRequests.filter((r) => normalize(r.status) === 'pending')
+    : [];
+
+  const borrowedCount = activeBorrowedList.length;
+  const pendingCount = pendingRequestsList.length;
+  const totalCount = Array.isArray(equipmentList) ? equipmentList.length : 0;
 
   useEffect(() => {
-    fetchStats();
-  }, []);
-
-  const fetchStats = async () => {
-    try {
-      setLoading(true);
-      const token = localStorage.getItem('token');
-
-      // Fetch all equipment
-      const res = await axios.get(`${API_BASE_URL}/api/equipment/all`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {}
-      });
-
-      setTotalEquipment(res.data.length);
-      setLoading(false);
-    } catch (err) {
-      console.error('Failed to fetch equipment stats:', err);
-      setLoading(false);
+    refreshEquipment(false);
+    if (isLoggedIn) {
+      refreshMyEquipment(false);
+      if (isAdmin) {
+        refreshIssuances(false);
+        refreshBorrowRequests();
+      }
     }
-  };
+  }, [isLoggedIn, isAdmin, refreshEquipment, refreshMyEquipment, refreshIssuances, refreshBorrowRequests]);
 
   return (
     <div className="w-full min-h-screen bg-gray-100 font-sans">
-
-
-
       {/* Hero Section */}
-      <section className="relative w-full h-[420px] bg-black">
+      <section className="relative w-full h-[400px] bg-black">
         <img
           src="/images/header.png"
           alt="Lab"
           className="w-full h-full object-cover opacity-70"
         />
         <div className="absolute inset-0 flex items-center justify-center">
-          <div className="text-center text-white px-4">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+          <div className="text-center text-white px-4 max-w-3xl">
+            <h2 className="text-3xl md:text-5xl font-extrabold mb-4 tracking-tight drop-shadow">
               Welcome to the Faculty of Engineering
             </h2>
-            <p className="text-sm md:text-base max-w-2xl mx-auto mb-6">
+            <p className="text-sm md:text-base max-w-2xl mx-auto text-gray-200 leading-relaxed">
               Track, request, and manage laboratory equipment efficiently through
               the Equipment Management System
             </p>
-            <div className="flex justify-center">
-              <input
-                type="text"
-                placeholder="Search equipment..."
-                className="w-72 md:w-96 px-4 py-2 rounded-l-md text-black focus:outline-none"
-              />
-              <button className="btn btn-accent rounded-l-none px-5 py-2">
-                Search
-              </button>
-            </div>
           </div>
         </div>
       </section>
@@ -69,20 +86,28 @@ export default function HomePage() {
       {/* Stats Cards */}
       <section className="max-w-7xl mx-auto px-6 -mt-14 relative z-10">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-
-          <StatCard title="Borrowed Items" value={borrowedItems.toString().padStart(2, '0')} />
-          <StatCard title="Pending Requests" value={pendingRequests.toString().padStart(2, '0')} />
-          <StatCard title="Total Available Equipment" value={loading ? '...' : totalEquipment} />
-
+          <StatCard
+            title="Borrowed Items"
+            value={borrowedCount.toString().padStart(2, '0')}
+            onClick={() => navigate(isAdmin ? '/admin/issuance' : '/equipment?view=my-equipment')}
+          />
+          <StatCard
+            title="Pending Requests"
+            value={pendingCount.toString().padStart(2, '0')}
+            onClick={() => navigate(isAdmin ? '/admin/borrow-requests' : '/equipment?view=my-equipment')}
+          />
+          <StatCard
+            title="Total Available Equipment"
+            value={totalCount.toString().padStart(2, '0')}
+            onClick={() => navigate('/equipment')}
+          />
         </div>
       </section>
 
       {/* Department Section */}
       <section className="relative w-full mt-16">
         <img
-
           src="/images/image.png"
-
           alt="Building"
           className="w-full h-[380px] object-cover"
         />
@@ -102,20 +127,21 @@ export default function HomePage() {
           </div>
         </div>
       </section>
-
-      
-
     </div>
   );
 }
 
-function StatCard({ title, value }) {
+function StatCard({ title, value, onClick }) {
   return (
-    <div className="bg-yellow-500 rounded-xl shadow p-6 text-center">
-      <p className="text-sm font-medium mb-2">{title}</p>
-      <p className="text-3xl font-bold">{value}</p>
+    <div
+      onClick={onClick}
+      className={`bg-yellow-500 rounded-xl shadow p-6 text-center transition-all ${
+        onClick ? 'cursor-pointer hover:bg-yellow-400 hover:shadow-lg transform hover:-translate-y-0.5' : ''
+      }`}
+    >
+      <p className="text-sm font-medium mb-2 text-gray-900">{title}</p>
+      <p className="text-3xl font-bold text-gray-900">{value}</p>
     </div>
   );
-
 }
 

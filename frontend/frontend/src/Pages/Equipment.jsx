@@ -1,6 +1,6 @@
 import {Search,ChevronDown,X,ClipboardList,Clock,CheckCircle,Package,RotateCcw} from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import { API_BASE_URL, getImageUrl } from '../services/api';
 import { useData } from '../context/DataContext';
@@ -8,7 +8,14 @@ import image from '/images/1.webp';
 import BorrowRequestForm from '../components/BorrowRequestForm';
 
 const Equipment = () => {
-  const { equipmentList, loadingEquipment, refreshEquipment } = useData();
+  const {
+    equipmentList,
+    loadingEquipment,
+    refreshEquipment,
+    myRequests: cachedRequests,
+    myIssuances: cachedIssuances,
+    refreshMyEquipment,
+  } = useData();
   const normalizeValue = (value) => {
     if (!value) return '';
     return String(value).toLowerCase().trim();
@@ -17,21 +24,22 @@ const Equipment = () => {
   const ITEMS_PER_PAGE = 6;
 
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [selectedDepartment, setSelectedDepartment] = useState('');
   const [selectedLaboratory, setSelectedLaboratory] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
   const [showDeptDropdown, setShowDeptDropdown] = useState(false);
   const [showLabDropdown, setShowLabDropdown] = useState(false);
-  const [loading, setLoading] = useState(loadingEquipment && equipmentList.length === 0);
+  const [loading, setLoading] = useState(!equipmentList || equipmentList.length === 0);
   const [error, setError] = useState('');
   const [isBorrowModalOpen, setIsBorrowModalOpen] = useState(false);
   const [selectedEquipmentForBorrow, setSelectedEquipmentForBorrow] = useState(null);
   const [labPages, setLabPages] = useState({});
   const [isMyEquipmentOpen, setIsMyEquipmentOpen] = useState(false);
-const [myRequests, setMyRequests] = useState([]);
-const [myIssuances, setMyIssuances] = useState([]);
-const [myEquipmentLoading, setMyEquipmentLoading] = useState(false);
-const [myEquipmentError, setMyEquipmentError] = useState('');
+  const [myRequests, setMyRequests] = useState(cachedRequests || []);
+  const [myIssuances, setMyIssuances] = useState(cachedIssuances || []);
+  const [myEquipmentLoading, setMyEquipmentLoading] = useState(false);
+  const [myEquipmentError, setMyEquipmentError] = useState('');
 
   const departments = [
     'Department of Electrical and Information Engineering',
@@ -51,60 +59,73 @@ const [myEquipmentError, setMyEquipmentError] = useState('');
   ];
 
   useEffect(() => {
+    if (equipmentList && equipmentList.length > 0) {
+      setLoading(false);
+    }
+  }, [equipmentList]);
+
+  useEffect(() => {
+    if (cachedRequests && cachedRequests.length > 0) {
+      setMyRequests(cachedRequests);
+    }
+  }, [cachedRequests]);
+
+  useEffect(() => {
+    if (cachedIssuances && cachedIssuances.length > 0) {
+      setMyIssuances(cachedIssuances);
+    }
+  }, [cachedIssuances]);
+
+  useEffect(() => {
     fetchEquipment();
   }, []);
 
+  useEffect(() => {
+    const q = searchParams.get('search');
+    if (q !== null && q !== undefined) {
+      setSearchQuery(q);
+    }
+    const view = searchParams.get('view');
+    if (view === 'my-equipment') {
+      setIsMyEquipmentOpen(true);
+      fetchMyEquipment();
+    }
+  }, [searchParams]);
+
   const fetchEquipment = async (forceRefresh = false) => {
-    return refreshEquipment(forceRefresh);
+    const res = await refreshEquipment(forceRefresh);
+    setLoading(false);
+    return res;
   };
 
   const fetchMyEquipment = async () => {
-  try {
-    setMyEquipmentLoading(true);
-    setMyEquipmentError('');
+    try {
+      const hasCached = (cachedRequests && cachedRequests.length > 0) || (cachedIssuances && cachedIssuances.length > 0);
+      if (!hasCached) {
+        setMyEquipmentLoading(true);
+      }
+      setMyEquipmentError('');
 
-    const token = localStorage.getItem('token');
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setMyEquipmentError('Please login to view your equipment.');
+        return;
+      }
 
-    if (!token) {
-      setMyEquipmentError('Please login to view your equipment.');
-      return;
+      const res = await refreshMyEquipment(false);
+      if (res) {
+        setMyRequests(res.requests || []);
+        setMyIssuances(res.issuances || []);
+      }
+    } catch (err) {
+      console.error('Failed to load my equipment:', err);
+      if (!cachedRequests?.length && !cachedIssuances?.length) {
+        setMyEquipmentError('Failed to load your equipment information.');
+      }
+    } finally {
+      setMyEquipmentLoading(false);
     }
-
-    const headers = {
-      Authorization: `Bearer ${token}`
-    };
-
-    const [requestsResponse, issuancesResponse] = await Promise.all([
-      axios.get(`${API_BASE_URL}/api/borrow-requests/my`, { headers }),
-      axios.get(`${API_BASE_URL}/api/issuances/my`, { headers })
-    ]);
-
-    setMyRequests(
-      Array.isArray(requestsResponse.data)
-        ? requestsResponse.data
-        : []
-    );
-
-    setMyIssuances(
-      Array.isArray(issuancesResponse.data)
-        ? issuancesResponse.data
-        : []
-    );
-
-  } catch (err) {
-    console.error('Failed to load my equipment:', err);
-
-    setMyEquipmentError(
-      'Failed to load your equipment information.'
-    );
-
-    setMyRequests([]);
-    setMyIssuances([]);
-
-  } finally {
-    setMyEquipmentLoading(false);
-  }
-};
+  };
 
 const pendingRequests = myRequests.filter(
   (request) => normalizeValue(request.status) === 'pending'

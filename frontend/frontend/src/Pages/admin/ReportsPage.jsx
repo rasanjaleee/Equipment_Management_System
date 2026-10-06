@@ -184,7 +184,7 @@ export default function ReportsPage() {
                   <td>${row.grnNumber ?? "-"}</td>
                   <td>${row.supplier ?? "-"}</td>
                   <td>${row.itemCount ?? 0}</td>
-                  <td>$${row.totalCost ?? 0}</td>
+                  <td>Rs. ${row.totalCost ?? 0}</td>
                 </tr>
               `
             )
@@ -236,7 +236,7 @@ export default function ReportsPage() {
                 <th>GRN Number</th>
                 <th>Supplier</th>
                 <th>Item Count</th>
-                <th>Total Cost</th>
+                <th>Total Cost (Rs.)</th>
               </tr>
             </thead>
             <tbody>
@@ -322,7 +322,7 @@ export default function ReportsPage() {
                     <th className="p-3">GRN Number</th>
                     <th className="p-3">Supplier</th>
                     <th className="p-3">Item Count</th>
-                    <th className="p-3">Total Cost</th>
+                    <th className="p-3">Total Cost (Rs.)</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -331,7 +331,7 @@ export default function ReportsPage() {
                       <td className="p-3">{row.grnNumber}</td>
                       <td className="p-3">{row.supplier || "-"}</td>
                       <td className="p-3">{row.itemCount}</td>
-                      <td className="p-3">${row.totalCost}</td>
+                      <td className="p-3">Rs. ${row.totalCost}</td>
                     </tr>
                   ))}
                   {grnData.length === 0 && (

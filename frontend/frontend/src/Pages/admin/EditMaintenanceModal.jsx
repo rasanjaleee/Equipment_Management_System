@@ -135,7 +135,7 @@ export default function EditMaintenanceModal({ item, onClose, onSaved, equipment
               />
             </Field>
 
-            <Field label="Cost (optional)">
+            <Field label="Cost (Rs.) (optional)">
               <input
                 type="number"
                 step="0.01"
