@@ -3,6 +3,7 @@ import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Swal from 'sweetalert2';
 import { API_BASE_URL } from '../../services/api';
+import { useData } from '../../context/DataContext';
 import {
   ArrowRight,
   CalendarDays,
@@ -1072,8 +1073,24 @@ function handleAccessoryQuantity(accessoryId, value, maxQuantity) {
 export default function Issuance() {
   const location = useLocation();
   const navigate = useNavigate();
-  const [borrowRequests, setBorrowRequests] = useState([]);
-  const [loadingRequests, setLoadingRequests] = useState(true);
+
+  const {
+    borrowRequests: cachedRequests,
+    setBorrowRequests: setCachedRequests,
+    refreshBorrowRequests,
+    issuances: cachedIssuances,
+    setIssuances: setCachedIssuances,
+    refreshIssuances,
+  } = useData();
+
+  const normalizedCached = useMemo(() => {
+    return Array.isArray(cachedRequests)
+      ? cachedRequests.map((item, index) => normalizeBorrowRequest(item, index))
+      : [];
+  }, [cachedRequests]);
+
+  const [borrowRequests, setBorrowRequests] = useState(normalizedCached);
+  const [loadingRequests, setLoadingRequests] = useState(normalizedCached.length > 0 ? false : true);
   const [requestsError, setRequestsError] = useState('');
   const [filter, setFilter] = useState('PENDING');
   const [detailsRequest, setDetailsRequest] = useState(null);
@@ -1088,24 +1105,39 @@ export default function Issuance() {
   const [accessoriesError, setAccessoriesError] = useState('');
   const [selectedAccessories, setSelectedAccessories] = useState([]);
 
-          const [issuances, setIssuances] = useState([]);
-          const [issuancesLoading, setIssuancesLoading] = useState(false);
-          const [issuancesError, setIssuancesError] = useState('');
+  const [issuances, setIssuances] = useState(cachedIssuances || []);
+  const [issuancesLoading, setIssuancesLoading] = useState(cachedIssuances && cachedIssuances.length > 0 ? false : true);
+  const [issuancesError, setIssuancesError] = useState('');
 
-          const [returnIssuance, setReturnIssuance] = useState(null);
-          const [returnAccessories, setReturnAccessories] = useState([]);
-          const [returnAccessoriesLoading, setReturnAccessoriesLoading] = useState(false);
+  const [returnIssuance, setReturnIssuance] = useState(null);
+  const [returnAccessories, setReturnAccessories] = useState([]);
+  const [returnAccessoriesLoading, setReturnAccessoriesLoading] = useState(false);
 
-          const [returnForm, setReturnForm] = useState({
-            returnDate: todayValue(),
-            conditionOnReturn: 'Working',
-            remarks: '',
-          });
+  const [returnForm, setReturnForm] = useState({
+    returnDate: todayValue(),
+    conditionOnReturn: 'Working',
+    remarks: '',
+  });
 
-          const [returnSubmitting, setReturnSubmitting] = useState(false);
-          const [returnMessage, setReturnMessage] = useState('');
-          const [returnError, setReturnError] = useState('');
-          const [returnSuccessMessage, setReturnSuccessMessage] = useState('');
+  const [returnSubmitting, setReturnSubmitting] = useState(false);
+  const [returnMessage, setReturnMessage] = useState('');
+  const [returnError, setReturnError] = useState('');
+  const [returnSuccessMessage, setReturnSuccessMessage] = useState('');
+
+  // Sync from context
+  useEffect(() => {
+    if (normalizedCached.length > 0) {
+      setBorrowRequests(normalizedCached);
+      setLoadingRequests(false);
+    }
+  }, [normalizedCached]);
+
+  useEffect(() => {
+    if (cachedIssuances && cachedIssuances.length > 0) {
+      setIssuances(cachedIssuances);
+      setIssuancesLoading(false);
+    }
+  }, [cachedIssuances]);
 
   const incomingState = location.state;
 
@@ -1178,18 +1210,20 @@ setSelectedAccessories(
 
 async function fetchIssuances() {
   try {
-    setIssuancesLoading(true);
+    if (!cachedIssuances || cachedIssuances.length === 0) {
+      setIssuancesLoading(true);
+    }
     setIssuancesError('');
 
     const response = await axios.get(ISSUANCES_API, {
       headers: getAuthHeaders(),
     });
 
-    setIssuances(Array.isArray(response.data) ? response.data : []);
+    const list = Array.isArray(response.data) ? response.data : [];
+    setIssuances(list);
+    setCachedIssuances(list);
   } catch (error) {
     console.error('Failed to load issuances:', error);
-
-    setIssuances([]);
 
     setIssuancesError(
       error.response?.data?.message ||
@@ -1378,16 +1412,18 @@ setReturnAccessories([]);
 
   async function fetchBorrowRequests() {
     try {
-      setLoadingRequests(true);
+      if (!cachedRequests || cachedRequests.length === 0) {
+        setLoadingRequests(true);
+      }
       setRequestsError('');
       console.debug('Fetching borrow requests with Authorization header');
       const response = await axios.get(BORROW_REQUESTS_API, {
         headers: getAuthHeaders(),
       });
-      const normalized = Array.isArray(response.data)
-        ? response.data.map((item, index) => normalizeBorrowRequest(item, index))
-        : [];
+      const rawData = Array.isArray(response.data) ? response.data : [];
+      const normalized = rawData.map((item, index) => normalizeBorrowRequest(item, index));
       setBorrowRequests(normalized);
+      setCachedRequests(rawData);
       if (!selectedRequest && normalized.length > 0 && filter === 'PENDING') {
         // keep the page useful even when the API returns mixed data
         setFormMessage('Borrow requests loaded successfully.');

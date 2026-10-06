@@ -1,67 +1,88 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import { API_BASE_URL } from "../../services/api";
+import { useData } from "../../context/DataContext";
+
+const defaultSettings = {
+  // System Info
+  systemName: "",
+  institutionName: "",
+  contactEmail: "",
+  timeZone: "Asia/Colombo",
+
+  // User Management
+  allowRegistrations: true,
+  requireEmailVerification: true,
+  defaultRole: "student",
+  sessionTimeoutMinutes: 30,
+
+  // Equipment Settings
+  defaultEquipmentStatus: "working",
+  allowManualSerialEntry: true,
+  maxIssuanceDays: 14,
+
+  // Notifications
+  emailNotificationsEnabled: true,
+  maintenanceReminderDays: 7,
+  alertOverdueIssuances: true,
+  alertBrokenEquipment: true,
+  smtpServer: "",
+  smtpPort: 587,
+  smtpUser: "",
+  smtpPassword: "",
+
+  // Reports
+  defaultReportFormat: "pdf",
+  auditLogRetentionYears: 3,
+  grnTemplatePath: "",
+
+  // Backups
+  autoBackupEnabled: false,
+  backupSchedule: "daily",
+  backupDestination: "",
+
+  // Legacy fields kept
+  maintenanceWindow: "",
+};
 
 export default function AdminSettings() {
-  const [loading, setLoading] = useState(true);
+  const {
+    settings: cachedSettings,
+    setSettings: setCachedSettings,
+    refreshSettings,
+  } = useData();
+
+  const [loading, setLoading] = useState(cachedSettings ? false : true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [activeSection, setActiveSection] = useState("system");
 
-  const [form, setForm] = useState({
-    // System Info
-    systemName: "",
-    institutionName: "",
-    contactEmail: "",
-    timeZone: "Asia/Colombo",
+  const [form, setForm] = useState(
+    cachedSettings ? { ...defaultSettings, ...cachedSettings } : defaultSettings
+  );
 
-    // User Management
-    allowRegistrations: true,
-    requireEmailVerification: true,
-    defaultRole: "student",
-    sessionTimeoutMinutes: 30,
-
-    // Equipment Settings
-    defaultEquipmentStatus: "working",
-    allowManualSerialEntry: true,
-    maxIssuanceDays: 14,
-
-    // Notifications
-    emailNotificationsEnabled: true,
-    maintenanceReminderDays: 7,
-    alertOverdueIssuances: true,
-    alertBrokenEquipment: true,
-    smtpServer: "",
-    smtpPort: 587,
-    smtpUser: "",
-    smtpPassword: "",
-
-    // Reports
-    defaultReportFormat: "pdf",
-    auditLogRetentionYears: 3,
-    grnTemplatePath: "",
-
-    // Backups
-    autoBackupEnabled: false,
-    backupSchedule: "daily",
-    backupDestination: "",
-
-    // Legacy fields kept
-    maintenanceWindow: "",
-  });
+  // Sync from context
+  useEffect(() => {
+    if (cachedSettings) {
+      setForm((prev) => ({ ...prev, ...cachedSettings }));
+      setLoading(false);
+    }
+  }, [cachedSettings]);
 
   useEffect(() => {
     fetchSettings();
   }, []);
 
   const fetchSettings = async () => {
-    setLoading(true);
+    if (!cachedSettings) setLoading(true);
     setError("");
     try {
-      const token = localStorage.getItem("token");
-      const headers = token ? { Authorization: `Bearer ${token}` } : {};
-      const res = await axios.get("/api/admin/settings", { headers });
-      if (res?.data) setForm((prev) => ({ ...prev, ...res.data }));
+      const data = await refreshSettings();
+      if (data) {
+        setForm((prev) => ({ ...prev, ...data }));
+        setCachedSettings(data);
+      }
     } catch (err) {
       console.warn("Could not load admin settings:", err);
     } finally {
@@ -85,7 +106,8 @@ export default function AdminSettings() {
     try {
       const token = localStorage.getItem("token");
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
-      await axios.post("/api/admin/settings", form, { headers });
+      await axios.post(`${API_BASE_URL}/api/admin/settings`, form, { headers });
+      setCachedSettings(form);
       setSuccess("Settings saved successfully.");
     } catch (err) {
       console.error(err);
@@ -99,7 +121,7 @@ export default function AdminSettings() {
     try {
       const token = localStorage.getItem("token");
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
-      const res = await axios.get("/api/admin/export", { headers, responseType: "blob" });
+      const res = await axios.get(`${API_BASE_URL}/api/admin/export`, { headers, responseType: "blob" });
       const url = window.URL.createObjectURL(new Blob([res.data]));
       const link = document.createElement("a");
       link.href = url;
@@ -117,7 +139,7 @@ export default function AdminSettings() {
     try {
       const token = localStorage.getItem("token");
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
-      await axios.delete("/api/admin/reset", { headers });
+      await axios.delete(`${API_BASE_URL}/api/admin/reset`, { headers });
       setSuccess("System data has been reset.");
     } catch (err) {
       setError(err?.response?.data?.message || "Reset failed.");

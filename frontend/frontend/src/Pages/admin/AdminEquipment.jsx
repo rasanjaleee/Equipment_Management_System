@@ -7,12 +7,14 @@ import axios from 'axios';
 import Swal from 'sweetalert2';
 
 import { API_BASE_URL, getImageUrl } from '../../services/api';
+import { useData } from '../../context/DataContext';
 
 import { useNavigate } from 'react-router-dom';
 
 export default function AdminEquipment() {
 
   const navigate = useNavigate();
+  const { equipmentList, loadingEquipment, refreshEquipment } = useData();
 
   const CUSTOM_EQUIPMENT_OPTION = '__CUSTOM__';
 
@@ -31,8 +33,6 @@ export default function AdminEquipment() {
   const [selectedStatusFilter, setSelectedStatusFilter] = useState('');
 
   const [currentPage, setCurrentPage] = useState(1);
-
-  const [equipmentList, setEquipmentList] = useState([]);
 
   const [photo, setPhoto] = useState(null);
 
@@ -152,26 +152,8 @@ export default function AdminEquipment() {
 
 
 
-  const fetchEquipment = async () => {
-
-    try {
-
-      const token = localStorage.getItem('token');
-
-      const res = await axios.get(`${API_BASE_URL}/api/equipment/all`, {
-
-        headers: { Authorization: `Bearer ${token}` }
-
-      });
-
-      setEquipmentList(res.data);
-
-    } catch (err) {
-
-      console.error('Failed to fetch equipment:', err);
-
-    }
-
+  const fetchEquipment = async (forceRefresh = false) => {
+    return refreshEquipment(forceRefresh);
   };
 
 
@@ -302,7 +284,9 @@ export default function AdminEquipment() {
 
 
 
-      await fetchEquipment();
+      clearEquipmentCache();
+
+      await fetchEquipment(true);
 
       resetForm();
 
@@ -508,7 +492,9 @@ export default function AdminEquipment() {
 
 
 
-    await fetchEquipment();
+    clearEquipmentCache();
+
+    await fetchEquipment(true);
 
 
 

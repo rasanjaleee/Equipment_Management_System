@@ -3,25 +3,51 @@ import { useEffect, useMemo, useState } from "react";
 import api from "../../api/axios";
 import AddMaintenanceModal from "./AddMaintenanceModal";
 import EditMaintenanceModal from "./EditMaintenanceModal";
+import { useData } from "../../context/DataContext";
 
 export default function MaintenancePage() {
+  const {
+    maintenanceList: cachedRecords,
+    setMaintenanceList: setCachedRecords,
+    refreshMaintenance,
+    equipmentList: cachedEquipment,
+    refreshEquipment,
+  } = useData();
+
   const [showAdd, setShowAdd] = useState(false);
   const [editItem, setEditItem] = useState(null);
 
-  const [records, setRecords] = useState([]);
-  const [equipment, setEquipment] = useState([]);
+  const [records, setRecords] = useState(cachedRecords || []);
+  const [equipment, setEquipment] = useState(cachedEquipment || []);
 
   const [search, setSearch] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(cachedRecords && cachedRecords.length > 0 ? false : true);
+
+  // Sync with context
+  useEffect(() => {
+    if (cachedRecords && cachedRecords.length > 0) {
+      setRecords(cachedRecords);
+      setLoading(false);
+    }
+  }, [cachedRecords]);
+
+  useEffect(() => {
+    if (cachedEquipment && cachedEquipment.length > 0) {
+      setEquipment(cachedEquipment);
+    }
+  }, [cachedEquipment]);
 
   const loadRecords = async () => {
-    setLoading(true);
+    if ((!cachedRecords || cachedRecords.length === 0) && records.length === 0) {
+      setLoading(true);
+    }
     try {
-      const res = await api.get("/api/maintenance");
-      setRecords(Array.isArray(res.data) ? res.data : []);
+      const data = await refreshMaintenance(false);
+      if (Array.isArray(data)) {
+        setRecords(data);
+      }
     } catch (err) {
       console.error("Failed to load maintenance records:", err);
-      alert("Failed to load maintenance records. Check backend & CORS.");
     } finally {
       setLoading(false);
     }
@@ -29,8 +55,10 @@ export default function MaintenancePage() {
 
   const loadEquipment = async () => {
     try {
-      const res = await api.get("/api/equipment");
-      setEquipment(Array.isArray(res.data) ? res.data : []);
+      const data = await refreshEquipment(false);
+      if (Array.isArray(data)) {
+        setEquipment(data);
+      }
     } catch (err) {
       console.error("Failed to load equipment:", err);
     }
@@ -120,6 +148,7 @@ export default function MaintenancePage() {
     try {
       await api.delete(`/api/maintenance/${id}`);
       setRecords((prev) => prev.filter((x) => x.id !== id));
+      setCachedRecords((prev) => prev.filter((x) => x.id !== id));
     } catch (err) {
       console.error("Delete failed:", err);
       alert("Delete failed.");
