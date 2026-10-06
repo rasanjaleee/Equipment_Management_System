@@ -685,7 +685,7 @@ const handleDeleteAccessory = async (accessory) => {
               No accessories registered for this equipment.
             </p>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="hidden md:block overflow-x-auto">
               <table className="min-w-full border border-gray-200">
                 <thead className="bg-gray-100">
                   <tr>
@@ -822,7 +822,7 @@ const handleDeleteAccessory = async (accessory) => {
           Back to Equipment List
         </button>
 
-        <div className="bg-white rounded-lg shadow-md overflow-hidden mb-6">
+        <div className="hidden md:block bg-white rounded-lg shadow-md overflow-hidden mb-6">
           <h1 className="text-xl sm:text-2xl font-bold text-center px-4 pt-6 pb-4 break-words">
             {decodeURIComponent(equipmentName)}
           </h1>
@@ -894,7 +894,7 @@ const handleDeleteAccessory = async (accessory) => {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-md overflow-hidden mb-6">
+                <div className="hidden md:block bg-white rounded-lg shadow-md overflow-hidden mb-6">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-yellow-500">
@@ -967,6 +967,112 @@ const handleDeleteAccessory = async (accessory) => {
               </tbody>
             </table>
           </div>
+        </div>
+
+                {/* Mobile Equipment Cards */}
+        <div className="md:hidden space-y-4 mb-6">
+          {equipmentList.map((item, index) => (
+            <div
+              key={item.id}
+              className="bg-white rounded-lg shadow-md overflow-hidden"
+            >
+              <div className="bg-yellow-500 px-4 py-3 flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-black">
+                    Equipment {String(index + 1).padStart(2, '0')}
+                  </p>
+
+                  <h3 className="font-bold text-gray-900 break-words">
+                    {item.equipmentName || '-'}
+                  </h3>
+                </div>
+
+                <span
+                  className={`shrink-0 px-3 py-1 text-xs font-semibold rounded-full ${
+                    item.status === 'WORKING'
+                      ? 'bg-green-500 text-white'
+                      : item.status === 'UNDER_REPAIR'
+                      ? 'bg-blue-500 text-white'
+                      : item.status === 'BROKEN'
+                      ? 'bg-red-500 text-white'
+                      : 'bg-gray-500 text-white'
+                  }`}
+                >
+                  {formatStatus(item.status)}
+                </span>
+              </div>
+
+              <div className="p-4 space-y-3 text-sm">
+                <div className="grid grid-cols-[110px_1fr] gap-2">
+                  <span className="font-semibold text-gray-600">
+                    Equipment ID
+                  </span>
+                  <span className="text-gray-900 break-words">
+                    {item.equipmentCode || `EQ-${item.id}`}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-[110px_1fr] gap-2">
+                  <span className="font-semibold text-gray-600">
+                    Laboratory
+                  </span>
+                  <span className="text-gray-900 break-words">
+                    {item.laboratory || '-'}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-[110px_1fr] gap-2">
+                  <span className="font-semibold text-gray-600">
+                    Model
+                  </span>
+                  <span className="text-gray-900 break-words">
+                    {item.model || '-'}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-[110px_1fr] gap-2">
+                  <span className="font-semibold text-gray-600">
+                    Purchase Date
+                  </span>
+                  <span className="text-gray-900">
+                    {formatDate(item.purchaseDate)}
+                  </span>
+                </div>
+
+                <div className="border-t border-gray-200 pt-3">
+                  <p className="font-semibold text-gray-600 mb-2">
+                    QR Code
+                  </p>
+
+                  {item.qrCode ? (
+                    <img
+                      src={getImageUrl(item.qrCode)}
+                      alt="QR code"
+                      className="w-20 h-20 object-contain"
+                    />
+                  ) : (
+                    <span className="text-gray-500">-</span>
+                  )}
+                </div>
+
+                <div className="pt-2">
+                  {item.status === 'WORKING' ? (
+                    <button
+                      type="button"
+                      onClick={() => handleReserve(item)}
+                      className="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-semibold px-4 py-2.5 rounded-lg transition-colors"
+                    >
+                      Reserve Equipment
+                    </button>
+                  ) : (
+                    <div className="w-full bg-gray-100 text-gray-500 text-center font-medium px-4 py-2.5 rounded-lg">
+                      Currently Unavailable
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
 
         <BorrowRequestForm
