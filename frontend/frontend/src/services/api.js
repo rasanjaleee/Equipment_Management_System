@@ -62,6 +62,11 @@ export const hasCachedData = (cacheKey, ttl = DEFAULT_TTL) => {
   return Date.now() - cacheStore.get(cacheKey).timestamp < ttl;
 };
 
+export const getCachedDataSync = (cacheKey) => {
+  if (!hasCachedData(cacheKey)) return [];
+  return cacheStore.get(cacheKey)?.data || [];
+};
+
 export const invalidateCache = (cacheKey) => {
   if (cacheKey) {
     cacheStore.delete(cacheKey);
@@ -87,4 +92,6 @@ export const getCachedEquipment = async (forceRefresh = false) => {
 };
 
 export const hasCachedEquipment = () => hasCachedData('equipment_all');
+export const getCachedEquipmentSync = () => getCachedDataSync('equipment_all');
 export const clearEquipmentCache = () => invalidateCache('equipment_all');
+

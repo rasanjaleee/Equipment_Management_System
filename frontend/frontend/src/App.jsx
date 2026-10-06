@@ -39,10 +39,14 @@ import TechnicianEquipment from './Pages/technician/TechnicianEquipment';
 import TechnicianActivityLog from './Pages/technician/TechnicianActivityLog';
 import TechnicianCalendar from './Pages/technician/TechnicianCalendar';
 
+import { DataProvider } from './context/DataContext';
+
 function AppWrapper() {
   return (
     <Router>
-      <App />
+      <DataProvider>
+        <App />
+      </DataProvider>
     </Router>
   );
 }

@@ -2,11 +2,13 @@ import {Search,ChevronDown,X,ClipboardList,Clock,CheckCircle,Package,RotateCcw} 
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { API_BASE_URL, getImageUrl, getCachedEquipment, hasCachedEquipment } from '../services/api';
+import { API_BASE_URL, getImageUrl } from '../services/api';
+import { useData } from '../context/DataContext';
 import image from '/images/1.webp';
 import BorrowRequestForm from '../components/BorrowRequestForm';
 
 const Equipment = () => {
+  const { equipmentList, loadingEquipment, refreshEquipment } = useData();
   const normalizeValue = (value) => {
     if (!value) return '';
     return String(value).toLowerCase().trim();
@@ -20,8 +22,7 @@ const Equipment = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showDeptDropdown, setShowDeptDropdown] = useState(false);
   const [showLabDropdown, setShowLabDropdown] = useState(false);
-  const [equipmentList, setEquipmentList] = useState([]);
-  const [loading, setLoading] = useState(!hasCachedEquipment());
+  const [loading, setLoading] = useState(loadingEquipment && equipmentList.length === 0);
   const [error, setError] = useState('');
   const [isBorrowModalOpen, setIsBorrowModalOpen] = useState(false);
   const [selectedEquipmentForBorrow, setSelectedEquipmentForBorrow] = useState(null);
@@ -54,20 +55,7 @@ const [myEquipmentError, setMyEquipmentError] = useState('');
   }, []);
 
   const fetchEquipment = async (forceRefresh = false) => {
-    try {
-      if (!hasCachedEquipment() || forceRefresh) {
-        setLoading(true);
-      }
-      const data = await getCachedEquipment(forceRefresh);
-      setEquipmentList(data);
-      setError('');
-    } catch (err) {
-      console.error('Failed to fetch equipment:', err);
-      setEquipmentList([]);
-      setError('Failed to load equipment. Please try again later.');
-    } finally {
-      setLoading(false);
-    }
+    return refreshEquipment(forceRefresh);
   };
 
   const fetchMyEquipment = async () => {
