@@ -1,115 +1,630 @@
-import React from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
-  Wrench, 
-  FlaskConical, 
-  ClipboardList, 
-  History, 
-  FileBarChart, 
-  Bell, 
+import { Outlet, NavLink, useLocation, useNavigate } from "react-router-dom";
+import React, { useEffect, useRef, useState } from "react";
+import Footer from "./Footer";
+import SockJS from "sockjs-client";
+import { Client } from "@stomp/stompjs";
+import { API_BASE_URL } from "../services/api";
+import {
+  LayoutDashboard,
+  Wrench,
+  FlaskConical,
+  ClipboardList,
+  History,
+  FileBarChart,
+  Users,
+  Bell,
   Settings,
-  LogOut
-} from 'lucide-react';
+  User,
+  LogOut,
+  ChevronDown,
+  PanelLeft,
+  X,
+} from "lucide-react";
+import {
+  getNotifications,
+  markAllAsRead as markAllAsReadApi,
+} from "../services/notificationService";
+import { useData } from "../context/DataContext";
 
-const AdminLayout = ({ children, pageTitle = 'Dashboard' }) => {
-  const navigate = useNavigate();
+export default function AdminLayout() {
   const location = useLocation();
+  const navigate = useNavigate();
 
-  // Logout handler
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    navigate('/login');
+  const loggedInUser = JSON.parse(localStorage.getItem("user"));
+
+  const normalizeRole = (value) =>
+    String(value || "").replace(/^ROLE_/i, "").toUpperCase();
+
+  const role = normalizeRole(loggedInUser?.role);
+  const username = loggedInUser?.username || "User";
+  const userId = loggedInUser?.id;
+
+  const {
+    notifications: cachedNotifs,
+    setNotifications: setCachedNotifs,
+  } = useData();
+
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [notificationOpen, setNotificationOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [notifications, setNotifications] = useState(cachedNotifs || []);
+
+  const dropdownRef = useRef(null);
+  const notificationRef = useRef(null);
+
+  useEffect(() => {
+    if (cachedNotifs && cachedNotifs.length > 0) {
+      setNotifications(cachedNotifs);
+    }
+  }, [cachedNotifs]);
+
+  // 1. Initial Fetch of Navbar Notifications
+  useEffect(() => {
+    if (!userId) return;
+
+    getNotifications(userId)
+      .then((response) => {
+        const list = Array.isArray(response.data) ? response.data : [];
+        setNotifications(list);
+        setCachedNotifs(list);
+      })
+      .catch((error) => {
+        console.error("Failed to load navbar notifications:", error);
+      });
+  }, [userId]);
+
+  // 2. Dropdown outside click handler
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setDropdownOpen(false);
+      }
+
+      if (
+        notificationRef.current &&
+        !notificationRef.current.contains(e.target)
+      ) {
+        setNotificationOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  // 3. WebSocket Subscription
+  useEffect(() => {
+    if (!userId) return;
+
+    const socket = new SockJS(`${API_BASE_URL}/ws`);
+
+    const client = new Client({
+      webSocketFactory: () => socket,
+      reconnectDelay: 5000,
+
+      onConnect: () => {
+        console.log("Connected to WebSocket");
+
+        // User-specific notification topic
+        client.subscribe(`/topic/notifications/${userId}`, (message) => {
+          try {
+            const newNotification = JSON.parse(message.body);
+
+            console.log("Received user notification:", newNotification);
+
+            setNotifications((prev) => [
+              {
+                ...newNotification,
+                read: false,
+                status: "UNREAD",
+                receivedAt: new Date().toLocaleString(),
+              },
+              ...prev,
+            ]);
+          } catch (error) {
+            console.error("Error parsing user notification:", error);
+          }
+        });
+      },
+
+      onStompError: (frame) => {
+        console.error(
+          "Broker reported error:",
+          frame.headers["message"]
+        );
+        console.error("Additional details:", frame.body);
+      },
+
+      onWebSocketError: (error) => {
+        console.error("WebSocket error:", error);
+      },
+    });
+
+    client.activate();
+
+    return () => {
+      client.deactivate();
+    };
+  }, [userId]);
+
+  const displayRole =
+    role === "SUPER_ADMIN"
+      ? "Super Admin"
+      : role === "ADMIN"
+      ? "Administrator"
+      : role === "TECHNICIAN"
+      ? "Technician"
+      : "User";
+
+  const welcomeText =
+    role === "SUPER_ADMIN"
+      ? "Welcome back, Super Admin!"
+      : role === "ADMIN"
+      ? "Welcome back, Admin!"
+      : role === "TECHNICIAN"
+      ? "Welcome back, Technician!"
+      : "Welcome back!";
+
+  const displayName = username;
+  const avatarLetter = username
+    ? username.charAt(0).toUpperCase()
+    : "U";
+
+  // Calculate unread notifications
+  const unreadCount = notifications.filter(
+    (n) => !n.read && n.status !== "READ"
+  ).length;
+
+  const handleMarkAllAsRead = () => {
+    if (!userId || unreadCount === 0) return;
+
+    const markAllReadUpdater = (prev) =>
+      prev.map((notification) => ({
+        ...notification,
+        read: true,
+        status: "READ",
+      }));
+    setNotifications(markAllReadUpdater);
+    setCachedNotifs(markAllReadUpdater);
+
+    // Backend sync
+    markAllAsReadApi(userId).catch((error) => {
+      console.error(
+        "Failed to mark all as read on backend:",
+        error
+      );
+    });
   };
 
-  const menuItems = [
-    { icon: <LayoutDashboard size={20} />, label: 'Dashboard', path: '/admin/dashboard' },
-    { icon: <Wrench size={20} />, label: 'Equipment', path: '/admin/equipment' },
-    { icon: <FlaskConical size={20} />, label: 'Laboratories', path: '/admin/laboratories' },
-    { icon: <ClipboardList size={20} />, label: 'Issuance', path: '/admin/issuance' },
-    { icon: <History size={20} />, label: 'Maintenance', path: '/admin/maintenance' },
-    { icon: <FileBarChart size={20} />, label: 'Reports', path: '/admin/reports' },
+  const handleNotificationClick = () => {
+    setNotificationOpen((prev) => !prev);
+  };
+
+  const baseMenu = [
+    {
+      to: "/admin/dashboard",
+      label: "Dashboard",
+      icon: LayoutDashboard,
+    },
+    {
+      to: "/admin/equipment",
+      label: "Equipment",
+      icon: Wrench,
+    },
+    {
+      to: "/admin/laboratories",
+      label: "Laboratories",
+      icon: FlaskConical,
+    },
+    {
+      to: "/admin/issuance",
+      label: "Issuance",
+      icon: ClipboardList,
+    },
+    {
+      to: "/admin/maintenance",
+      label: "Maintenance",
+      icon: History,
+    },
+    {
+      to: "/admin/reports",
+      label: "Reports",
+      icon: FileBarChart,
+    },
+    {
+      to: "/admin/activity-log",
+      label: "Activity Log",
+      icon: ClipboardList,
+    },
   ];
 
+  const superAdminOnlyMenu = [
+    {
+      to: "/admin/users",
+      label: "User Management",
+      icon: Users,
+    },
+  ];
+
+  const menu =
+    role === "SUPER_ADMIN"
+      ? [...baseMenu, ...superAdminOnlyMenu]
+      : baseMenu;
+
+  const bottomMenu = [
+    {
+      to: "/admin/notifications",
+      label: "Notifications",
+      icon: Bell,
+    },
+    {
+      to: "/admin/settings",
+      label: "Settings",
+      icon: Settings,
+    },
+  ];
+
+  const titleMap = {
+    "/admin/dashboard": "Dashboard",
+    "/admin/equipment": "Equipment",
+    "/admin/laboratories": "Laboratories",
+    "/admin/issuance": "Issuance",
+    "/admin/maintenance": "Maintenance",
+    "/admin/reports": "Reports",
+    "/admin/users": "User Management",
+    "/admin/activity-log": "Activity Log",
+    "/admin/notifications": "Notifications",
+    "/admin/settings": "Settings",
+    "/admin/profile": "Profile",
+  };
+
+  const currentTitle = titleMap[location.pathname] || "Admin";
+
+  const linkClass = ({ isActive }) =>
+    `flex items-center ${
+      sidebarOpen ? "gap-3 px-3 py-2" : "justify-center p-2"
+    } rounded-lg cursor-pointer transition-all text-sm font-medium ${
+      isActive
+        ? "bg-yellow-500 text-white shadow-md"
+        : "text-gray-700 hover:bg-orange-100"
+    }`;
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    setDropdownOpen(false);
+    navigate("/login");
+  };
+
+  const goProfile = () => {
+    setDropdownOpen(false);
+    navigate("/admin/profile");
+  };
+
   return (
-    <div className="flex h-screen bg-gray-50 font-sans">
-      {/* Sidebar */}
-      <aside className="w-52 bg-gray-200 flex flex-col border-r border-gray-300">
-        <div className="p-6">
-          <h1 className="text-sm font-bold leading-tight">
-            Faculty of Engineering <br />
-            <span className="text-gray-600">Equipment Management System</span>
-          </h1>
+    <div className="min-h-screen bg-gray-50 font-sans">
+      {/* Mobile sidebar overlay */}
+{sidebarOpen && (
+  <div
+    className="fixed inset-0 bg-black/40 z-40 lg:hidden"
+    onClick={() => setSidebarOpen(false)}
+  />
+)}
+      <aside
+  className={`fixed top-0 left-0 h-screen bg-white border-r border-gray-200 flex flex-col transition-all duration-300 shadow-sm z-50
+    w-64
+    ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
+    lg:translate-x-0
+    ${sidebarOpen ? "lg:w-56" : "lg:w-20"}
+  `}
+>
+        <div
+          className="px-3 border-b border-gray-200 h-20 flex items-center"
+          style={{ backgroundColor: "#E89B00" }}
+        >
+          <div className="flex items-center gap-2 min-w-0 w-full">
+            <img
+              src="/images/home_logo.png"
+              alt="University Logo"
+              className="w-14 h-14 object-contain flex-shrink-0"
+            />
+            {sidebarOpen && (
+              <div className="leading-tight min-w-0">
+                <h1 className="text-[11px] font-bold text-white break-words">
+                  Faculty of Engineering
+                </h1>
+                <p className="text-[11px] text-orange-100 break-words">
+                  Equipment Management System
+                </p>
+              </div>
+            )}
+          </div>
         </div>
 
-        <nav className="flex-1 px-4 space-y-2">
-          {menuItems.map((item, index) => (
-            <div
-              key={index}
-              onClick={() => navigate(item.path)}
-              className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors text-sm ${
-                location.pathname === item.path
-                  ? 'bg-orange-400 text-black font-semibold'
-                  : 'hover:bg-gray-300'
-              }`}
-            >
-              {item.icon}
-              <span>{item.label}</span>
-            </div>
-          ))}
+        {/* Sidebar Toggle Bar at the top of the sidebar */}
+        <div
+          className={`px-2 py-1.5 border-b border-gray-100 flex items-center ${
+            sidebarOpen ? "justify-between" : "justify-center"
+          }`}
+        >
+          {sidebarOpen && (
+            <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider pl-1">
+              Menu
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="p-1.5 text-gray-500 hover:text-gray-900 hover:bg-orange-100 rounded-lg transition flex items-center justify-center"
+            title={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
+            aria-label={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
+          >
+            <PanelLeft size={19} />
+          </button>
+        </div>
+
+        <nav className="flex-1 px-2 py-2 space-y-1 overflow-y-auto overflow-x-hidden">
+          {menu.map((item) => {
+            const Icon = item.icon;
+
+            return (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                className={linkClass}
+                title={!sidebarOpen ? item.label : ""}
+                onClick={() => {
+                  if (window.innerWidth < 1024) {
+                    setSidebarOpen(false);
+                  }
+                }}
+              >
+                <Icon size={20} className="flex-shrink-0" />
+                {sidebarOpen && <span className="truncate">{item.label}</span>}
+              </NavLink>
+            );
+          })}
         </nav>
 
-        <div className="p-4 border-t border-gray-300 space-y-2">
-          <div className="flex items-center gap-3 p-3 hover:bg-gray-300 rounded-lg cursor-pointer text-sm">
-            <Bell size={20} />
-            <span>Notifications</span>
-          </div>
-          <div className="flex items-center gap-3 p-3 hover:bg-gray-300 rounded-lg cursor-pointer text-sm">
-            <Settings size={20} />
-            <span>Settings</span>
-          </div>
+        <div className="px-2 py-2 border-t border-gray-200 space-y-1 flex-shrink-0">
+          {bottomMenu.map((item) => {
+            const Icon = item.icon;
+
+            return (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                className={linkClass}
+                title={!sidebarOpen ? item.label : ""}
+                onClick={() => {
+                  if (window.innerWidth < 1024) {
+                    setSidebarOpen(false);
+                  }
+                }}
+              >
+                <Icon size={20} className="flex-shrink-0" />
+                {sidebarOpen && <span className="truncate">{item.label}</span>}
+              </NavLink>
+            );
+          })}
         </div>
       </aside>
 
-      {/* Main Content */}
-      <main className="flex-1 flex flex-col overflow-hidden">
-        {/* Header */}
-        <header className="bg-orange-400 p-4 flex justify-between items-center shadow-md">
-          <div className="text-xs font-medium">
-            <p>{pageTitle}</p>
-            <p className="text-xs">Welcome Admin!</p>
-          </div>
-          
-          <div className="font-semibold text-sm">Welcome Admin!</div>
+      <div
+  className={`min-h-screen flex flex-col transition-all duration-300
+    ml-0
+    ${sidebarOpen ? "lg:ml-56" : "lg:ml-20"}
+  `}
+>
+        <header
+  className={`fixed top-0 right-0 h-20 flex items-center shadow-md z-30
+    left-0 px-3 sm:px-4 md:px-5
+    ${sidebarOpen ? "lg:left-56" : "lg:left-20"}
+    transition-all duration-300
+  `}
+  style={{ backgroundColor: "#E89B00" }}
+>
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+  {/* Mobile menu button */}
+  <button
+    type="button"
+    onClick={() => setSidebarOpen(true)}
+    className="lg:hidden flex-shrink-0 p-2 text-white hover:bg-white/10 rounded-lg transition"
+    aria-label="Open menu"
+    title="Open menu"
+  >
+    <PanelLeft size={24} />
+  </button>
 
-          <div className="flex items-center gap-4">
-            <Bell className="cursor-pointer" size={18} />
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 bg-gray-300 rounded-full flex items-center justify-center text-xs font-bold">A</div>
-              <div className="text-xs leading-tight">
-                <p className="font-bold">Admin User</p>
-                <p>Administrator</p>
-              </div>
-            </div>
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-2 bg-white hover:bg-gray-100 text-gray-800 font-semibold px-4 py-2 rounded-lg transition duration-200 shadow-sm text-xs"
-              title="Logout"
+  <div className="min-w-0">
+    <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-white truncate">
+      {currentTitle}
+    </h2>
+
+    <p className="hidden sm:block text-xs md:text-sm text-gray-100 mt-1 truncate">
+      {welcomeText}
+    </p>
+  </div>
+</div>
+
+          <div className="flex items-center gap-1 sm:gap-2 md:gap-4 flex-shrink-0">
+            <div
+              className="relative"
+              ref={notificationRef}
             >
-              <LogOut size={16} />
-              <span>Logout</span>
-            </button>
+              <button
+                onClick={handleNotificationClick}
+                className="relative p-2 text-white rounded-lg transition-colors"
+                style={{
+                  backgroundColor: "rgba(232, 155, 0, 0.7)",
+                }}
+                title="Notifications"
+              >
+                <Bell size={22} />
+
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 flex items-center justify-center text-[10px] font-bold bg-red-500 text-white rounded-full border border-white">
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </span>
+                )}
+              </button>
+
+              {notificationOpen && (
+                <div className="fixed left-3 right-3 top-20 sm:absolute sm:left-auto sm:right-0 sm:top-auto sm:mt-3 sm:w-96 max-h-[420px] overflow-hidden bg-white border border-gray-200 rounded-xl shadow-lg z-50">
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+                    <h3 className="text-sm font-semibold text-gray-800">
+                      Notifications
+                    </h3>
+
+                    <button
+                      onClick={handleMarkAllAsRead}
+                      className="text-xs text-orange-600 hover:text-orange-700 font-medium"
+                    >
+                      Mark all as read
+                    </button>
+                  </div>
+
+                  <div className="max-h-[360px] overflow-y-auto">
+                    {notifications.length === 0 ? (
+                      <div className="px-4 py-8 text-center text-sm text-gray-500">
+                        No notifications yet
+                      </div>
+                    ) : (
+                      notifications.map((notification) => {
+                        const isRead =
+                          notification.read ||
+                          notification.status === "READ";
+
+                        return (
+                          <div
+                            key={notification.id}
+                            className={`px-4 py-3 border-b border-gray-100 hover:bg-gray-50 ${
+                              !isRead
+                                ? "bg-orange-50"
+                                : "bg-white"
+                            }`}
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-semibold text-gray-800">
+                                  {notification.title ||
+                                    "Notification"}
+                                </p>
+
+                                <p className="text-sm text-gray-600 mt-1 break-words">
+                                  {notification.message ||
+                                    "No message"}
+                                </p>
+
+                                <p className="text-xs text-gray-400 mt-2">
+                                  {notification.createdAt
+                                    ? new Date(
+                                        notification.createdAt
+                                      ).toLocaleString()
+                                    : notification.receivedAt || ""}
+                                </p>
+                              </div>
+
+                              {!isRead && (
+                                <span className="w-2.5 h-2.5 bg-red-500 rounded-full mt-2 flex-shrink-0"></span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div
+              className="w-px h-6 opacity-50"
+              style={{
+                backgroundColor: "rgba(255, 255, 255, 0.3)",
+              }}
+            ></div>
+
+            <div
+              className="relative"
+              ref={dropdownRef}
+            >
+              <button
+                type="button"
+                onClick={() => setDropdownOpen(!dropdownOpen)}
+                className="flex items-center gap-3 p-2 rounded-lg transition-colors"
+                style={{
+                  backgroundColor: "rgba(232, 155, 0, 0.7)",
+                }}
+              >
+                <div
+                  className="w-9 h-9 bg-white rounded-full flex items-center justify-center font-bold shadow-md"
+                  style={{ color: "#E89B00" }}
+                >
+                  {avatarLetter}
+                </div>
+
+                <div className="text-left hidden sm:block">
+                  <p className="text-sm font-semibold text-white">
+                    {displayName}
+                  </p>
+
+                  <p className="text-xs text-gray-100">
+                    {displayRole}
+                  </p>
+                </div>
+
+                <ChevronDown
+                size={18}
+                className={`hidden sm:block text-white transition-transform ${
+                  dropdownOpen ? "rotate-180" : ""
+                }`}
+              />
+              </button>
+
+              {dropdownOpen && (
+                <div className="absolute right-0 mt-3 w-52 sm:w-56 max-w-[calc(100vw-1.5rem)] bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
+                  <button
+                    onClick={goProfile}
+                    className="w-full flex items-center gap-3 px-5 py-3.5 text-sm text-gray-700 transition-colors font-medium border-b border-gray-100"
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor =
+                        "#FEF5E6";
+                      e.currentTarget.style.color = "#E89B00";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = "white";
+                      e.currentTarget.style.color = "#333";
+                    }}
+                  >
+                    <User size={18} />
+                    <span>My Profile</span>
+                  </button>
+
+                  <button
+                    onClick={handleLogout}
+                    className="w-full flex items-center gap-3 px-5 py-3.5 text-sm text-red-600 hover:bg-red-50 transition-colors font-medium"
+                  >
+                    <LogOut size={18} />
+                    <span>Logout</span>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </header>
 
-        {/* Content Area */}
-        <div className="flex-1 overflow-auto">
-          {children}
-        </div>
-      </main>
+        <div className="flex-1 flex flex-col pt-20 min-w-0">
+        <main className="flex-1 w-full min-w-0 p-3 sm:p-4 lg:p-5">
+          <Outlet />
+        </main>
+
+        <Footer />
+      </div>
+      </div>
     </div>
   );
-};
-
-export default AdminLayout;
+}

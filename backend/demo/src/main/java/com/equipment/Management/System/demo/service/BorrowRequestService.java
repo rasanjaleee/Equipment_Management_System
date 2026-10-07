@@ -1,4 +1,6 @@
 package com.equipment.Management.System.demo.service;
+import com.equipment.Management.System.demo.model.User;
+import com.equipment.Management.System.demo.repository.UserRepository;
 
 import com.equipment.Management.System.demo.dto.BorrowRequestCreateRequest;
 import com.equipment.Management.System.demo.dto.BorrowRequestResponse;
@@ -12,6 +14,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class BorrowRequestService {
@@ -20,15 +23,48 @@ public class BorrowRequestService {
 
     private final BorrowRequestRepository borrowRequestRepository;
     private final EquipmentRepository equipmentRepository;
+    private final NotificationService notificationService;
+    private final UserRepository userRepository;
 
     public BorrowRequestService(BorrowRequestRepository borrowRequestRepository,
-                                EquipmentRepository equipmentRepository) {
+                                EquipmentRepository equipmentRepository,NotificationService notificationService,UserRepository userRepository) {
         this.borrowRequestRepository = borrowRequestRepository;
         this.equipmentRepository = equipmentRepository;
+        this.notificationService = notificationService;
+        this.userRepository = userRepository;
     }
 
     public List<BorrowRequestResponse> getAllBorrowRequests() {
         return borrowRequestRepository.findAll().stream().map(this::toResponse).toList();
+    }
+
+    public List<BorrowRequestResponse> getMyBorrowRequests(String username) {
+
+        if (username == null || username.isBlank()) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED,
+                    "Authenticated user is required."
+            );
+        }
+
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "User not found."
+                ));
+
+        if (user.getEmail() == null || user.getEmail().isBlank()) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "User email is not available."
+            );
+        }
+
+        return borrowRequestRepository
+                .findByEmailIgnoreCaseOrderByCreatedAtDesc(user.getEmail())
+                .stream()
+                .map(this::toResponse)
+                .toList();
     }
 
     public BorrowRequestResponse createBorrowRequest(BorrowRequestCreateRequest request) {
@@ -55,6 +91,21 @@ public class BorrowRequestService {
         entity.setStatus(normalizeStatus(request.getStatus()));
 
         BorrowRequest saved = borrowRequestRepository.save(entity);
+
+        List<User> admins = userRepository.findByRole("ADMIN");
+
+        for (User admin : admins) {
+            notificationService.createNotificationForUser(
+                    admin.getId(),
+                    "New Equipment Request",
+                    saved.getApplicantName() + " requested " + saved.getEquipment().getEquipmentName(),
+                    "BORROW_REQUEST",
+                    saved.getId(),
+                    "BorrowRequest",
+                    "HIGH"
+            );
+        }
+
         return toResponse(saved);
     }
 
@@ -78,6 +129,73 @@ public class BorrowRequestService {
         );
 
         return conflicts.isEmpty();
+    }
+
+    public List<Map<String, Object>> getEquipmentCalendar(
+            Long equipmentId,
+            LocalDate startDate,
+            LocalDate endDate) {
+
+        if (equipmentId == null || startDate == null || endDate == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Equipment ID, start date and end date are required."
+            );
+        }
+
+        if (endDate.isBefore(startDate)) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Calendar end date must not be before start date."
+            );
+        }
+
+        if (!equipmentRepository.existsById(equipmentId)) {
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "Equipment not found."
+            );
+        }
+
+        return borrowRequestRepository.findBlockingRequestsForCalendar(
+                        equipmentId,
+                        startDate,
+                        endDate,
+                        BLOCKING_STATUSES
+                )
+                .stream()
+                .map(request -> {
+                    Map<String, Object> period = new java.util.HashMap<>();
+                    period.put("startDate", request.getBorrowStartDate());
+                    period.put("endDate", request.getBorrowEndDate());
+                    return period;
+                })
+                .toList();
+    }
+
+    public List<BorrowRequestResponse> getCalendarBorrowRequests(
+            LocalDate startDate,
+            LocalDate endDate) {
+
+        if (startDate == null || endDate == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Calendar start date and end date are required."
+            );
+        }
+
+        if (endDate.isBefore(startDate)) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Calendar end date must not be before start date."
+            );
+        }
+
+        return borrowRequestRepository
+                .findCalendarRequests(startDate, endDate)
+                .stream()
+                .map(this::toResponse)
+                .toList();
     }
 
     private void validateRequest(BorrowRequestCreateRequest request) {
@@ -126,6 +244,12 @@ public class BorrowRequestService {
         response.setLaboratoryName(entity.getEquipment().getLaboratory());
         response.setModel(entity.getEquipment().getModel());
         response.setSerialNumber(entity.getEquipment().getSerialNumber());
+
+        User user = userRepository.findByEmail(entity.getEmail())
+                .orElse(null);
+
+        response.setUserId(user != null ? user.getId() : null);
+
         response.setApplicantName(entity.getApplicantName());
         response.setRegistrationOrStaffId(entity.getRegistrationOrStaffId());
         response.setDepartment(entity.getDepartment());

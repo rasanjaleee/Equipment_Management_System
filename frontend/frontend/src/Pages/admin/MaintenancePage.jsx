@@ -3,25 +3,51 @@ import { useEffect, useMemo, useState } from "react";
 import api from "../../api/axios";
 import AddMaintenanceModal from "./AddMaintenanceModal";
 import EditMaintenanceModal from "./EditMaintenanceModal";
+import { useData } from "../../context/DataContext";
 
 export default function MaintenancePage() {
+  const {
+    maintenanceList: cachedRecords,
+    setMaintenanceList: setCachedRecords,
+    refreshMaintenance,
+    equipmentList: cachedEquipment,
+    refreshEquipment,
+  } = useData();
+
   const [showAdd, setShowAdd] = useState(false);
   const [editItem, setEditItem] = useState(null);
 
-  const [records, setRecords] = useState([]);
-  const [equipment, setEquipment] = useState([]);
+  const [records, setRecords] = useState(cachedRecords || []);
+  const [equipment, setEquipment] = useState(cachedEquipment || []);
 
   const [search, setSearch] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(cachedRecords && cachedRecords.length > 0 ? false : true);
+
+  // Sync with context
+  useEffect(() => {
+    if (cachedRecords && cachedRecords.length > 0) {
+      setRecords(cachedRecords);
+      setLoading(false);
+    }
+  }, [cachedRecords]);
+
+  useEffect(() => {
+    if (cachedEquipment && cachedEquipment.length > 0) {
+      setEquipment(cachedEquipment);
+    }
+  }, [cachedEquipment]);
 
   const loadRecords = async () => {
-    setLoading(true);
+    if ((!cachedRecords || cachedRecords.length === 0) && records.length === 0) {
+      setLoading(true);
+    }
     try {
-      const res = await api.get("/api/maintenance");
-      setRecords(Array.isArray(res.data) ? res.data : []);
+      const data = await refreshMaintenance(false);
+      if (Array.isArray(data)) {
+        setRecords(data);
+      }
     } catch (err) {
       console.error("Failed to load maintenance records:", err);
-      alert("Failed to load maintenance records. Check backend & CORS.");
     } finally {
       setLoading(false);
     }
@@ -29,8 +55,10 @@ export default function MaintenancePage() {
 
   const loadEquipment = async () => {
     try {
-      const res = await api.get("/api/equipment");
-      setEquipment(Array.isArray(res.data) ? res.data : []);
+      const data = await refreshEquipment(false);
+      if (Array.isArray(data)) {
+        setEquipment(data);
+      }
     } catch (err) {
       console.error("Failed to load equipment:", err);
     }
@@ -120,6 +148,7 @@ export default function MaintenancePage() {
     try {
       await api.delete(`/api/maintenance/${id}`);
       setRecords((prev) => prev.filter((x) => x.id !== id));
+      setCachedRecords((prev) => prev.filter((x) => x.id !== id));
     } catch (err) {
       console.error("Delete failed:", err);
       alert("Delete failed.");
@@ -151,8 +180,8 @@ export default function MaintenancePage() {
 
   return (
     <div className="w-full">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold text-center w-full">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6">
+        <h1 className="text-xl sm:text-2xl font-semibold text-center sm:text-left w-full">
           Maintenance Management
         </h1>
 
@@ -161,35 +190,35 @@ export default function MaintenancePage() {
             loadRecords();
             loadEquipment();
           }}
-          className="ml-4 text-sm underline whitespace-nowrap"
+          className="self-end sm:self-auto sm:ml-4 text-sm underline whitespace-nowrap"
           title="Refresh"
         >
           Refresh
         </button>
       </div>
 
-      <div className="flex items-center justify-between gap-4 mb-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 mb-4">
         <input
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="search equipment / lab / model / issue..."
-          className="w-full max-w-xl px-4 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+          className="w-full sm:max-w-xl px-4 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-yellow-400"
         />
 
         <button
           onClick={() => setShowAdd(true)}
-          className="bg-yellow-400 hover:bg-yellow-500 text-black font-semibold px-5 py-2 rounded-md shadow"
+          className="w-full sm:w-auto bg-yellow-400 hover:bg-yellow-500 text-black font-semibold px-5 py-2 rounded-md shadow whitespace-nowrap"
         >
           Add Maintenance Record
         </button>
       </div>
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="bg-white rounded-lg shadow overflow-x-auto">
         {loading ? (
           <div className="p-4 text-sm text-gray-600">Loading...</div>
         ) : (
-          <table className="w-full text-sm">
+          <table className="w-full min-w-[1000px] text-sm">
             <thead className="bg-gray-200 text-left">
               <tr>
                 <th className="p-3">Equipment</th>

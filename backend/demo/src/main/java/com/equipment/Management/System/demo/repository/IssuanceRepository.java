@@ -9,11 +9,22 @@ import java.util.Optional;
 
 @Repository
 public interface IssuanceRepository extends JpaRepository<Issuance, Long> {
-    
+
     Optional<Issuance> findByIssuanceId(String issuanceId);
-    
+
+    Optional<Issuance> findFirstByEquipment_IdAndStatusIgnoreCase(
+            Long equipmentId,
+            String status
+    );
+
     List<Issuance> findByStatus(String status);
-    
-    List<Issuance> findByUserId(Long userId);
-    
-    List<Issuance> findByEquipment_Id(Long equipmentId);}
+
+    List<Issuance> findByUser_Id(Long userId);
+
+    List<Issuance> findByEquipment_Id(Long equipmentId);
+
+    boolean existsByEquipment_IdAndStatusIgnoreCase(
+            Long equipmentId,
+            String status
+    );
+}

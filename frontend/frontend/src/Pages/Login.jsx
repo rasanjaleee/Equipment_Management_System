@@ -1,18 +1,22 @@
 import { useState } from "react";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+import { API_BASE_URL } from "../services/api";
 import logo from '/images/logo.jpg';
 import loginpage01 from "/images/loginpage01.png";
 
 
 export default function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [form, setForm] = useState({ 
     username: "", 
     password: "" 
   });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const normalizeRole = (value) => String(value || "").replace(/^ROLE_/i, "").toUpperCase();
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -37,24 +41,35 @@ export default function Login() {
     }
 
     try {
-      const res = await axios.post("http://localhost:8080/auth/login", sanitized);
+      const res = await axios.post(`${API_BASE_URL}/auth/login`, sanitized);
       
       // Store JWT token and user info
-      const { token, id, username, email, role } = res.data;
-      localStorage.setItem("token", token);
-      localStorage.setItem("user", JSON.stringify({ id, username, email, role }));
-      axios.defaults.headers.common.Authorization = `Bearer ${token}`;
 
-      const normalizedRole = String(role || "").replace(/^ROLE_/i, "").toUpperCase();
+// Store JWT token and user info
+const { token, id, username, email, role, mustChangePassword } = res.data;
+const normalizedRole = normalizeRole(role);
 
-      // Redirect to dashboard
-      if (normalizedRole === "ADMIN") {
-        console.log("Redirecting to admin dashboard");
-        navigate("/admin/dashboard");
-      } else {
-        console.log("Redirecting to user home");
-        navigate("/home");
-      }
+localStorage.setItem("token", token);
+localStorage.setItem(
+  "user",
+  JSON.stringify({ id, username, email, role: normalizedRole, mustChangePassword })
+);
+
+// ✅ Keep axios auth header (important)
+axios.defaults.headers.common.Authorization = `Bearer ${token}`;
+
+if (mustChangePassword) {
+  navigate("/change-password");
+} else if (location.state?.from) {
+  navigate(location.state.from);
+} else if (normalizedRole === "SUPER_ADMIN" || normalizedRole === "ADMIN") {
+  navigate("/admin/dashboard");
+} else if (normalizedRole === "TECHNICIAN") {
+  navigate("/technician/dashboard");
+} else {
+  navigate("/home");
+}
+
    } catch (err) {
   const status = err.response?.status;
   const msg = err.response?.data?.message;
@@ -73,7 +88,7 @@ export default function Login() {
   return (
     <div className="min-h-screen flex">
       {/* Left side - Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center bg-white p-8">
+      <div className="w-full lg:w-1/2 flex items-center justify-center bg-white p-4 sm:p-8">
         <div className="max-w-md w-full">
           {/* Logo and Title */}
           <div className="mb-8">
