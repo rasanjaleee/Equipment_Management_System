@@ -73,7 +73,7 @@ function App() {
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {shouldShowNavbar && <Navbar />}
 
-      <main className={`flex-grow ${shouldShowNavbar ? 'pt-24' : ''}`}>
+      <main className={`flex-grow ${shouldShowNavbar ? 'pt-16 sm:pt-20' : ''}`}>
         <Routes>
           {/* Public routes */}
           <Route path="/" element={<Landing />} />
