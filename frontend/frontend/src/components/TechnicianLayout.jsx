@@ -481,7 +481,7 @@ export default function TechnicianLayout() {
         </header>
 
         {/* Content Body */}
-        <div className="flex-1 flex flex-col overflow-y-auto pt-24">
+        <div className="flex-1 flex flex-col overflow-y-auto pt-20">
           <main className="flex-1 p-4 lg:p-5">
             <Outlet />
           </main>
