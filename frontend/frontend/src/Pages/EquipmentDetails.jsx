@@ -374,67 +374,98 @@ const handleDeleteAccessory = async (accessory) => {
     }
 
     return (
-      <div className="min-h-screen bg-gray-50 py-8">
-        <div className="max-w-5xl mx-auto px-4">
-          <button
-            onClick={() => navigate('/equipment')}
-            className="mb-6 inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 font-medium"
-          >
-            <ArrowLeft size={20} />
-            Back to Equipment List
-          </button>
+  <div className="min-h-screen bg-gray-50 py-4 sm:py-8">
+    <div className="max-w-5xl mx-auto px-3 sm:px-4">
 
-          <div className="bg-white rounded-lg shadow-md overflow-hidden p-6">
-            <h1 className="text-2xl font-bold text-center mb-6">{equipment.equipmentName}</h1>
+      <button
+        onClick={() => navigate('/equipment')}
+        className="mb-4 sm:mb-6 inline-flex items-center gap-2 text-sm sm:text-base text-gray-600 hover:text-gray-900 font-medium"
+      >
+        <ArrowLeft size={18} />
+        Back to Equipment List
+      </button>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div>
-                {equipment.photoPath ? (
-                  <img
-                    src={getImageUrl(equipment.photoPath)}
-                    alt={equipment.equipmentName}
-                    className="w-full h-72 object-cover rounded-lg border"
-                  />
-                ) : (
-                  <div className="w-full h-72 bg-gray-100 rounded-lg border flex items-center justify-center text-gray-500">
-                    No image
-                  </div>
-                )}
+      <div className="bg-white rounded-lg shadow-md overflow-hidden p-4 sm:p-6">
+
+        <h1 className="text-xl sm:text-2xl font-bold text-center mb-4 sm:mb-6 break-words">
+          {equipment.equipmentName}
+        </h1>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-8">
+
+          <div className="w-full">
+            {equipment.photoPath ? (
+              <img
+                src={getImageUrl(equipment.photoPath)}
+                alt={equipment.equipmentName}
+                className="w-full h-56 sm:h-72 object-contain rounded-lg border bg-white"
+              />
+            ) : (
+              <div className="w-full h-56 sm:h-72 bg-gray-100 rounded-lg border flex items-center justify-center text-gray-500">
+                No image
               </div>
-
-              <div className="space-y-3">
-                <div><span className="font-semibold">Equipment ID:</span> {equipment.equipmentCode || `EQ-${equipment.id}`}</div>
-                <div><span className="font-semibold">Laboratory:</span> {equipment.laboratory || '-'}</div>
-                <div><span className="font-semibold">Model:</span> {equipment.model || '-'}</div>
-                <div><span className="font-semibold">Serial Number:</span> {equipment.serialNumber || '-'}</div>
-                <div><span className="font-semibold">Purchase Date:</span> {formatDate(equipment.purchaseDate)}</div>
-                <div><span className="font-semibold">Status:</span> {formatStatus(equipment.status)}</div>
-
-                <div className="pt-4 flex flex-col sm:flex-row gap-3">
-                  <button
-                    onClick={() => handleReserve(equipment)}
-                    className="bg-yellow-500 hover:bg-yellow-400 text-black font-semibold px-6 py-2.5 rounded-lg inline-flex items-center justify-center gap-2 shadow-sm transition-colors cursor-pointer"
-                  >
-                    <Calendar size={18} />
-                    Reserve / Request to Borrow
-                  </button>
-                </div>
-
-                <div className="pt-4">
-                  <p className="font-semibold mb-2">QR Code</p>
-                  {equipment.qrCode ? (
-                    <img
-                      src={getImageUrl(equipment.qrCode)}
-                      alt="QR code"
-                      className="w-48 h-48 object-contain border rounded p-2 bg-white"
-                    />
-                  ) : (
-                    <p className="text-gray-500">QR not available</p>
-                  )}
-                </div>
-              </div>
-                        </div>
+            )}
           </div>
+
+          <div className="space-y-3 text-sm sm:text-base min-w-0">
+
+            <div className="break-words">
+              <span className="font-semibold">Equipment ID:</span>{' '}
+              {equipment.equipmentCode || `EQ-${equipment.id}`}
+            </div>
+
+            <div className="break-words">
+              <span className="font-semibold">Laboratory:</span>{' '}
+              {equipment.laboratory || '-'}
+            </div>
+
+            <div className="break-words">
+              <span className="font-semibold">Model:</span>{' '}
+              {equipment.model || '-'}
+            </div>
+
+            <div className="break-words">
+              <span className="font-semibold">Serial Number:</span>{' '}
+              {equipment.serialNumber || '-'}
+            </div>
+
+            <div className="break-words">
+              <span className="font-semibold">Purchase Date:</span>{' '}
+              {formatDate(equipment.purchaseDate)}
+            </div>
+
+            <div className="break-words">
+              <span className="font-semibold">Status:</span>{' '}
+              {formatStatus(equipment.status)}
+            </div>
+
+            <div className="pt-3 sm:pt-4">
+              <button
+                onClick={() => handleReserve(equipment)}
+                className="w-full sm:w-auto bg-yellow-500 hover:bg-yellow-400 text-black text-sm sm:text-base font-semibold px-4 sm:px-6 py-2.5 rounded-lg inline-flex items-center justify-center gap-2 shadow-sm transition-colors cursor-pointer"
+              >
+                <Calendar size={18} className="shrink-0" />
+                <span>Reserve / Request to Borrow</span>
+              </button>
+            </div>
+
+            <div className="pt-3 sm:pt-4">
+              <p className="font-semibold mb-2">QR Code</p>
+
+              {equipment.qrCode ? (
+                <img
+                  src={getImageUrl(equipment.qrCode)}
+                  alt="QR code"
+                  className="w-32 h-32 sm:w-48 sm:h-48 object-contain border rounded p-2 bg-white"
+                />
+              ) : (
+                <p className="text-gray-500">QR not available</p>
+              )}
+            </div>
+
+          </div>
+        </div>
+      </div>
         </div>
 
 
