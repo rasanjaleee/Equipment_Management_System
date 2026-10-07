@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.security.core.Authentication;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/issuances")
@@ -21,7 +22,7 @@ public class IssuanceController {
 
     // Creat  e a new issuance
     @PostMapping
-    public ResponseEntity<IssuanceDTO> createIssuance(
+    public ResponseEntity<?> createIssuance(
             @RequestBody IssuanceRequest request,
             Authentication authentication) {
 
@@ -34,7 +35,9 @@ public class IssuanceController {
             return new ResponseEntity<>(issuance, HttpStatus.CREATED);
 
         } catch (Exception e) {
-            return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+            return ResponseEntity.badRequest().body(Map.of(
+                    "message", e.getMessage() == null ? "Failed to create issuance." : e.getMessage()
+            ));
         }
     }
 
