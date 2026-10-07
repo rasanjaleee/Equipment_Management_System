@@ -18,6 +18,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Locale;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -79,18 +81,24 @@ public class IssuanceService {
             );
         }
 
-        User user = userRepository.findById(request.getUserId())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        User user = resolveIssuanceUser(request);
 
         User issuedBy = userRepository.findByUsername(issuedByUsername)
                 .orElseThrow(() -> new RuntimeException("Issuing user not found"));
 
-        if (issuanceRepository.findByIssuanceId(request.getIssuanceId()).isPresent()) {
+                String issuanceId = request.getIssuanceId();
+                if (issuanceId == null || issuanceId.isBlank()) {
+                        issuanceId = generateIssuanceId();
+                } else {
+                        issuanceId = issuanceId.trim();
+                }
+
+                if (issuanceRepository.findByIssuanceId(issuanceId).isPresent()) {
             throw new RuntimeException("Issuance ID already exists");
         }
 
         Issuance issuance = new Issuance();
-        issuance.setIssuanceId(request.getIssuanceId());
+                issuance.setIssuanceId(issuanceId);
         issuance.setIssueDate(request.getIssueDate());
         issuance.setReturnDueDate(request.getReturnDueDate());
         issuance.setStatus(request.getStatus());
@@ -189,6 +197,57 @@ public class IssuanceService {
 
         return convertToDTO(saved);
     }
+
+        private User resolveIssuanceUser(IssuanceRequest request) {
+                if (request.getUserId() != null) {
+                        Optional<User> userById = userRepository.findById(request.getUserId());
+                        if (userById.isPresent()) {
+                                return userById.get();
+                        }
+                }
+
+                String email = request.getEmail() == null ? "" : request.getEmail().trim();
+                if (!email.isBlank()) {
+                        Optional<User> userByEmail = userRepository.findByEmailIgnoreCase(email);
+                        if (userByEmail.isPresent()) {
+                                return userByEmail.get();
+                        }
+                }
+
+                String registrationOrStaffId = request.getRegistrationOrStaffId() == null
+                                ? ""
+                                : request.getRegistrationOrStaffId().trim();
+                if (!registrationOrStaffId.isBlank()) {
+                        Optional<User> userByUsername = userRepository.findByUsernameIgnoreCase(registrationOrStaffId);
+                        if (userByUsername.isPresent()) {
+                                return userByUsername.get();
+                        }
+                }
+
+                String missingUser = !registrationOrStaffId.isBlank()
+                                ? "Registration / Staff ID '" + registrationOrStaffId + "'"
+                                : !email.isBlank()
+                                                ? "email '" + email + "'"
+                                                : "the supplied user details";
+                throw new RuntimeException("No registered account found for " + missingUser + ".");
+        }
+
+        private String generateIssuanceId() {
+                long highestSequence = issuanceRepository.findByIssuanceIdStartingWith("ISS-").stream()
+                                .map(Issuance::getIssuanceId)
+                                .filter(id -> id != null && id.matches("ISS-\\d+"))
+                                .map(id -> id.substring(4))
+                                .mapToLong(Long::parseLong)
+                                .max()
+                                .orElse(0L);
+
+                String candidate;
+                do {
+                        candidate = String.format(Locale.ROOT, "ISS-%06d", ++highestSequence);
+                } while (issuanceRepository.findByIssuanceId(candidate).isPresent());
+
+                return candidate;
+        }
 
     // ================= READ =================
     public List<IssuanceDTO> getAllIssuances() {

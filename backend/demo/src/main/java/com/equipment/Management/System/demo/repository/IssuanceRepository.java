@@ -12,6 +12,8 @@ public interface IssuanceRepository extends JpaRepository<Issuance, Long> {
 
     Optional<Issuance> findByIssuanceId(String issuanceId);
 
+        List<Issuance> findByIssuanceIdStartingWith(String prefix);
+
     Optional<Issuance> findFirstByEquipment_IdAndStatusIgnoreCase(
             Long equipmentId,
             String status

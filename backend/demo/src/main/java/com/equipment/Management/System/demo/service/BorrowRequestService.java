@@ -245,7 +245,7 @@ public class BorrowRequestService {
         response.setModel(entity.getEquipment().getModel());
         response.setSerialNumber(entity.getEquipment().getSerialNumber());
 
-        User user = userRepository.findByEmail(entity.getEmail())
+        User user = userRepository.findByEmailIgnoreCase(entity.getEmail().trim())
                 .orElse(null);
 
         response.setUserId(user != null ? user.getId() : null);
