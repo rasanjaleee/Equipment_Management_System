@@ -1,0 +1,188 @@
+import { useEffect, useState } from "react";
+import axios from "axios";
+import { API_BASE_URL } from "../../services/api";
+import { useData } from "../../context/DataContext";
+
+export default function TechnicianEquipment() {
+  const {
+    equipmentList: cachedEquipment,
+    setEquipmentList: setCachedEquipment,
+    refreshEquipment,
+  } = useData();
+
+  const [equipmentList, setEquipmentList] = useState(cachedEquipment || []);
+  const [editingId, setEditingId] = useState(null);
+  const [statusMap, setStatusMap] = useState(() => {
+    const map = {};
+    (cachedEquipment || []).forEach((item) => {
+      map[item.id] = item.status;
+    });
+    return map;
+  });
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (cachedEquipment && cachedEquipment.length > 0) {
+      setEquipmentList(cachedEquipment);
+      setStatusMap((prev) => {
+        const next = { ...prev };
+        cachedEquipment.forEach((item) => {
+          if (!next[item.id]) {
+            next[item.id] = item.status;
+          }
+        });
+        return next;
+      });
+    }
+  }, [cachedEquipment]);
+
+  useEffect(() => {
+    fetchEquipment();
+  }, []);
+
+  const fetchEquipment = async () => {
+    try {
+      const data = await refreshEquipment(false);
+      if (Array.isArray(data)) {
+        setEquipmentList(data);
+        setStatusMap((prev) => {
+          const next = { ...prev };
+          data.forEach((item) => {
+            if (!next[item.id]) {
+              next[item.id] = item.status;
+            }
+          });
+          return next;
+        });
+      }
+    } catch (err) {
+      console.error("Failed to fetch equipment:", err);
+      if (!cachedEquipment || cachedEquipment.length === 0) {
+        setError("Failed to load equipment");
+      }
+    }
+  };
+
+  const handleStatusChange = (id, value) => {
+    setStatusMap((prev) => ({ ...prev, [id]: value }));
+  };
+
+  const handleUpdate = async (item) => {
+    try {
+      const token = localStorage.getItem("token");
+      const formData = new FormData();
+      const updatedStatus = statusMap[item.id] || item.status;
+
+      formData.append("equipmentName", item.equipmentName || "");
+      formData.append("laboratory", item.laboratory || "");
+      formData.append("model", item.model || "");
+      formData.append("serialNumber", item.serialNumber || "");
+      formData.append("cost", item.cost ?? "");
+      formData.append("purchaseDate", item.purchaseDate || "");
+      formData.append("supplier", item.supplier || "");
+      formData.append("status", updatedStatus);
+      formData.append("grnNumber", item.grnNumber || "");
+
+      await axios.put(
+        `${API_BASE_URL}/api/equipment/update/${item.id}`,
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "multipart/form-data"
+          }
+        }
+      );
+
+      setMessage("Equipment status updated successfully");
+      setError("");
+      setEditingId(null);
+
+      setCachedEquipment((prev) =>
+        prev.map((eq) => (eq.id === item.id ? { ...eq, status: updatedStatus } : eq))
+      );
+      setEquipmentList((prev) =>
+        prev.map((eq) => (eq.id === item.id ? { ...eq, status: updatedStatus } : eq))
+      );
+      fetchEquipment();
+    } catch (err) {
+      console.error(err);
+      setError("Failed to update equipment status");
+      setMessage("");
+    }
+  };
+
+  return (
+    <div className="p-2">
+      <h1 className="text-2xl font-bold mb-6">Equipment Status Update</h1>
+
+      {message && (
+        <div className="bg-green-50 border-l-4 border-green-500 p-4 rounded mb-4">
+          <p className="text-green-700 font-medium">{message}</p>
+        </div>
+      )}
+
+      {error && (
+        <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded mb-4">
+          <p className="text-red-700 font-medium">{error}</p>
+        </div>
+      )}
+
+      <div className="bg-white shadow-2xl overflow-x-auto rounded-lg">
+        <table className="w-full min-w-[850px] text-sm">
+          <thead className="bg-yellow-500 text-white">
+            <tr>
+              <th className="px-4 py-3">ID</th>
+              <th className="px-4 py-3">Name</th>
+              <th className="px-4 py-3">Laboratory</th>
+              <th className="px-4 py-3">Model</th>
+              <th className="px-4 py-3">Current Status</th>
+              <th className="px-4 py-3">Update Status</th>
+              <th className="px-4 py-3">Action</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {equipmentList.map((item) => (
+              <tr key={item.id} className="border-b text-center">
+                <td className="px-4 py-3">{item.id}</td>
+                <td className="px-4 py-3">{item.equipmentName}</td>
+                <td className="px-4 py-3">{item.laboratory}</td>
+                <td className="px-4 py-3">{item.model || "-"}</td>
+                <td className="px-4 py-3">{item.status}</td>
+                <td className="px-4 py-3">
+                  <select
+                    value={statusMap[item.id] || item.status}
+                    onChange={(e) => handleStatusChange(item.id, e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded-lg bg-white"
+                  >
+                    <option value="WORKING">WORKING</option>
+                    <option value="UNDER_REPAIR">UNDER_REPAIR</option>
+                    <option value="BROKEN">BROKEN</option>
+                  </select>
+                </td>
+                <td className="px-4 py-3">
+                  <button
+                    onClick={() => handleUpdate(item)}
+                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+                  >
+                    Save
+                  </button>
+                </td>
+              </tr>
+            ))}
+
+            {equipmentList.length === 0 && (
+              <tr>
+                <td colSpan="7" className="py-8 text-center text-gray-500">
+                  No equipment found
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}

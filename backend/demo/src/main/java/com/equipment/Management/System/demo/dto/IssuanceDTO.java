@@ -21,6 +21,11 @@ public class IssuanceDTO {
     private Long userId;
     private String userName;
     private String userEmail;
+
+    // Issued By Information
+    private Long issuedById;
+    private String issuedByName;
+
     private String roleDept;
     private String contact;
     
@@ -136,6 +141,22 @@ public class IssuanceDTO {
 
     public void setUserEmail(String userEmail) {
         this.userEmail = userEmail;
+    }
+
+    public Long getIssuedById() {
+        return issuedById;
+    }
+
+    public void setIssuedById(Long issuedById) {
+        this.issuedById = issuedById;
+    }
+
+    public String getIssuedByName() {
+        return issuedByName;
+    }
+
+    public void setIssuedByName(String issuedByName) {
+        this.issuedByName = issuedByName;
     }
 
     public String getRoleDept() {

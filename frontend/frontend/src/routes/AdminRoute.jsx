@@ -1,8 +1,8 @@
 import { Navigate } from "react-router-dom";
 
 export default function AdminRoute({ children }) {
-  const token = localStorage.getItem("token");
   const rawUser = localStorage.getItem("user");
+  const normalizeRole = (value) => String(value || "").replace(/^ROLE_/i, "").toUpperCase();
   let user = null;
 
   try {
@@ -11,10 +11,10 @@ export default function AdminRoute({ children }) {
     user = null;
   }
 
-  if (!token || !user || user.role !== "ADMIN") {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    return <Navigate to="/login" replace />;
+  const role = normalizeRole(user?.role);
+
+  if (role !== "ADMIN" && role !== "SUPER_ADMIN") {
+    return <Navigate to="/home" replace />;
   }
 
   return children;

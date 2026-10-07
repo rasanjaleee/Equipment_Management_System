@@ -13,10 +13,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import java.time.LocalDateTime;
 
 @RestController
 @RequestMapping("/auth")
-@CrossOrigin(originPatterns = "http://localhost:*")
+@CrossOrigin(originPatterns = {"http://localhost:*", "https://*.choreoapps.dev", "https://*.choreo.org"})
 public class AuthController {
 
     @Autowired
@@ -104,13 +105,13 @@ public class AuthController {
             ));
         }
 
-        // 2️⃣ Verify username & password
-        boolean success = userService.verifyUser(
+        // 2️⃣ Verify username & password and retrieve user in a single database lookup
+        java.util.Optional<User> userOpt = userService.authenticateUser(
                 loginRequest.getUsername(),
                 loginRequest.getPassword()
         );
 
-        if (!success) {
+        if (userOpt.isEmpty()) {
             loginAttemptService.loginFailed(key);
             return ResponseEntity
                     .status(HttpStatus.UNAUTHORIZED)
@@ -120,12 +121,13 @@ public class AuthController {
         // 3️⃣ Successful login → reset failed attempts
         loginAttemptService.loginSucceeded(key);
 
-        User user = userService
-                .getUserByUsername(loginRequest.getUsername())
-                .orElseThrow();
+        User user = userOpt.get();
 
-        // 4️⃣ Generate JWT
+        // Save successful login time
+        user.setLastLogin(LocalDateTime.now());
+        userService.saveUser(user);
 
+        // Generate JWT
         String token = jwtUtil.generateToken(user.getUsername(), user.getRole());
 
         return ResponseEntity.ok(Map.of(
@@ -133,8 +135,45 @@ public class AuthController {
                 "id", user.getId(),
                 "username", user.getUsername(),
                 "email", user.getEmail(),
-                "role", user.getRole()
+                "role", user.getRole(),
+                "mustChangePassword", user.isMustChangePassword()
         ));
+    }
+    @PostMapping("/change-password")
+    public ResponseEntity<?> changePassword(@RequestBody Map<String, String> request) {
+        try {
+            String username = request.get("username") != null ? request.get("username").trim().toLowerCase() : "";
+            String oldPassword = request.get("oldPassword") != null ? request.get("oldPassword").trim() : "";
+            String newPassword = request.get("newPassword") != null ? request.get("newPassword").trim() : "";
+
+            if (username.isBlank() || oldPassword.isBlank() || newPassword.isBlank()) {
+                return ResponseEntity.badRequest().body(Map.of("message", "All fields are required"));
+            }
+
+            User user = userService.getUserByUsername(username)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            if (!userService.verifyUser(username, oldPassword)) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("message", "Current password is incorrect"));
+            }
+
+            user.setPassword(userService.encodePassword(newPassword));
+            user.setMustChangePassword(false);
+            userService.saveUser(user);
+
+            return ResponseEntity.ok(Map.of("message", "Password changed successfully"));
+
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "message", "Failed to change password: " + e.getMessage()
+            ));
+        }
+    }
+
+    @GetMapping("/ping")
+    public ResponseEntity<?> ping() {
+        return ResponseEntity.ok(Map.of("status", "UP", "message", "Backend service is active"));
     }
 
 }

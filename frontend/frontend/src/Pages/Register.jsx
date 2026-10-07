@@ -1,6 +1,7 @@
 import { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import { API_BASE_URL } from "../services/api";
 import signuppage01 from "/images/signuppage01.png";
 
 
@@ -60,7 +61,7 @@ export default function Register() {
     }
 
     try {
-      const res = await axios.post("http://localhost:8080/auth/register", sanitized);
+      const res = await axios.post(`${API_BASE_URL}/auth/register`, sanitized);
       setSuccess("Registration successful! Redirecting to login...");
       setForm({ username: "", email: "", password: "" });
       
@@ -88,7 +89,7 @@ export default function Register() {
   return (
     <div className="min-h-screen flex">
       {/* Left side - Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center bg-white p-8">
+      <div className="w-full lg:w-1/2 flex items-center justify-center bg-white p-4 sm:p-8">
         <div className="max-w-md w-full">
           {/* Logo and Title */}
           <div className="mb-8">

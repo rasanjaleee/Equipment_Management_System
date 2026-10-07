@@ -1,22 +1,45 @@
-import { Search, ChevronDown, X } from 'lucide-react';
+import {Search,ChevronDown,X,ClipboardList,Clock,CheckCircle,Package,RotateCcw} from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
+import { API_BASE_URL, getImageUrl } from '../services/api';
+import { useData } from '../context/DataContext';
 import image from '/images/1.webp';
 import BorrowRequestForm from '../components/BorrowRequestForm';
 
 const Equipment = () => {
+  const {
+    equipmentList,
+    loadingEquipment,
+    refreshEquipment,
+    myRequests: cachedRequests,
+    myIssuances: cachedIssuances,
+    refreshMyEquipment,
+  } = useData();
+  const normalizeValue = (value) => {
+    if (!value) return '';
+    return String(value).toLowerCase().trim();
+  };
+
+  const ITEMS_PER_PAGE = 6;
+
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [selectedDepartment, setSelectedDepartment] = useState('');
-  const [selectedLaboratory, setSelectedLaboratory] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedLaboratory, setSelectedLaboratory] = useState(searchParams.get('lab') || '');
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
   const [showDeptDropdown, setShowDeptDropdown] = useState(false);
   const [showLabDropdown, setShowLabDropdown] = useState(false);
-  const [equipmentList, setEquipmentList] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!equipmentList || equipmentList.length === 0);
   const [error, setError] = useState('');
   const [isBorrowModalOpen, setIsBorrowModalOpen] = useState(false);
   const [selectedEquipmentForBorrow, setSelectedEquipmentForBorrow] = useState(null);
+  const [labPages, setLabPages] = useState({});
+  const [isMyEquipmentOpen, setIsMyEquipmentOpen] = useState(false);
+  const [myRequests, setMyRequests] = useState(cachedRequests || []);
+  const [myIssuances, setMyIssuances] = useState(cachedIssuances || []);
+  const [myEquipmentLoading, setMyEquipmentLoading] = useState(false);
+  const [myEquipmentError, setMyEquipmentError] = useState('');
 
   const departments = [
     'Department of Electrical and Information Engineering',
@@ -26,7 +49,6 @@ const Equipment = () => {
     'Department of Interdisciplinary Studies'
   ];
 
-  // Laboratories list under Electrical and Information Engineering
   const laboratoriesListOptions = [
     'Electrical Machines and Power Electronics Laboratory',
     'Power Systems and High Voltage Laboratory',
@@ -36,102 +58,227 @@ const Equipment = () => {
     'Computer Networks Laboratory'
   ];
 
-  // Fetch equipment from backend
+  useEffect(() => {
+    if (equipmentList && equipmentList.length > 0) {
+      setLoading(false);
+    }
+  }, [equipmentList]);
+
+  useEffect(() => {
+    if (cachedRequests && cachedRequests.length > 0) {
+      setMyRequests(cachedRequests);
+    }
+  }, [cachedRequests]);
+
+  useEffect(() => {
+    if (cachedIssuances && cachedIssuances.length > 0) {
+      setMyIssuances(cachedIssuances);
+    }
+  }, [cachedIssuances]);
+
   useEffect(() => {
     fetchEquipment();
   }, []);
 
- const fetchEquipment = async () => {
-  try {
-    setLoading(true);
-
-    const token = localStorage.getItem('token'); // ✅ get token if user logged in
-
-    const res = await axios.get('http://localhost:8080/api/equipment/all', {
-      headers: token ? { Authorization: `Bearer ${token}` } : {}
-    });
-
-    setEquipmentList(res.data);
-    setError('');
-  } catch (err) {
-    console.error('Failed to fetch equipment:', err);
-    setError('Failed to load equipment. Please try again later.');
-  } finally {
-    setLoading(false);
-  }
-};
-
-  // Group equipment by laboratory
-  const groupedByLaboratory = equipmentList.reduce((acc, equipment) => {
-    const labName = equipment.laboratory || 'Other';
-    if (!acc[labName]) {
-      acc[labName] = [];
+  useEffect(() => {
+    const q = searchParams.get('search');
+    if (q !== null && q !== undefined) {
+      setSearchQuery(q);
     }
-    acc[labName].push(equipment);
+    const lab = searchParams.get('lab');
+    if (lab !== null && lab !== undefined) {
+      setSelectedLaboratory(lab);
+    }
+    const view = searchParams.get('view');
+    if (view === 'my-equipment') {
+      setIsMyEquipmentOpen(true);
+      fetchMyEquipment();
+    }
+  }, [searchParams]);
+
+  const fetchEquipment = async (forceRefresh = false) => {
+    const res = await refreshEquipment(forceRefresh);
+    setLoading(false);
+    return res;
+  };
+
+  const fetchMyEquipment = async () => {
+    try {
+      const hasCached = (cachedRequests && cachedRequests.length > 0) || (cachedIssuances && cachedIssuances.length > 0);
+      if (!hasCached) {
+        setMyEquipmentLoading(true);
+      }
+      setMyEquipmentError('');
+
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setMyEquipmentError('Please login to view your equipment.');
+        return;
+      }
+
+      const res = await refreshMyEquipment(false);
+      if (res) {
+        setMyRequests(res.requests || []);
+        setMyIssuances(res.issuances || []);
+      }
+    } catch (err) {
+      console.error('Failed to load my equipment:', err);
+      if (!cachedRequests?.length && !cachedIssuances?.length) {
+        setMyEquipmentError('Failed to load your equipment information.');
+      }
+    } finally {
+      setMyEquipmentLoading(false);
+    }
+  };
+
+const pendingRequests = myRequests.filter(
+  (request) => normalizeValue(request.status) === 'pending'
+);
+
+const approvedRequests = myRequests.filter(
+  (request) => normalizeValue(request.status) === 'approved'
+);
+
+const currentBorrowed = myIssuances.filter(
+  (issuance) => normalizeValue(issuance.status) === 'issued'
+);
+
+const returnedEquipment = myIssuances.filter(
+  (issuance) => normalizeValue(issuance.status) === 'returned'
+);
+
+  const dynamicLabMap = equipmentList.reduce((acc, item) => {
+    const labName = (item.laboratory || '').trim();
+    if (!labName) return acc;
+    const key = normalizeValue(labName);
+    if (!acc[key]) acc[key] = labName;
     return acc;
   }, {});
 
-  // Get unique laboratories for filter - combine predefined list with dynamic ones
-  const dynamicLabs = [...new Set(equipmentList.map(eq => eq.laboratory).filter(Boolean))];
+  const dynamicLabs = Object.values(dynamicLabMap);
   const laboratoriesList = [...new Set([...laboratoriesListOptions, ...dynamicLabs])];
 
-  // Filter equipment based on search and filters
-  const filteredEquipment = Object.entries(groupedByLaboratory)
-    .map(([labName, equipment]) => ({
-      name: labName,
-      equipment: equipment.filter(item => {
-        const matchesSearch = searchQuery === '' || 
-          item.equipmentName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          item.model?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          item.serialNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          item.supplier?.toLowerCase().includes(searchQuery.toLowerCase());
-        
-        const matchesLab = selectedLaboratory === '' || item.laboratory === selectedLaboratory;
-        
-        return matchesSearch && matchesLab;
-      })
-    }))
-    .filter(lab => lab.equipment.length > 0);
+  const filteredMap = equipmentList.reduce((acc, item) => {
+    const normalizedSearch = normalizeValue(searchQuery);
+
+    const matchesSearch =
+      normalizedSearch === '' ||
+      normalizeValue(item.equipmentName).includes(normalizedSearch) ||
+      normalizeValue(item.model).includes(normalizedSearch);
+
+    const matchesLab =
+      selectedLaboratory === '' ||
+      normalizeValue(item.laboratory) === normalizeValue(selectedLaboratory);
+
+    if (!matchesSearch || !matchesLab) return acc;
+
+    const labName = (item.laboratory || 'Other').trim() || 'Other';
+    const equipmentName = (item.equipmentName || 'Unknown').trim() || 'Unknown';
+    const labKey = normalizeValue(labName) || 'other';
+    const equipmentKey = normalizeValue(equipmentName) || 'unknown';
+
+    if (!acc[labKey]) acc[labKey] = { name: labName, equipmentByName: {} };
+
+    if (!acc[labKey].equipmentByName[equipmentKey]) {
+      acc[labKey].equipmentByName[equipmentKey] = { name: equipmentName, items: [] };
+    }
+
+    acc[labKey].equipmentByName[equipmentKey].items.push(item);
+    return acc;
+  }, {});
+
+  const filteredEquipment = Object.values(filteredMap).map((lab) => {
+    const equipment = Object.values(lab.equipmentByName).map((group) => {
+      const working = group.items.filter(
+        (item) => normalizeValue(item.status) === 'working'
+      ).length;
+
+      const underRepair = group.items.filter(
+        (item) => normalizeValue(item.status) === 'under_repair'
+      ).length;
+
+      const broken = group.items.filter(
+        (item) => normalizeValue(item.status) === 'broken'
+      ).length;
+
+      return {
+        name: group.name,
+        items: group.items,
+        totalQuantity: group.items.length,
+        working,
+        underRepair,
+        broken,
+        displayItem: group.items[0]
+      };
+    });
+
+    return { name: lab.name, equipment };
+  });
+
+  useEffect(() => {
+    setLabPages({});
+  }, [searchQuery, selectedLaboratory, selectedDepartment]);
+
+  const getLabPage = (labName, totalItems) => {
+    const key = normalizeValue(labName) || 'other';
+    const totalPages = Math.max(1, Math.ceil(totalItems / ITEMS_PER_PAGE));
+    const currentPage = Math.min(labPages[key] || 1, totalPages);
+    return { key, currentPage, totalPages };
+  };
+
+  const updateLabPage = (labKey, page, totalPages) => {
+    const clampedPage = Math.min(Math.max(page, 1), totalPages);
+    setLabPages((prev) => ({ ...prev, [labKey]: clampedPage }));
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Hero Section */}
-      <div className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-8">
-            {/* Left Content */}
-            <div className="flex-1">
-              <h1 className="text-4xl font-bold text-gray-900 mb-4">
-                Laboratory Equipment<br />Inventory
-              </h1>
-              <p className="text-gray-600 text-lg">
-                Browse and view details of all available<br />laboratory devices
-              </p>
-            </div>
+      <div
+        className="relative w-full bg-cover bg-center"
+        style={{
+          backgroundImage: `url(${image})`,
+          minHeight: '380px',
+        }}
+      >
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              'linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.70) 100%)',
+          }}
+        />
 
-            {/* Right Image */}
-            <div className="flex-1">
-              <img 
-                src={image}
-                alt="Engineering Building"
-                className="w-full h-64 object-cover rounded-lg shadow-md"
-              />
-            </div>
-          </div>
-        </div>
-      </div>
+        <div className="relative flex flex-col items-center justify-center text-center px-4 py-20">
+          <span
+            className="inline-flex items-center gap-2 mb-5 px-4 py-1.5 rounded-full text-xs font-semibold tracking-widest uppercase"
+            style={{
+              background: 'rgba(234,179,8,0.20)',
+              color: '#FDE68A',
+              border: '1px solid rgba(234,179,8,0.40)'
+            }}
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-pulse"></span>
+            Faculty of Engineering · University of Ruhuna
+          </span>
 
-      {/* Search and Filter Section */}
-      <div className="bg-yellow-500 py-6">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center bg-white rounded-md px-4 py-3 shadow-md max-w-2xl">
-            <Search className="text-gray-400 mr-3" size={20} />
+          <h1 className="text-4xl md:text-5xl font-extrabold text-white mb-4 leading-tight tracking-tight">
+            Laboratory Equipment
+            <span className="block text-yellow-400">Inventory</span>
+          </h1>
+
+          <p className="text-gray-300 text-base md:text-lg max-w-xl mb-10">
+            Browse, search, and request laboratory devices across all departments and facilities.
+          </p>
+
+          <div className="flex items-center bg-white rounded-full px-5 py-3 shadow-2xl w-full max-w-xl">
+            <Search className="text-yellow-500 mr-3 flex-shrink-0" size={20} />
             <input
               type="text"
-              placeholder="Search by equipment name, model, serial number..."
+              placeholder="Search by equipment name or model..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="flex-1 border-none outline-none text-gray-700 placeholder-gray-400 text-sm"
+              className="flex-1 border-none outline-none text-gray-700 placeholder-gray-400 text-sm bg-transparent"
             />
             {searchQuery && (
               <button
@@ -139,223 +286,759 @@ const Equipment = () => {
                 className="ml-2 p-1 hover:bg-gray-100 rounded-full transition-colors"
                 title="Clear search"
               >
-                <X className="text-gray-400 hover:text-gray-600" size={18} />
+                <X className="text-gray-400 hover:text-gray-600" size={16} />
               </button>
             )}
+          </div>
+
+          <div className="flex flex-wrap justify-center gap-3 mt-8">
+            <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-4 py-1.5 text-white text-xs font-medium">
+              <span className="w-2 h-2 rounded-full bg-green-400"></span>
+              {equipmentList.filter((e) => normalizeValue(e.status) === 'working').length} Working
+            </div>
+
+            <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-4 py-1.5 text-white text-xs font-medium">
+              <span className="w-2 h-2 rounded-full bg-blue-400"></span>
+              {equipmentList.filter((e) => normalizeValue(e.status) === 'under_repair').length} Under Repair
+            </div>
+
+            <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-4 py-1.5 text-white text-xs font-medium">
+              <span className="w-2 h-2 rounded-full bg-red-400"></span>
+              {equipmentList.filter((e) => normalizeValue(e.status) === 'broken').length} Broken
+            </div>
+
+            <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-4 py-1.5 text-yellow-300 text-xs font-medium">
+              <span className="w-2 h-2 rounded-full bg-yellow-400"></span>
+              {equipmentList.length} Total Items
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-          {/* Department Filter */}
-          <div className="relative">
-            <div 
-              onClick={() => {
-                setShowDeptDropdown(!showDeptDropdown);
-                setShowLabDropdown(false);
-              }}
-              className="bg-gray-100 rounded-lg p-4 flex items-center justify-between cursor-pointer hover:bg-gray-200 transition-colors"
-            >
-              <span className="text-gray-700 font-medium">
-                {selectedDepartment || 'Department'}
-              </span>
-              <ChevronDown size={20} className="text-yellow-500" />
-            </div>
-            
-            {showDeptDropdown && (
-              <div className="absolute z-10 w-full mt-2 bg-white rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                {departments.map((dept, index) => (
+      {/* Filters Bar */}
+      <div className="bg-yellow-500 py-4 shadow-md">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative flex-1 min-w-[200px]">
+              <div
+                onClick={() => {
+                  setShowDeptDropdown(!showDeptDropdown);
+                  setShowLabDropdown(false);
+                }}
+                className="bg-white rounded-lg px-4 py-2.5 flex items-center justify-between cursor-pointer hover:bg-yellow-50 transition-colors shadow-sm"
+              >
+                <span className="text-gray-700 font-medium text-sm truncate">
+                  {selectedDepartment || 'All Departments'}
+                </span>
+                <ChevronDown size={16} className="text-yellow-600 flex-shrink-0 ml-2" />
+              </div>
+
+              {showDeptDropdown && (
+                <div className="absolute z-20 w-full mt-1 bg-white rounded-lg shadow-xl max-h-60 overflow-y-auto border border-yellow-100">
                   <div
-                    key={index}
                     onClick={() => {
-                      setSelectedDepartment(dept);
+                      setSelectedDepartment('');
                       setShowDeptDropdown(false);
                     }}
-                    className="p-3 hover:bg-yellow-50 cursor-pointer border-b last:border-b-0 text-sm text-gray-700"
+                    className="p-3 hover:bg-yellow-50 cursor-pointer border-b text-sm text-gray-500 italic"
                   >
-                    {dept}
+                    All Departments
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
 
-          {/* Laboratory Filter */}
-          <div className="relative">
-            <div 
-              onClick={() => {
-                setShowLabDropdown(!showLabDropdown);
-                setShowDeptDropdown(false);
-              }}
-              className="bg-gray-100 rounded-lg p-4 flex items-center justify-between cursor-pointer hover:bg-gray-200 transition-colors"
-            >
-              <span className="text-gray-700 font-medium">
-                {selectedLaboratory || 'Laboratory'}
-              </span>
-              <ChevronDown size={20} className="text-yellow-500" />
+                  {departments.map((dept, index) => (
+                    <div
+                      key={index}
+                      onClick={() => {
+                        setSelectedDepartment(dept);
+                        setShowDeptDropdown(false);
+                      }}
+                      className="p-3 hover:bg-yellow-50 cursor-pointer border-b last:border-b-0 text-sm text-gray-700"
+                    >
+                      {dept}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-            
-            {showLabDropdown && (
-              <div className="absolute z-10 w-full mt-2 bg-white rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                {laboratoriesList.map((lab, index) => (
+
+            <div className="relative flex-1 min-w-[200px]">
+              <div
+                onClick={() => {
+                  setShowLabDropdown(!showLabDropdown);
+                  setShowDeptDropdown(false);
+                }}
+                className="bg-white rounded-lg px-4 py-2.5 flex items-center justify-between cursor-pointer hover:bg-yellow-50 transition-colors shadow-sm"
+              >
+                <span className="text-gray-700 font-medium text-sm truncate">
+                  {selectedLaboratory || 'All Laboratories'}
+                </span>
+                <ChevronDown size={16} className="text-yellow-600 flex-shrink-0 ml-2" />
+              </div>
+
+              {showLabDropdown && (
+                <div className="absolute z-20 w-full mt-1 bg-white rounded-lg shadow-xl max-h-60 overflow-y-auto border border-yellow-100">
                   <div
-                    key={index}
                     onClick={() => {
-                      setSelectedLaboratory(lab);
+                      setSelectedLaboratory('');
                       setShowLabDropdown(false);
                     }}
-                    className="p-3 hover:bg-yellow-50 cursor-pointer border-b last:border-b-0 text-sm text-gray-700"
+                    className="p-3 hover:bg-yellow-50 cursor-pointer border-b text-sm text-gray-500 italic"
                   >
-                    {lab}
+                    All Laboratories
                   </div>
-                ))}
-              </div>
-            )}
+
+                  {laboratoriesList.map((lab, index) => (
+                    <div
+                      key={index}
+                      onClick={() => {
+                        setSelectedLaboratory(lab);
+                        setShowLabDropdown(false);
+                      }}
+                      className="p-3 hover:bg-yellow-50 cursor-pointer border-b last:border-b-0 text-sm text-gray-700"
+                    >
+                      {lab}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 sm:flex gap-2 w-full lg:w-auto">
+              <button
+                onClick={() => {
+                  setSelectedDepartment('');
+                  setSelectedLaboratory('');
+                  setSearchQuery('');
+                }}
+                className="w-full sm:w-auto bg-white hover:bg-yellow-50 text-yellow-700 font-semibold px-5 py-2.5 rounded-lg text-sm transition-colors shadow-sm border border-yellow-200"
+              >
+                Clear
+              </button>
+
+              <button
+              onClick={() => {
+                setIsMyEquipmentOpen(true);
+                fetchMyEquipment();
+              }}
+              className="w-full sm:w-auto justify-center bg-white hover:bg-yellow-50 text-gray-900 font-semibold px-5 py-2.5 rounded-lg text-sm transition-colors shadow-sm border border-gray-300 flex items-center gap-2"
+            >
+              <ClipboardList size={17} />
+              My Equipment
+            </button>
+
+              <button
+                onClick={() => {
+                  const token = localStorage.getItem('token');
+                  if (!token) {
+                    navigate('/login', { state: { from: '/equipment' } });
+                    return;
+                  }
+                  setSelectedEquipmentForBorrow(null);
+                  setIsBorrowModalOpen(true);
+                }}
+                className="w-full sm:w-auto bg-black hover:bg-gray-800 text-white font-semibold px-5 py-2.5 rounded-lg text-sm transition-colors shadow-sm"
+              >
+                Request to Borrow
+              </button>
+            </div>
           </div>
         </div>
+      </div>
 
-        {/* Filter Buttons */}
-        <div className="flex flex-wrap gap-3 mb-4">
-          <button 
-            onClick={() => {
-              // Filters are applied automatically via filteredEquipment
-              console.log('Filters applied:', { selectedDepartment, selectedLaboratory, searchQuery });
-            }}
-            className="bg-yellow-500 hover:bg-yellow-400 text-black font-semibold px-6 py-2 rounded-full text-sm transition-colors"
-          >
-            Apply Filters
-          </button>
-          <button 
-            onClick={() => {
-              setSelectedDepartment('');
-              setSelectedLaboratory('');
-              setSearchQuery('');
-            }}
-            className="bg-yellow-500 hover:bg-yellow-400 text-black font-semibold px-6 py-2 rounded-full text-sm transition-colors"
-          >
-            Clear Filters
-          </button>
-          <button
-            onClick={() => {
-              setSelectedEquipmentForBorrow(null);
-              setIsBorrowModalOpen(true);
-            }}
-            className="bg-black hover:bg-gray-800 text-white font-semibold px-6 py-2 rounded-full text-sm transition-colors"
-          >
-            Request to Borrow
-          </button>
-        </div>
-
-        {/* Search Results Indicator */}
-        {(searchQuery || selectedLaboratory) && (
-          <div className="mb-6 p-3 bg-blue-50 border-l-4 border-blue-500 rounded">
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {(searchQuery || selectedLaboratory || selectedDepartment) && (
+          <div className="mb-6 p-3 bg-blue-50 border-l-4 border-blue-500 rounded flex flex-wrap items-center gap-2">
             <p className="text-sm text-gray-700">
               {searchQuery && (
-                <span>Searching for: <strong>"{searchQuery}"</strong></span>
+                <span>
+                  Searching: <strong>"{searchQuery}"</strong>
+                </span>
               )}
-              {searchQuery && selectedLaboratory && <span className="mx-2">•</span>}
+
+              {searchQuery && selectedLaboratory && <span className="mx-2">·</span>}
+
               {selectedLaboratory && (
-                <span>Laboratory: <strong>{selectedLaboratory}</strong></span>
+                <span>
+                  Lab: <strong>{selectedLaboratory}</strong>
+                </span>
               )}
-              <span className="ml-2">
-                - Found <strong>{filteredEquipment.reduce((acc, lab) => acc + lab.equipment.length, 0)}</strong> equipment
+
+              <span className="ml-2 text-gray-500">
+                —{' '}
+                <strong>
+                  {filteredEquipment.reduce(
+                    (acc, lab) =>
+                      acc + lab.equipment.reduce((sum, g) => sum + g.totalQuantity, 0),
+                    0
+                  )}
+                </strong>{' '}
+                items ({filteredEquipment.reduce((acc, lab) => acc + lab.equipment.length, 0)} types)
               </span>
             </p>
           </div>
         )}
 
-        {/* Loading State */}
         {loading && (
-          <div className="text-center py-12">
+          <div className="text-center py-16">
             <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500"></div>
-            <p className="mt-4 text-gray-600">Loading equipment...</p>
+            <p className="mt-4 text-gray-500">Loading equipment...</p>
           </div>
         )}
 
-        {/* Error State */}
         {error && !loading && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
-            <strong className="font-bold">Error!</strong>
-            <span className="block sm:inline"> {error}</span>
+          <div
+            className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4"
+            role="alert"
+          >
+            <strong className="font-bold">Error! </strong>
+            {error}
           </div>
         )}
 
-        {/* No Equipment Found */}
         {!loading && !error && filteredEquipment.length === 0 && (
-          <div className="text-center py-12 bg-white rounded-lg shadow-sm">
-            <p className="text-gray-600 text-lg">No equipment found matching your criteria.</p>
-            <button 
+          <div className="text-center py-16 bg-white rounded-xl shadow-sm">
+            <p className="text-gray-500 text-lg mb-4">No equipment found matching your criteria.</p>
+            <button
               onClick={() => {
                 setSelectedDepartment('');
                 setSelectedLaboratory('');
                 setSearchQuery('');
               }}
-              className="mt-4 bg-yellow-500 hover:bg-yellow-400 text-black font-semibold px-6 py-2 rounded-full text-sm transition-colors"
+              className="bg-yellow-500 hover:bg-yellow-400 text-black font-semibold px-6 py-2 rounded-full text-sm transition-colors"
             >
               Clear Filters
             </button>
           </div>
         )}
 
-        {/* Laboratory Sections */}
-        {!loading && !error && filteredEquipment.map((lab, index) => (
-          <div key={index} className="mb-12">
-            <div className="bg-white border-l-4 border-yellow-500 p-4 mb-6 shadow-sm">
-              <h2 className="text-xl font-bold text-gray-900">{lab.name}</h2>
-              <p className="text-gray-600 text-sm">Total Equipment = {lab.equipment.length}</p>
-            </div>
+        {!loading &&
+          !error &&
+          filteredEquipment.map((lab, index) => {
+            const { key: labKey, currentPage, totalPages } = getLabPage(
+              lab.name,
+              lab.equipment.length
+            );
 
-            {/* Equipment Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {lab.equipment.map((item) => (
-                <div key={item.id} className="bg-white rounded-lg shadow-md overflow-hidden border-2 border-yellow-400 hover:shadow-xl transition-shadow">
-                  {/* Equipment Image */}
-                  <div className="aspect-video bg-gray-100 flex items-center justify-center overflow-hidden">
-                    {item.photoPath ? (
-                      <img 
-                        src={`http://localhost:8080/${item.photoPath}?t=${Date.now()}`}
-                        alt={item.equipmentName}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          e.target.onerror = null;
-                          e.target.src = '/images/1.webp';
-                        }}
-                      />
-                    ) : (
-                      <img 
-                        src="/images/1.webp"
-                        alt={item.equipmentName}
-                        className="w-full h-full object-cover"
-                      />
-                    )}
+            const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+            const paginatedEquipment = lab.equipment.slice(
+              startIndex,
+              startIndex + ITEMS_PER_PAGE
+            );
+
+            return (
+              <div key={index} className="mb-12">
+                <div className="flex items-center gap-4 mb-6 bg-white rounded-xl p-4 shadow-sm border-l-4 border-yellow-500">
+                  <div className="flex-1">
+                    <h2 className="text-lg font-bold text-gray-900">{lab.name}</h2>
+                    <p className="text-gray-500 text-sm mt-0.5">
+                      {lab.equipment.reduce((acc, g) => acc + g.totalQuantity, 0)} items
+                      &nbsp;·&nbsp;
+                      {lab.equipment.length} types
+                    </p>
                   </div>
 
-                  {/* Equipment Details */}
-                  <div className="p-4">
-                    <h3 className="font-bold text-gray-900 mb-1">{item.equipmentName}</h3>
-                    <p className="text-sm text-gray-600 mb-1">Model: {item.model || 'N/A'}</p>
-                    <p className="text-sm text-gray-600 mb-1">Serial: {item.serialNumber || 'N/A'}</p>
-                    <p className="text-sm text-gray-600 mb-4">
-                      Status: <span className={`font-semibold ${item.status === 'WORKING' ? 'text-green-600' : 'text-red-600'}`}>
-                        {item.status || 'N/A'}
-                      </span>
-                    </p>
+                  <div className="flex gap-3 text-xs font-medium">
+                    <span className="flex items-center gap-1 text-green-600 bg-green-50 px-2 py-1 rounded-full">
+                      <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                      {lab.equipment.reduce((a, g) => a + g.working, 0)} Working
+                    </span>
 
-                    <button
-                      onClick={() => navigate(`/equipment/${item.id}`)}
-                      className="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-semibold py-2 px-4 rounded transition-colors"
-                    >
-                      View Details
-                    </button>
+                    <span className="flex items-center gap-1 text-blue-600 bg-blue-50 px-2 py-1 rounded-full">
+                      <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                      {lab.equipment.reduce((a, g) => a + g.underRepair, 0)} Repair
+                    </span>
+
+                    <span className="flex items-center gap-1 text-red-600 bg-red-50 px-2 py-1 rounded-full">
+                      <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+                      {lab.equipment.reduce((a, g) => a + g.broken, 0)} Broken
+                    </span>
                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
-        ))}
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+                  {paginatedEquipment.map((group, groupIndex) => (
+                    <div
+                      key={groupIndex}
+                      className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
+                    >
+                      <div className="aspect-[4/3] bg-gray-100 overflow-hidden">
+                        <img
+                          src={
+                            group.displayItem.photoPath
+                              ? getImageUrl(group.displayItem.photoPath)
+                              : '/images/sample1.jpg'
+                          }
+                          alt={group.name}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = '/images/sample1.jpg';
+                          }}
+                        />
+                      </div>
+
+                      <div className="p-3">
+                        <h3 className="font-semibold text-sm text-gray-900 mb-2 line-clamp-2 min-h-[2.5rem]">
+                          {group.name}
+                        </h3>
+
+                        <div className="bg-gray-50 rounded-lg p-2 mb-3">
+                          <p className="text-xs text-gray-600 mb-1.5 font-medium">
+                            Qty: {group.totalQuantity}
+                          </p>
+
+                          <div className="flex flex-wrap gap-1.5 text-[10px]">
+                            <span className="flex items-center gap-1 bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full">
+                              <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                              {group.working}
+                            </span>
+
+                            <span className="flex items-center gap-1 bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full">
+                              <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                              {group.underRepair}
+                            </span>
+
+                            <span className="flex items-center gap-1 bg-red-100 text-red-700 px-1.5 py-0.5 rounded-full">
+                              <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+                              {group.broken}
+                            </span>
+                          </div>
+                        </div>
+
+                        <button
+                          onClick={() =>
+                            navigate(
+                              `/equipment/details/${encodeURIComponent(group.name)}/${encodeURIComponent(lab.name)}`
+                            )
+                          }
+                          className="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-semibold py-1.5 px-4 rounded-lg text-xs transition-colors"
+                        >
+                          View Details
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {totalPages > 1 && (
+                  <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+                    <button
+                      onClick={() => updateLabPage(labKey, currentPage - 1, totalPages)}
+                      disabled={currentPage === 1}
+                      className="px-4 py-1.5 text-sm rounded-lg border border-gray-300 bg-white text-gray-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50"
+                    >
+                      Previous
+                    </button>
+
+                    {Array.from({ length: totalPages }, (_, idx) => idx + 1).map(
+                      (pageNumber) => (
+                        <button
+                          key={pageNumber}
+                          onClick={() => updateLabPage(labKey, pageNumber, totalPages)}
+                          className={`px-3 py-1.5 text-sm rounded-lg border transition-colors ${
+                            currentPage === pageNumber
+                              ? 'bg-yellow-500 border-yellow-500 text-black font-semibold'
+                              : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                          }`}
+                        >
+                          {pageNumber}
+                        </button>
+                      )
+                    )}
+
+                    <button
+                      onClick={() => updateLabPage(labKey, currentPage + 1, totalPages)}
+                      disabled={currentPage === totalPages}
+                      className="px-4 py-1.5 text-sm rounded-lg border border-gray-300 bg-white text-gray-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50"
+                    >
+                      Next
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
       </div>
+
+      {/* ================= MY EQUIPMENT MODAL ================= */}
+{isMyEquipmentOpen && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+
+    <div className="bg-white w-full max-w-6xl max-h-[90vh] overflow-y-auto rounded-2xl shadow-2xl">
+
+      {/* HEADER */}
+      <div className="sticky top-0 z-10 bg-white border-b px-6 py-4 flex items-center justify-between">
+
+        <div>
+          <h2 className="text-xl font-bold text-gray-900">
+            My Equipment
+          </h2>
+
+          <p className="text-sm text-gray-500">
+            Your requests, borrowed equipment and return history
+          </p>
+        </div>
+
+        <button
+          onClick={() => setIsMyEquipmentOpen(false)}
+          className="p-2 hover:bg-gray-100 rounded-full"
+        >
+          <X size={22} />
+        </button>
+
+      </div>
+
+      <div className="p-6">
+
+        {myEquipmentLoading ? (
+
+          <div className="py-16 text-center">
+            <div className="inline-block animate-spin rounded-full h-10 w-10 border-b-2 border-yellow-500" />
+            <p className="mt-3 text-gray-500">
+              Loading your equipment...
+            </p>
+          </div>
+
+        ) : myEquipmentError ? (
+
+          <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">
+            {myEquipmentError}
+          </div>
+
+        ) : (
+          <>
+
+            {/* SUMMARY */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+
+              <div className="bg-yellow-50 border border-yellow-100 rounded-xl p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-500">
+                      Pending
+                    </p>
+
+                    <p className="text-2xl font-bold text-yellow-600">
+                      {pendingRequests.length}
+                    </p>
+                  </div>
+
+                  <Clock
+                    size={26}
+                    className="text-yellow-500"
+                  />
+                </div>
+              </div>
+
+              <div className="bg-green-50 border border-green-100 rounded-xl p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-500">
+                      Approved
+                    </p>
+
+                    <p className="text-2xl font-bold text-green-600">
+                      {approvedRequests.length}
+                    </p>
+                  </div>
+
+                  <CheckCircle
+                    size={26}
+                    className="text-green-500"
+                  />
+                </div>
+              </div>
+
+              <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-500">
+                      Currently Borrowed
+                    </p>
+
+                    <p className="text-2xl font-bold text-blue-600">
+                      {currentBorrowed.length}
+                    </p>
+                  </div>
+
+                  <Package
+                    size={26}
+                    className="text-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-500">
+                      Returned
+                    </p>
+
+                    <p className="text-2xl font-bold text-gray-700">
+                      {returnedEquipment.length}
+                    </p>
+                  </div>
+
+                  <RotateCcw
+                    size={26}
+                    className="text-gray-500"
+                  />
+                </div>
+              </div>
+
+            </div>
+
+
+            {/* MY REQUESTS */}
+            <div className="mb-8">
+
+              <h3 className="font-bold text-lg text-gray-900 mb-3">
+                My Requests
+              </h3>
+
+              <div className="border border-gray-200 rounded-xl overflow-x-auto">
+
+                <table className="w-full min-w-[750px] text-sm">
+
+                  <thead className="bg-gray-100 text-left">
+                    <tr>
+                      <th className="p-3">Equipment</th>
+                      <th className="p-3">Serial No.</th>
+                      <th className="p-3">Laboratory</th>
+                      <th className="p-3">Borrow Period</th>
+                      <th className="p-3">Status</th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+
+                    {myRequests.length === 0 ? (
+
+                      <tr>
+                        <td
+                          colSpan="5"
+                          className="p-6 text-center text-gray-500"
+                        >
+                          You have no equipment requests.
+                        </td>
+                      </tr>
+
+                    ) : (
+
+                      myRequests.map((request) => (
+
+                        <tr
+                          key={request.id}
+                          className="border-t hover:bg-gray-50"
+                        >
+
+                          <td className="p-3 font-medium">
+                            {request.equipmentName || '-'}
+                          </td>
+
+                          <td className="p-3">
+                            {request.serialNumber || '-'}
+                          </td>
+
+                          <td className="p-3">
+                            {request.laboratoryName || '-'}
+                          </td>
+
+                          <td className="p-3">
+                            {request.borrowStartDate || '-'}
+                            {' → '}
+                            {request.borrowEndDate || '-'}
+                          </td>
+
+                          <td className="p-3">
+                            <span
+                              className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
+                                normalizeValue(request.status) === 'approved'
+                                  ? 'bg-green-100 text-green-700'
+                                  : normalizeValue(request.status) === 'rejected'
+                                    ? 'bg-red-100 text-red-700'
+                                    : 'bg-yellow-100 text-yellow-700'
+                              }`}
+                            >
+                              {request.status || 'PENDING'}
+                            </span>
+                          </td>
+
+                        </tr>
+
+                      ))
+
+                    )}
+
+                  </tbody>
+
+                </table>
+
+              </div>
+            </div>
+
+
+            {/* CURRENTLY BORROWED */}
+            <div className="mb-8">
+
+              <h3 className="font-bold text-lg text-gray-900 mb-3">
+                Currently Borrowed
+              </h3>
+
+              <div className="border border-gray-200 rounded-xl overflow-x-auto">
+
+                <table className="w-full min-w-[700px] text-sm">
+
+                  <thead className="bg-gray-100 text-left">
+                    <tr>
+                      <th className="p-3">Issuance ID</th>
+                      <th className="p-3">Equipment</th>
+                      <th className="p-3">Issue Date</th>
+                      <th className="p-3">Due Date</th>
+                      <th className="p-3">Status</th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+
+                    {currentBorrowed.length === 0 ? (
+
+                      <tr>
+                        <td
+                          colSpan="5"
+                          className="p-6 text-center text-gray-500"
+                        >
+                          You currently have no borrowed equipment.
+                        </td>
+                      </tr>
+
+                    ) : (
+
+                      currentBorrowed.map((issuance) => (
+
+                        <tr
+                          key={issuance.id}
+                          className="border-t hover:bg-gray-50"
+                        >
+
+                          <td className="p-3 font-medium">
+                            {issuance.issuanceId || '-'}
+                          </td>
+
+                          <td className="p-3">
+                            {issuance.equipmentName || '-'}
+                          </td>
+
+                          <td className="p-3">
+                            {issuance.issueDate || '-'}
+                          </td>
+
+                          <td className="p-3">
+                            {issuance.returnDueDate || '-'}
+                          </td>
+
+                          <td className="p-3">
+                            <span className="inline-flex rounded-full bg-blue-100 text-blue-700 px-2.5 py-1 text-xs font-semibold">
+                              {issuance.status}
+                            </span>
+                          </td>
+
+                        </tr>
+
+                      ))
+
+                    )}
+
+                  </tbody>
+
+                </table>
+
+              </div>
+            </div>
+
+
+            {/* RETURN HISTORY */}
+            <div>
+
+              <h3 className="font-bold text-lg text-gray-900 mb-3">
+                Return History
+              </h3>
+
+              <div className="border border-gray-200 rounded-xl overflow-x-auto">
+
+                <table className="w-full min-w-[700px] text-sm">
+
+                  <thead className="bg-gray-100 text-left">
+                    <tr>
+                      <th className="p-3">Issuance ID</th>
+                      <th className="p-3">Equipment</th>
+                      <th className="p-3">Return Date</th>
+                      <th className="p-3">Condition</th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+
+                    {returnedEquipment.length === 0 ? (
+
+                      <tr>
+                        <td
+                          colSpan="4"
+                          className="p-6 text-center text-gray-500"
+                        >
+                          No return history available.
+                        </td>
+                      </tr>
+
+                    ) : (
+
+                      returnedEquipment.map((issuance) => (
+
+                        <tr
+                          key={issuance.id}
+                          className="border-t hover:bg-gray-50"
+                        >
+
+                          <td className="p-3 font-medium">
+                            {issuance.issuanceId || '-'}
+                          </td>
+
+                          <td className="p-3">
+                            {issuance.equipmentName || '-'}
+                          </td>
+
+                          <td className="p-3">
+                            {issuance.returnDate || '-'}
+                          </td>
+
+                          <td className="p-3">
+                            {issuance.conditionOnReturn || '-'}
+                          </td>
+
+                        </tr>
+
+                      ))
+
+                    )}
+
+                  </tbody>
+
+                </table>
+
+              </div>
+            </div>
+
+          </>
+        )}
+
+      </div>
+
+    </div>
+
+  </div>
+)}
 
       <BorrowRequestForm
         isOpen={isBorrowModalOpen}
