@@ -11,7 +11,7 @@ public class Issuance {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true, length = 30)
+    @Column(unique = true, length = 30)
     private String issuanceId;
 
     @Column(nullable = false)
