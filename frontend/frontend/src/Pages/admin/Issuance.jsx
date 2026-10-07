@@ -53,19 +53,14 @@ function todayValue() {
   return new Date().toISOString().slice(0, 10);
 }
 
-function makeIssuanceId(seed) {
-  const safeSeed = String(seed || Date.now()).replace(/\D/g, '').slice(-6) || String(Date.now()).slice(-6);
-  return `ISS-${safeSeed}`;
-}
-
 function normalizeBorrowRequest(request, fallbackIndex = 0) {
   const rawId = request.id ?? request.requestId ?? request.borrowRequestId ?? request.borrowRequestCode;
   return {
     id: rawId ?? `request-${fallbackIndex}`,
     requestId: request.requestCode ?? request.requestId ?? `BR-${String(rawId ?? fallbackIndex + 1).padStart(4, '0')}`,
-    userName: request.userName ?? request.applicantName ?? request.name ?? 'Unknown user',
+    userName: request.userName ?? request.applicantName ?? request.name ?? request.user?.username ?? 'Unknown user',
     userId: request.registrationOrStaffId ?? request.registrationNumber ?? request.staffId ?? 'N/A',
-    userDbId: request.userId ?? null,
+    userDbId: request.userId ?? request.user?.id ?? null,
     equipmentName: request.equipmentName ?? request.itemName ?? 'Unknown equipment',
     equipmentId: request.equipmentId ?? null,
     laboratoryName: request.laboratoryName ?? request.laboratory ?? request.labName ?? 'N/A',
@@ -76,7 +71,7 @@ function normalizeBorrowRequest(request, fallbackIndex = 0) {
     borrowEndDate: request.borrowEndDate ?? request.endDate ?? '',
     status: String(request.status ?? 'PENDING').toUpperCase(),
     purpose: request.purpose ?? request.reason ?? '',
-    email: request.email ?? request.userEmail ?? '',
+    email: request.email ?? request.userEmail ?? request.user?.email ?? '',
     contactNumber: request.contactNumber ?? request.contact ?? '',
     department: request.department ?? request.roleDept ?? '',
     returnDueDate: request.borrowEndDate ?? request.endDate ?? '',
@@ -161,7 +156,7 @@ function InfoCard({ icon: Icon, label, value }) {
   );
 }
 
-function RequestDetailsModal({ request, onClose, onApprove, onReject, actionLoading }) {
+function RequestDetailsModal({ request, onClose, onApprove, onRequestForm, onReject, actionLoading }) {
   if (!request) {
     return null;
   }
@@ -212,12 +207,20 @@ function RequestDetailsModal({ request, onClose, onApprove, onReject, actionLoad
               Reject
             </Button>
             <Button
+              onClick={() => onRequestForm(request)}
+              disabled={actionLoading === request.id || request.status !== 'PENDING'}
+              className="border border-blue-300 bg-blue-50 text-blue-700 hover:bg-blue-100"
+            >
+              <ClipboardList size={16} />
+              Request Form
+            </Button>
+            <Button
               onClick={() => onApprove(request)}
               disabled={actionLoading === request.id || request.status !== 'PENDING'}
               className="bg-emerald-600 text-white hover:bg-emerald-700"
             >
               <CheckCircle2 size={16} />
-              Approve / Issue
+              Approve
             </Button>
           </div>
         </div>
@@ -226,7 +229,7 @@ function RequestDetailsModal({ request, onClose, onApprove, onReject, actionLoad
   );
 }
 
-function BorrowRequestTable({ requests, filter, onFilterChange, onViewDetails, onApprove, onReject, actionLoading }) {
+function BorrowRequestTable({ requests, filter, onFilterChange, onViewDetails, onApprove, onRequestForm, onReject, actionLoading }) {
   const stats = getFilterStats(requests);
 
   const visibleRequests = useMemo(() => {
@@ -317,7 +320,15 @@ function BorrowRequestTable({ requests, filter, onFilterChange, onViewDetails, o
                         className="bg-emerald-600 text-white hover:bg-emerald-700"
                       >
                         {actionLoading === request.id ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
-                        Approve / Issue
+                        Approve
+                      </Button>
+                      <Button
+                        onClick={() => onRequestForm(request)}
+                        disabled={actionLoading === request.id || request.status !== 'PENDING'}
+                        className="border border-blue-300 bg-blue-50 text-blue-700 hover:bg-blue-100"
+                      >
+                        <ClipboardList size={16} />
+                        Request Form
                       </Button>
                       <Button
                         onClick={() => onReject(request)}
@@ -1420,7 +1431,7 @@ setReturnAccessories([]);
     setSelectedRequest(request);
     setForm((prev) => ({
       ...prev,
-      issuanceId: makeIssuanceId(request.id),
+      issuanceId: '',
       issueDate: todayValue(),
       returnDueDate: request.borrowEndDate || '',
       conditionAtIssue: 'Working',
@@ -1443,12 +1454,39 @@ setReturnAccessories([]);
     setFormMessage('Selected request loaded into the issuance form.');
   }
 
-  function handleApprove(request) {
+  function handleRequestForm(request) {
     if (request.status !== 'PENDING') {
       setFormError('Only pending requests can be issued.');
       return;
     }
     navigate('/issuance', { state: request.raw });
+  }
+
+  async function handleApprove(request) {
+    if (request.status !== 'PENDING') {
+      setFormError('Only pending requests can be approved.');
+      return;
+    }
+
+    try {
+      setActionLoadingId(request.id);
+      setFormMessage('');
+      setFormError('');
+      await updateBorrowRequestStatus(request, 'APPROVED');
+      await fetchBorrowRequests();
+      if (selectedRequest?.id === request.id) {
+        setSelectedRequest(null);
+        setForm(defaultIssuanceForm);
+      }
+      if (detailsRequest?.id === request.id) {
+        setDetailsRequest(null);
+      }
+      setFormMessage(`Borrow request ${request.requestId} approved directly.`);
+    } catch (error) {
+      setFormError(error.response?.data?.message || error.response?.data || 'Failed to approve borrow request.');
+    } finally {
+      setActionLoadingId(null);
+    }
   }
 
   async function updateBorrowRequestStatus(request, status) {
@@ -1505,9 +1543,6 @@ if (!result.isConfirmed) {
 
   function validateIssuanceForm() {
     const nextErrors = {};
-    if (!form.issuanceId.trim()) {
-      nextErrors.issuanceId = 'Issuance ID is required.';
-    }
     if (!form.issueDate) {
       nextErrors.issueDate = 'Issue date is required.';
     }
@@ -1536,9 +1571,6 @@ if (!result.isConfirmed) {
       nextErrors.userId = 'Registration / Staff ID is required.';
    }
 
-   if (!form.userDbId || Number.isNaN(Number(form.userDbId))) {
-     nextErrors.userDbId = 'Valid database user ID is missing for this request.';
-  }
     if (!form.userName.trim()) {
       nextErrors.userName = 'User name is required.';
     }
@@ -1574,14 +1606,17 @@ if (!result.isConfirmed) {
 }
 
     const payload = {
-      issuanceId: form.issuanceId.trim() || makeIssuanceId(selectedRequest?.id),
+      issuanceId: form.issuanceId.trim() || null,
       issueDate: form.issueDate,
       returnDueDate: form.returnDueDate,
       status: 'Issued',
       equipmentId: Number(form.equipmentId),
       qtyIssued: Number(form.qtyIssued),
       conditionAtIssue: form.conditionAtIssue,
-      userId: Number(form.userDbId),
+      userId: form.userDbId ? Number(form.userDbId) : null,
+      registrationOrStaffId: form.userId.trim(),
+      email: selectedRequest?.email || null,
+      userName: form.userName.trim(),
       roleDept: form.roleDept || null,
       contact: form.contact || null,
       returnDate: null,
@@ -1675,6 +1710,7 @@ if (!result.isConfirmed) {
           onFilterChange={setFilter}
           onViewDetails={setDetailsRequest}
           onApprove={handleApprove}
+          onRequestForm={handleRequestForm}
           onReject={handleReject}
           actionLoading={actionLoadingId}
         />
@@ -1715,6 +1751,7 @@ if (!result.isConfirmed) {
           request={detailsRequest}
           onClose={() => setDetailsRequest(null)}
           onApprove={(request) => handleApprove(request)}
+          onRequestForm={(request) => handleRequestForm(request)}
           onReject={(request) => handleReject(request)}
           actionLoading={actionLoadingId}
         />
