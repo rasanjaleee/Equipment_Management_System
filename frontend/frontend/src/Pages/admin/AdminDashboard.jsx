@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
-import axios from "axios";
 import { API_BASE_URL } from "../../services/api";
+import { useData } from "../../context/DataContext";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -27,11 +27,18 @@ import {
 } from "recharts";
 
 export default function AdminDashboard() {
-  const [equipment, setEquipment] = useState([]);
-  const [maintenance, setMaintenance] = useState([]);
-  const [activityLogs, setActivityLogs] = useState([]);
-  const [laboratories, setLaboratories] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const {
+    equipmentList: equipment,
+    laboratories,
+    maintenanceList: maintenance,
+    activityLogs,
+    refreshEquipment,
+    refreshLaboratories,
+    refreshMaintenance,
+    refreshActivityLogs,
+  } = useData();
+
+  const [loading, setLoading] = useState(equipment.length === 0);
   const [error, setError] = useState("");
 
   const getErrorMessage = (err, fallback = "Failed to load dashboard") => {
@@ -48,48 +55,19 @@ export default function AdminDashboard() {
     fetchDashboardData();
   }, []);
 
-  const fetchDashboardData = async () => {
-    setLoading(true);
+  const fetchDashboardData = async (forceRefresh = false) => {
+    if (equipment.length === 0 || forceRefresh) {
+      setLoading(true);
+    }
     setError("");
 
     try {
-      const token = localStorage.getItem("token");
-      const headers = {
-        Authorization: `Bearer ${token}`,
-      };
-
-      const results = await Promise.allSettled([
-        axios.get(`${API_BASE_URL}/api/equipment/all`, { headers }),
-        axios.get(`${API_BASE_URL}/api/maintenance`, { headers }),
-        axios.get(`${API_BASE_URL}/api/activity-logs`, { headers }),
-        axios.get(`${API_BASE_URL}/api/laboratories`, { headers }),
+      await Promise.all([
+        refreshEquipment(forceRefresh),
+        refreshMaintenance(forceRefresh),
+        refreshActivityLogs(forceRefresh),
+        refreshLaboratories(forceRefresh),
       ]);
-
-      const [equipmentRes, maintenanceRes, activityRes, labRes] = results;
-
-      setEquipment(
-        equipmentRes.status === "fulfilled" && Array.isArray(equipmentRes.value.data)
-          ? equipmentRes.value.data
-          : []
-      );
-
-      setMaintenance(
-        maintenanceRes.status === "fulfilled" && Array.isArray(maintenanceRes.value.data)
-          ? maintenanceRes.value.data
-          : []
-      );
-
-      setActivityLogs(
-        activityRes.status === "fulfilled" && Array.isArray(activityRes.value.data)
-          ? activityRes.value.data
-          : []
-      );
-
-      setLaboratories(
-        labRes.status === "fulfilled" && Array.isArray(labRes.value.data)
-          ? labRes.value.data
-          : []
-      );
     } catch (err) {
       console.error("Dashboard load failed:", err);
       setError(getErrorMessage(err));

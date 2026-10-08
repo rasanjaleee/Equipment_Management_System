@@ -4,15 +4,38 @@ import axios from 'axios';
 import { API_BASE_URL, getImageUrl } from '../services/api';
 import { ArrowLeft, Loader, Edit, Trash2, Calendar } from 'lucide-react';
 import BorrowRequestForm from '../components/BorrowRequestForm';
+import { useData } from '../context/DataContext';
 
 const EquipmentDetails = () => {
   const { id, equipmentName, laboratory } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [equipment, setEquipment] = useState(null);
-  const [equipmentList, setEquipmentList] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const normalizeValue = (value) =>
+    (value || '').trim().replace(/\s+/g, ' ').toLowerCase();
+
+  const { equipmentList: cachedAllEquipment, refreshEquipment } = useData();
+
+  const selectedName = decodeURIComponent(equipmentName || '');
+  const selectedLab = decodeURIComponent(laboratory || '');
+
+  const cachedSingle = id
+    ? cachedAllEquipment?.find((item) => String(item.id) === String(id)) || null
+    : null;
+
+  const cachedGrouped = !id && equipmentName && laboratory && cachedAllEquipment?.length > 0
+    ? cachedAllEquipment.filter(
+        (item) =>
+          normalizeValue(item.equipmentName) === normalizeValue(selectedName) &&
+          normalizeValue(item.laboratory) === normalizeValue(selectedLab)
+      )
+    : [];
+
+  const [equipment, setEquipment] = useState(cachedSingle);
+  const [equipmentList, setEquipmentList] = useState(cachedGrouped);
+  const [loading, setLoading] = useState(
+    id ? !cachedSingle : cachedGrouped.length === 0
+  );
   const [error, setError] = useState('');
   const [isBorrowModalOpen, setIsBorrowModalOpen] = useState(false);
   const [selectedEquipmentForBorrow, setSelectedEquipmentForBorrow] = useState(null);
@@ -36,15 +59,12 @@ const EquipmentDetails = () => {
 
   const [editingAccessoryId, setEditingAccessoryId] = useState(null);
 
-const [accessoryForm, setAccessoryForm] = useState({
-  accessoryName: '',
-  quantity: 1,
-  status: 'AVAILABLE',
-  description: ''
-});
-
-  const normalizeValue = (value) =>
-    (value || '').trim().replace(/\s+/g, ' ').toLowerCase();
+  const [accessoryForm, setAccessoryForm] = useState({
+    accessoryName: '',
+    quantity: 1,
+    status: 'AVAILABLE',
+    description: ''
+  });
 
   useEffect(() => {
     if (id) {
@@ -56,7 +76,9 @@ const [accessoryForm, setAccessoryForm] = useState({
 
   const fetchSingleEquipment = async () => {
     try {
-      setLoading(true);
+      if (!equipment && !cachedSingle) {
+        setLoading(true);
+      }
       const token = localStorage.getItem('token');
 
       const res = await axios.get(`${API_BASE_URL}/api/equipment/${id}`, {
@@ -64,15 +86,17 @@ const [accessoryForm, setAccessoryForm] = useState({
       });
 
       setEquipment(res.data);
-setError('');
+      setError('');
 
-await Promise.all([
-  fetchAccessories(res.data.id),
-  fetchCurrentIssuance(res.data.id)
-]);
+      await Promise.all([
+        fetchAccessories(res.data.id),
+        fetchCurrentIssuance(res.data.id)
+      ]);
     } catch (err) {
       console.error('Failed to fetch single equipment:', err);
-      setError('Failed to load equipment details. Please try again later.');
+      if (!equipment && !cachedSingle) {
+        setError('Failed to load equipment details. Please try again later.');
+      }
     } finally {
       setLoading(false);
     }
@@ -269,17 +293,16 @@ const handleDeleteAccessory = async (accessory) => {
 
   const fetchGroupedEquipmentDetails = async () => {
     try {
-      setLoading(true);
-      const token = localStorage.getItem('token');
-
-      const res = await axios.get(`${API_BASE_URL}/api/equipment/all`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {}
-      });
+      if (equipmentList.length === 0 && cachedGrouped.length === 0) {
+        setLoading(true);
+      }
+      const data = await refreshEquipment(false);
+      const listToFilter = Array.isArray(data) && data.length > 0 ? data : cachedAllEquipment;
 
       const selectedName = decodeURIComponent(equipmentName || '');
       const selectedLab = decodeURIComponent(laboratory || '');
 
-      const filtered = res.data.filter(
+      const filtered = listToFilter.filter(
         (item) =>
           normalizeValue(item.equipmentName) === normalizeValue(selectedName) &&
           normalizeValue(item.laboratory) === normalizeValue(selectedLab)
@@ -289,7 +312,9 @@ const handleDeleteAccessory = async (accessory) => {
       setError('');
     } catch (err) {
       console.error('Failed to fetch equipment details:', err);
-      setError('Failed to load equipment details. Please try again later.');
+      if (equipmentList.length === 0 && cachedGrouped.length === 0) {
+        setError('Failed to load equipment details. Please try again later.');
+      }
     } finally {
       setLoading(false);
     }
@@ -349,67 +374,98 @@ const handleDeleteAccessory = async (accessory) => {
     }
 
     return (
-      <div className="min-h-screen bg-gray-50 py-8">
-        <div className="max-w-5xl mx-auto px-4">
-          <button
-            onClick={() => navigate('/equipment')}
-            className="mb-6 inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 font-medium"
-          >
-            <ArrowLeft size={20} />
-            Back to Equipment List
-          </button>
+  <div className="min-h-screen bg-gray-50 py-4 sm:py-8">
+    <div className="max-w-5xl mx-auto px-3 sm:px-4">
 
-          <div className="bg-white rounded-lg shadow-md overflow-hidden p-6">
-            <h1 className="text-2xl font-bold text-center mb-6">{equipment.equipmentName}</h1>
+      <button
+        onClick={() => navigate('/equipment')}
+        className="mb-4 sm:mb-6 inline-flex items-center gap-2 text-sm sm:text-base text-gray-600 hover:text-gray-900 font-medium"
+      >
+        <ArrowLeft size={18} />
+        Back to Equipment List
+      </button>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div>
-                {equipment.photoPath ? (
-                  <img
-                    src={getImageUrl(equipment.photoPath)}
-                    alt={equipment.equipmentName}
-                    className="w-full h-72 object-cover rounded-lg border"
-                  />
-                ) : (
-                  <div className="w-full h-72 bg-gray-100 rounded-lg border flex items-center justify-center text-gray-500">
-                    No image
-                  </div>
-                )}
+      <div className="bg-white rounded-lg shadow-md overflow-hidden p-4 sm:p-6">
+
+        <h1 className="text-xl sm:text-2xl font-bold text-center mb-4 sm:mb-6 break-words">
+          {equipment.equipmentName}
+        </h1>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-8">
+
+          <div className="w-full">
+            {equipment.photoPath ? (
+              <img
+                src={getImageUrl(equipment.photoPath)}
+                alt={equipment.equipmentName}
+                className="w-full h-56 sm:h-72 object-contain rounded-lg border bg-white"
+              />
+            ) : (
+              <div className="w-full h-56 sm:h-72 bg-gray-100 rounded-lg border flex items-center justify-center text-gray-500">
+                No image
               </div>
-
-              <div className="space-y-3">
-                <div><span className="font-semibold">Equipment ID:</span> {equipment.equipmentCode || `EQ-${equipment.id}`}</div>
-                <div><span className="font-semibold">Laboratory:</span> {equipment.laboratory || '-'}</div>
-                <div><span className="font-semibold">Model:</span> {equipment.model || '-'}</div>
-                <div><span className="font-semibold">Serial Number:</span> {equipment.serialNumber || '-'}</div>
-                <div><span className="font-semibold">Purchase Date:</span> {formatDate(equipment.purchaseDate)}</div>
-                <div><span className="font-semibold">Status:</span> {formatStatus(equipment.status)}</div>
-
-                <div className="pt-4 flex flex-col sm:flex-row gap-3">
-                  <button
-                    onClick={() => handleReserve(equipment)}
-                    className="bg-yellow-500 hover:bg-yellow-400 text-black font-semibold px-6 py-2.5 rounded-lg inline-flex items-center justify-center gap-2 shadow-sm transition-colors cursor-pointer"
-                  >
-                    <Calendar size={18} />
-                    Reserve / Request to Borrow
-                  </button>
-                </div>
-
-                <div className="pt-4">
-                  <p className="font-semibold mb-2">QR Code</p>
-                  {equipment.qrCode ? (
-                    <img
-                      src={getImageUrl(equipment.qrCode)}
-                      alt="QR code"
-                      className="w-48 h-48 object-contain border rounded p-2 bg-white"
-                    />
-                  ) : (
-                    <p className="text-gray-500">QR not available</p>
-                  )}
-                </div>
-              </div>
-                        </div>
+            )}
           </div>
+
+          <div className="space-y-3 text-sm sm:text-base min-w-0">
+
+            <div className="break-words">
+              <span className="font-semibold">Equipment ID:</span>{' '}
+              {equipment.equipmentCode || `EQ-${equipment.id}`}
+            </div>
+
+            <div className="break-words">
+              <span className="font-semibold">Laboratory:</span>{' '}
+              {equipment.laboratory || '-'}
+            </div>
+
+            <div className="break-words">
+              <span className="font-semibold">Model:</span>{' '}
+              {equipment.model || '-'}
+            </div>
+
+            <div className="break-words">
+              <span className="font-semibold">Serial Number:</span>{' '}
+              {equipment.serialNumber || '-'}
+            </div>
+
+            <div className="break-words">
+              <span className="font-semibold">Purchase Date:</span>{' '}
+              {formatDate(equipment.purchaseDate)}
+            </div>
+
+            <div className="break-words">
+              <span className="font-semibold">Status:</span>{' '}
+              {formatStatus(equipment.status)}
+            </div>
+
+            <div className="pt-3 sm:pt-4">
+              <button
+                onClick={() => handleReserve(equipment)}
+                className="w-full sm:w-auto bg-yellow-500 hover:bg-yellow-400 text-black text-sm sm:text-base font-semibold px-4 sm:px-6 py-2.5 rounded-lg inline-flex items-center justify-center gap-2 shadow-sm transition-colors cursor-pointer"
+              >
+                <Calendar size={18} className="shrink-0" />
+                <span>Reserve / Request to Borrow</span>
+              </button>
+            </div>
+
+            <div className="pt-3 sm:pt-4">
+              <p className="font-semibold mb-2">QR Code</p>
+
+              {equipment.qrCode ? (
+                <img
+                  src={getImageUrl(equipment.qrCode)}
+                  alt="QR code"
+                  className="w-32 h-32 sm:w-48 sm:h-48 object-contain border rounded p-2 bg-white"
+                />
+              ) : (
+                <p className="text-gray-500">QR not available</p>
+              )}
+            </div>
+
+          </div>
+        </div>
+      </div>
         </div>
 
 
@@ -660,7 +716,7 @@ const handleDeleteAccessory = async (accessory) => {
               No accessories registered for this equipment.
             </p>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="hidden md:block overflow-x-auto">
               <table className="min-w-full border border-gray-200">
                 <thead className="bg-gray-100">
                   <tr>
@@ -797,7 +853,7 @@ const handleDeleteAccessory = async (accessory) => {
           Back to Equipment List
         </button>
 
-        <div className="bg-white rounded-lg shadow-md overflow-hidden mb-6">
+        <div className="hidden md:block bg-white rounded-lg shadow-md overflow-hidden mb-6">
           <h1 className="text-xl sm:text-2xl font-bold text-center px-4 pt-6 pb-4 break-words">
             {decodeURIComponent(equipmentName)}
           </h1>
@@ -869,7 +925,7 @@ const handleDeleteAccessory = async (accessory) => {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-md overflow-hidden mb-6">
+                <div className="hidden md:block bg-white rounded-lg shadow-md overflow-hidden mb-6">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-yellow-500">
@@ -942,6 +998,112 @@ const handleDeleteAccessory = async (accessory) => {
               </tbody>
             </table>
           </div>
+        </div>
+
+                {/* Mobile Equipment Cards */}
+        <div className="md:hidden space-y-4 mb-6">
+          {equipmentList.map((item, index) => (
+            <div
+              key={item.id}
+              className="bg-white rounded-lg shadow-md overflow-hidden"
+            >
+              <div className="bg-yellow-500 px-4 py-3 flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-black">
+                    Equipment {String(index + 1).padStart(2, '0')}
+                  </p>
+
+                  <h3 className="font-bold text-gray-900 break-words">
+                    {item.equipmentName || '-'}
+                  </h3>
+                </div>
+
+                <span
+                  className={`shrink-0 px-3 py-1 text-xs font-semibold rounded-full ${
+                    item.status === 'WORKING'
+                      ? 'bg-green-500 text-white'
+                      : item.status === 'UNDER_REPAIR'
+                      ? 'bg-blue-500 text-white'
+                      : item.status === 'BROKEN'
+                      ? 'bg-red-500 text-white'
+                      : 'bg-gray-500 text-white'
+                  }`}
+                >
+                  {formatStatus(item.status)}
+                </span>
+              </div>
+
+              <div className="p-4 space-y-3 text-sm">
+                <div className="grid grid-cols-[110px_1fr] gap-2">
+                  <span className="font-semibold text-gray-600">
+                    Equipment ID
+                  </span>
+                  <span className="text-gray-900 break-words">
+                    {item.equipmentCode || `EQ-${item.id}`}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-[110px_1fr] gap-2">
+                  <span className="font-semibold text-gray-600">
+                    Laboratory
+                  </span>
+                  <span className="text-gray-900 break-words">
+                    {item.laboratory || '-'}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-[110px_1fr] gap-2">
+                  <span className="font-semibold text-gray-600">
+                    Model
+                  </span>
+                  <span className="text-gray-900 break-words">
+                    {item.model || '-'}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-[110px_1fr] gap-2">
+                  <span className="font-semibold text-gray-600">
+                    Purchase Date
+                  </span>
+                  <span className="text-gray-900">
+                    {formatDate(item.purchaseDate)}
+                  </span>
+                </div>
+
+                <div className="border-t border-gray-200 pt-3">
+                  <p className="font-semibold text-gray-600 mb-2">
+                    QR Code
+                  </p>
+
+                  {item.qrCode ? (
+                    <img
+                      src={getImageUrl(item.qrCode)}
+                      alt="QR code"
+                      className="w-20 h-20 object-contain"
+                    />
+                  ) : (
+                    <span className="text-gray-500">-</span>
+                  )}
+                </div>
+
+                <div className="pt-2">
+                  {item.status === 'WORKING' ? (
+                    <button
+                      type="button"
+                      onClick={() => handleReserve(item)}
+                      className="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-semibold px-4 py-2.5 rounded-lg transition-colors"
+                    >
+                      Reserve Equipment
+                    </button>
+                  ) : (
+                    <div className="w-full bg-gray-100 text-gray-500 text-center font-medium px-4 py-2.5 rounded-lg">
+                      Currently Unavailable
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
 
         <BorrowRequestForm

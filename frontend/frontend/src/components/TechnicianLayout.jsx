@@ -11,9 +11,10 @@ import {
   User,
   LogOut,
   ChevronDown,
-  Menu,
+  PanelLeft,
   X,
   Bell,
+  CalendarDays,
 } from "lucide-react";
 import {
   getNotifications,
@@ -157,6 +158,7 @@ export default function TechnicianLayout() {
     { to: "/technician/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { to: "/technician/equipment", label: "Equipment Status", icon: Wrench },
     { to: "/technician/maintenance", label: "Maintenance", icon: History },
+    { to: "/technician/calendar", label: "Equipment Calendar", icon: CalendarDays },
     { to: "/technician/activity-log", label: "My Activity", icon: ClipboardList },
   ];
 
@@ -173,6 +175,7 @@ export default function TechnicianLayout() {
     "/technician/dashboard": "Technician Dashboard",
     "/technician/equipment": "Equipment Status",
     "/technician/maintenance": "Maintenance",
+    "/technician/calendar": "Equipment Calendar",
     "/technician/activity-log": "My Activity",
     "/technician/notifications": "Notifications",
     "/technician/profile": "Profile",
@@ -181,7 +184,9 @@ export default function TechnicianLayout() {
   const currentTitle = titleMap[location.pathname] || "Technician";
 
   const linkClass = ({ isActive }) =>
-    `flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition-all text-sm font-medium ${
+    `flex items-center ${
+      sidebarOpen ? "gap-3 px-3 py-2" : "justify-center p-2"
+    } rounded-lg cursor-pointer transition-all text-sm font-medium ${
       isActive
         ? "bg-yellow-500 text-white shadow-md"
         : "text-gray-700 hover:bg-orange-100"
@@ -226,7 +231,7 @@ export default function TechnicianLayout() {
           className="px-3 border-b border-gray-200 h-20 flex items-center"
           style={{ backgroundColor: "#E89B00" }}
         >
-          <div className="flex items-center gap-1 min-w-0 w-full">
+          <div className="flex items-center gap-2 min-w-0 w-full">
             <img
               src="/images/home_logo.png"
               alt="University Logo"
@@ -245,8 +250,30 @@ export default function TechnicianLayout() {
           </div>
         </div>
 
+        {/* Sidebar Toggle Bar at the top of the sidebar */}
+        <div
+          className={`px-2 py-1.5 border-b border-gray-100 flex items-center ${
+            sidebarOpen ? "justify-between" : "justify-center"
+          }`}
+        >
+          {sidebarOpen && (
+            <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider pl-1">
+              Menu
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="p-1.5 text-gray-500 hover:text-gray-900 hover:bg-orange-100 rounded-lg transition flex items-center justify-center"
+            title={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
+            aria-label={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
+          >
+            <PanelLeft size={19} />
+          </button>
+        </div>
+
         {/* Navigation items */}
-        <nav className="flex-1 px-3 py-5 space-y-2">
+        <nav className="flex-1 px-2 py-2 space-y-1 overflow-y-auto overflow-x-hidden">
           {menu.map((item) => {
             const Icon = item.icon;
             return (
@@ -265,7 +292,7 @@ export default function TechnicianLayout() {
         </nav>
 
         {/* Bottom Menu (Notifications) */}
-        <div className="px-3 py-3 border-t border-gray-200 space-y-2">
+        <div className="px-2 py-2 border-t border-gray-200 space-y-1 flex-shrink-0">
           {bottomMenu.map((item) => {
             const Icon = item.icon;
             return (
@@ -296,16 +323,6 @@ export default function TechnicianLayout() {
             );
           })}
         </div>
-
-        {/* Sidebar Collapse Button */}
-        <div className="p-3 border-t border-gray-200">
-          <button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="w-full p-2 hover:bg-gray-100 rounded-lg transition text-gray-600 flex justify-center items-center"
-          >
-            {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
-          </button>
-        </div>
       </aside>
 
       {/* Main Container */}
@@ -325,17 +342,18 @@ export default function TechnicianLayout() {
 <button
   type="button"
   onClick={() => setMobileSidebarOpen(true)}
-  className="lg:hidden flex items-center justify-center text-white shrink-0"
+  className="lg:hidden flex items-center justify-center text-white shrink-0 p-2 hover:bg-white/10 rounded-lg transition"
   aria-label="Open menu"
+  title="Open menu"
 >
-  <Menu size={28} />
+  <PanelLeft size={28} />
 </button>
 
           <div className="min-w-0 flex-1">
-            <h2 className="truncate text-lg font-bold text-white sm:text-2xl">
+            <h2 className="text-2xl font-bold text-white truncate">
               {currentTitle}
             </h2>
-            <p className="mt-1 hidden text-sm text-gray-100 sm:block">
+            <p className="text-sm text-gray-100 mt-1">
               Welcome back, Technician!
             </p>
           </div>
@@ -360,7 +378,8 @@ export default function TechnicianLayout() {
 
               {notificationOpen && (
                 <div
-                  className="fixed left-3 right-3 top-20 z-[9999] flex max-h-[min(420px,calc(100dvh-6rem))] flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl sm:absolute sm:left-auto sm:right-0 sm:top-full sm:mt-3 sm:max-h-[420px] sm:w-96"
+                  className="absolute right-0 mt-3 w-80 sm:w-96 max-h-[420px] flex flex-col bg-white border border-gray-200 rounded-xl shadow-2xl z-[9999] overflow-hidden"
+                  style={{ top: "100%" }}
                 >
                   <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50">
                     <div>
@@ -504,8 +523,8 @@ export default function TechnicianLayout() {
         </header>
 
         {/* Content Body */}
-        <div className="flex min-w-0 flex-1 flex-col overflow-y-auto pt-20 sm:pt-24">
-          <main className="min-w-0 flex-1 p-3 sm:p-4 lg:p-5">
+        <div className="flex-1 flex flex-col overflow-y-auto pt-20">
+          <main className="flex-1 p-4 lg:p-5">
             <Outlet />
           </main>
 

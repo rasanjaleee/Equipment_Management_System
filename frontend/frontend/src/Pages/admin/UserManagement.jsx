@@ -1,9 +1,16 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { API_BASE_URL } from "../../services/api";
+import { useData } from "../../context/DataContext";
 
 export default function UserManagement() {
-  const [users, setUsers] = useState([]);
+  const {
+    users: cachedUsers,
+    setUsers: setCachedUsers,
+    refreshUsers,
+  } = useData();
+
+  const [users, setUsers] = useState(cachedUsers || []);
   const [form, setForm] = useState({
     username: "",
     email: "",
@@ -15,12 +22,18 @@ export default function UserManagement() {
 
   const token = localStorage.getItem("token");
 
+  useEffect(() => {
+    if (cachedUsers && cachedUsers.length > 0) {
+      setUsers(cachedUsers);
+    }
+  }, [cachedUsers]);
+
   const fetchUsers = async () => {
     try {
-      const res = await axios.get(`${API_BASE_URL}/api/admin/users`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setUsers(res.data);
+      const data = await refreshUsers(false);
+      if (Array.isArray(data)) {
+        setUsers(data);
+      }
     } catch (err) {
       console.error(err);
       setError("Failed to load users");

@@ -3,11 +3,31 @@ import axios from "axios";
 import { API_BASE_URL } from "../services/api";
 
 export default function ProfilePage() {
-  const [profile, setProfile] = useState(null);
-  const [email, setEmail] = useState("");
+  const [profile, setProfile] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("user")) || null;
+    } catch {
+      return null;
+    }
+  });
+  const [email, setEmail] = useState(() => {
+    try {
+      const u = JSON.parse(localStorage.getItem("user"));
+      return u?.email || "";
+    } catch {
+      return "";
+    }
+  });
 
   const [profilePhoto, setProfilePhoto] = useState(null);
-  const [photoPreview, setPhotoPreview] = useState("");
+  const [photoPreview, setPhotoPreview] = useState(() => {
+    try {
+      const u = JSON.parse(localStorage.getItem("user"));
+      return u?.profileImage || "";
+    } catch {
+      return "";
+    }
+  });
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   const [passwordForm, setPasswordForm] = useState({

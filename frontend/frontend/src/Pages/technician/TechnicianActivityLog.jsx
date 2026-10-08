@@ -1,37 +1,52 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
-import { API_BASE_URL } from "../../services/api";
+import { useData } from "../../context/DataContext";
 
 export default function TechnicianActivityLog() {
-  const [logs, setLogs] = useState([]);
+  const { userActivityLogs: cachedLogs, refreshUserActivityLogs } = useData();
+  const [logs, setLogs] = useState(cachedLogs || []);
+  const [loading, setLoading] = useState(!cachedLogs || cachedLogs.length === 0);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    fetchMyLogs();
-  }, []);
-
-  const fetchMyLogs = async () => {
+  const user = (() => {
     try {
-      const token = localStorage.getItem("token");
-      const user = JSON.parse(localStorage.getItem("user"));
-      const username = user?.username;
-
-      const res = await axios.get(
-        `${API_BASE_URL}/api/activity-logs/user/${username}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
-      );
-
-      setLogs(res.data);
-      setError("");
-    } catch (err) {
-      console.error("Failed to fetch technician logs:", err);
-      setError("Failed to load your activity logs");
+      return JSON.parse(localStorage.getItem("user"));
+    } catch {
+      return null;
     }
-  };
+  })();
+  const username = user?.username;
+
+  useEffect(() => {
+    if (cachedLogs && cachedLogs.length > 0) {
+      setLogs(cachedLogs);
+      setLoading(false);
+    }
+  }, [cachedLogs]);
+
+  useEffect(() => {
+    if (!username) {
+      setLoading(false);
+      return;
+    }
+    const fetchLogs = async () => {
+      try {
+        setError("");
+        const data = await refreshUserActivityLogs(username, false);
+        if (Array.isArray(data)) {
+          setLogs(data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch technician logs:", err);
+        if (!cachedLogs || cachedLogs.length === 0) {
+          setError("Failed to load your activity logs");
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchLogs();
+  }, [username, refreshUserActivityLogs]);
 
   const formatAction = (action) => {
     if (!action) return "-";
