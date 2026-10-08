@@ -138,21 +138,21 @@ const userId = loggedInUser?.id;
   };
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 w-full bg-gradient-to-r from-yellow-500 to-orange-400 px-3 sm:px-6 py-1 shadow-md">
-      <div className="max-w-7xl mx-auto flex items-center justify-between">
+    <nav className="fixed top-0 left-0 right-0 z-50 w-full bg-gradient-to-r from-yellow-500 to-orange-400 px-2 sm:px-6 py-1 shadow-md">
+      <div className="mx-auto flex w-full max-w-7xl min-w-0 items-center justify-between gap-2">
 
         {/* ================= LEFT LOGO ================= */}
-        <div className="flex items-center gap-0">
+        <div className="flex min-w-0 items-center gap-0">
           <img
             src="/images/home_logo.png"
             alt="University Logo"
-            className="w-16 h-16 sm:w-24 sm:h-20 object-contain mt-1"
+            className="mt-1 h-12 w-12 shrink-0 object-contain sm:h-20 sm:w-24"
           />
-          <div className="flex flex-col leading-tight -ml-2 sm:-ml-4">
-            <h1 className="text-white font-bold text-xs sm:text-xl tracking-wide whitespace-nowrap">
+          <div className="-ml-1 flex min-w-0 flex-col leading-tight sm:-ml-4">
+            <h1 className="text-[10px] font-bold leading-tight text-white sm:text-xl sm:tracking-wide">
               FACULTY OF ENGINEERING
             </h1>
-            <p className="text-white text-[10px] sm:text-base font-medium whitespace-nowrap">
+            <p className="hidden text-[10px] font-medium text-white sm:block sm:text-base">
               UNIVERSITY OF RUHUNA
             </p>
           </div>
@@ -166,13 +166,13 @@ const userId = loggedInUser?.id;
         </div>
 
         {/* ================= RIGHT ICONS ================= */}
-        <div className="flex items-center gap-4">
+        <div className="flex shrink-0 items-center gap-2 sm:gap-4">
 
           {/* Mobile Menu Button */}
           <button
             type="button"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden text-white hover:text-gray-100"
+            className="md:hidden rounded-lg p-2 text-white hover:bg-white/10"
             aria-label="Toggle navigation menu"
           >
             {mobileMenuOpen ? <X size={26} /> : <Menu size={26} />}
@@ -194,7 +194,7 @@ const userId = loggedInUser?.id;
 
             {/* ================= NOTIFICATION DROPDOWN ================= */}
             {notifOpen && (
-              <div className="absolute right-0 mt-3 w-96 bg-white rounded-xl shadow-xl z-50 overflow-hidden border border-gray-100">
+              <div className="fixed left-3 right-3 top-[4.5rem] z-50 overflow-hidden rounded-xl border border-gray-100 bg-white shadow-xl sm:absolute sm:left-auto sm:right-0 sm:top-auto sm:mt-3 sm:w-96">
 
                 {/* Header */}
                 <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50">

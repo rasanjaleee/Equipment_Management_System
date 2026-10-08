@@ -65,10 +65,10 @@ function App() {
     !isTechnicianRoute;
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="app-shell flex flex-col overflow-x-hidden">
       {shouldShowNavbar && <Navbar />}
 
-      <main className={`flex-grow ${shouldShowNavbar ? 'pt-24' : ''}`}>
+      <main className={`flex-grow w-full overflow-x-hidden ${shouldShowNavbar ? 'pt-24' : ''}`}>
         <Routes>
           {/* Public routes */}
           <Route path="/" element={<Landing />} />

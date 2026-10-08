@@ -37,7 +37,7 @@ export default function HomePage() {
 
 
       {/* Hero Section */}
-      <section className="relative w-full h-[420px] bg-black">
+      <section className="relative h-[360px] w-full bg-black sm:h-[420px]">
         <img
           src="/images/header.png"
           alt="Lab"
@@ -52,13 +52,13 @@ export default function HomePage() {
               Track, request, and manage laboratory equipment efficiently through
               the Equipment Management System
             </p>
-            <div className="flex justify-center">
+            <div className="mx-auto flex w-full max-w-xl justify-center">
               <input
                 type="text"
                 placeholder="Search equipment..."
-                className="w-72 md:w-96 px-4 py-2 rounded-l-md text-black focus:outline-none"
+                className="min-w-0 flex-1 rounded-l-md px-3 py-2 text-black focus:outline-none sm:px-4"
               />
-              <button className="btn btn-accent rounded-l-none px-5 py-2">
+              <button className="btn btn-accent shrink-0 rounded-l-none px-3 py-2 sm:px-5">
                 Search
               </button>
             </div>
@@ -67,7 +67,7 @@ export default function HomePage() {
       </section>
 
       {/* Stats Cards */}
-      <section className="max-w-7xl mx-auto px-6 -mt-14 relative z-10">
+      <section className="relative z-10 mx-auto -mt-10 max-w-7xl px-4 sm:-mt-14 sm:px-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 
           <StatCard title="Borrowed Items" value={borrowedItems.toString().padStart(2, '0')} />

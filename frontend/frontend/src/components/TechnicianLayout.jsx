@@ -332,10 +332,10 @@ export default function TechnicianLayout() {
 </button>
 
           <div className="min-w-0 flex-1">
-            <h2 className="text-2xl font-bold text-white truncate">
+            <h2 className="truncate text-lg font-bold text-white sm:text-2xl">
               {currentTitle}
             </h2>
-            <p className="text-sm text-gray-100 mt-1">
+            <p className="mt-1 hidden text-sm text-gray-100 sm:block">
               Welcome back, Technician!
             </p>
           </div>
@@ -360,8 +360,7 @@ export default function TechnicianLayout() {
 
               {notificationOpen && (
                 <div
-                  className="absolute right-0 mt-3 w-80 sm:w-96 max-h-[420px] flex flex-col bg-white border border-gray-200 rounded-xl shadow-2xl z-[9999] overflow-hidden"
-                  style={{ top: "100%" }}
+                  className="fixed left-3 right-3 top-20 z-[9999] flex max-h-[min(420px,calc(100dvh-6rem))] flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl sm:absolute sm:left-auto sm:right-0 sm:top-full sm:mt-3 sm:max-h-[420px] sm:w-96"
                 >
                   <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50">
                     <div>
@@ -505,8 +504,8 @@ export default function TechnicianLayout() {
         </header>
 
         {/* Content Body */}
-        <div className="flex-1 flex flex-col overflow-y-auto pt-24">
-          <main className="flex-1 p-4 lg:p-5">
+        <div className="flex min-w-0 flex-1 flex-col overflow-y-auto pt-20 sm:pt-24">
+          <main className="min-w-0 flex-1 p-3 sm:p-4 lg:p-5">
             <Outlet />
           </main>
 
