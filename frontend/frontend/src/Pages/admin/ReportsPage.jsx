@@ -1,16 +1,30 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { API_BASE_URL } from "../../services/api";
+import { useData } from "../../context/DataContext";
 
 export default function ReportsPage() {
+  const {
+    grnData: cachedGrn,
+    setGrnData: setCachedGrn,
+    refreshGrn,
+  } = useData();
+
   const [activeTab, setActiveTab] = useState("grn");
-  const [grnData, setGrnData] = useState([]);
+  const [grnData, setGrnData] = useState(cachedGrn || []);
   const [inventorySummary, setInventorySummary] = useState(null);
   const [inventoryList, setInventoryList] = useState([]);
   const [laboratoryFilter, setLaboratoryFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [allLaboratories, setAllLaboratories] = useState([]);
   const [error, setError] = useState("");
+
+  // Sync GRN from context
+  useEffect(() => {
+    if (cachedGrn && cachedGrn.length > 0) {
+      setGrnData(cachedGrn);
+    }
+  }, [cachedGrn]);
 
   useEffect(() => {
     fetchGrnReport();
@@ -29,10 +43,10 @@ export default function ReportsPage() {
 
   const fetchGrnReport = async () => {
     try {
-      const res = await axios.get(`${API_BASE_URL}/api/reports/grn`, {
-        headers: getHeaders(),
-      });
-      setGrnData(res.data || []);
+      const data = await refreshGrn(false);
+      if (Array.isArray(data)) {
+        setGrnData(data);
+      }
     } catch (err) {
       console.error(err);
       setError("Failed to load GRN report");
@@ -170,7 +184,7 @@ export default function ReportsPage() {
                   <td>${row.grnNumber ?? "-"}</td>
                   <td>${row.supplier ?? "-"}</td>
                   <td>${row.itemCount ?? 0}</td>
-                  <td>$${row.totalCost ?? 0}</td>
+                  <td>Rs. ${row.totalCost ?? 0}</td>
                 </tr>
               `
             )
@@ -222,7 +236,7 @@ export default function ReportsPage() {
                 <th>GRN Number</th>
                 <th>Supplier</th>
                 <th>Item Count</th>
-                <th>Total Cost</th>
+                <th>Total Cost (Rs.)</th>
               </tr>
             </thead>
             <tbody>
@@ -308,7 +322,7 @@ export default function ReportsPage() {
                     <th className="p-3">GRN Number</th>
                     <th className="p-3">Supplier</th>
                     <th className="p-3">Item Count</th>
-                    <th className="p-3">Total Cost</th>
+                    <th className="p-3">Total Cost (Rs.)</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -317,7 +331,7 @@ export default function ReportsPage() {
                       <td className="p-3">{row.grnNumber}</td>
                       <td className="p-3">{row.supplier || "-"}</td>
                       <td className="p-3">{row.itemCount}</td>
-                      <td className="p-3">${row.totalCost}</td>
+                      <td className="p-3">Rs. ${row.totalCost}</td>
                     </tr>
                   ))}
                   {grnData.length === 0 && (

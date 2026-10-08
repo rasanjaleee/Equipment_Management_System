@@ -1,13 +1,26 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { API_BASE_URL } from "../../services/api";
+import { useData } from "../../context/DataContext";
 
 export default function ActivityLog() {
-  const [logs, setLogs] = useState([]);
+  const {
+    activityLogs: cachedLogs,
+    setActivityLogs: setCachedLogs,
+    refreshActivityLogs,
+  } = useData();
+
+  const [logs, setLogs] = useState(cachedLogs || []);
   const [error, setError] = useState("");
 
   const adminLogs = logs.filter((log) => log.role === "ROLE_ADMIN");
   const technicianLogs = logs.filter((log) => log.role === "ROLE_TECHNICIAN");
+
+  useEffect(() => {
+    if (cachedLogs && cachedLogs.length > 0) {
+      setLogs(cachedLogs);
+    }
+  }, [cachedLogs]);
 
   useEffect(() => {
     fetchLogs();
@@ -15,15 +28,10 @@ export default function ActivityLog() {
 
   const fetchLogs = async () => {
     try {
-      const token = localStorage.getItem("token");
-
-      const res = await axios.get(`${API_BASE_URL}/api/activity-logs`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-
-      setLogs(res.data);
+      const data = await refreshActivityLogs(false);
+      if (Array.isArray(data)) {
+        setLogs(data);
+      }
       setError("");
     } catch (err) {
       console.error("Failed to fetch activity logs:", err);

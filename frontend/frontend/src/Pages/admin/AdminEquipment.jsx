@@ -7,12 +7,14 @@ import axios from 'axios';
 import Swal from 'sweetalert2';
 
 import { API_BASE_URL, getImageUrl } from '../../services/api';
+import { useData } from '../../context/DataContext';
 
 import { useNavigate } from 'react-router-dom';
 
 export default function AdminEquipment() {
 
   const navigate = useNavigate();
+  const { equipmentList, loadingEquipment, refreshEquipment } = useData();
 
   const CUSTOM_EQUIPMENT_OPTION = '__CUSTOM__';
 
@@ -31,8 +33,6 @@ export default function AdminEquipment() {
   const [selectedStatusFilter, setSelectedStatusFilter] = useState('');
 
   const [currentPage, setCurrentPage] = useState(1);
-
-  const [equipmentList, setEquipmentList] = useState([]);
 
   const [photo, setPhoto] = useState(null);
 
@@ -116,7 +116,11 @@ export default function AdminEquipment() {
 
     (value || '').trim().replace(/\s+/g, ' ').toLowerCase();
 
-
+  const formatCost = (val) => {
+    if (val === null || val === undefined || val === '') return '-';
+    const num = Number(val);
+    return isNaN(num) ? `Rs. ${val}` : `Rs. ${num.toLocaleString()}`;
+  };
 
   const equipmentNamesMap = [...sampleEquipmentNames, ...equipmentList.map((item) => item.equipmentName)]
 
@@ -152,26 +156,8 @@ export default function AdminEquipment() {
 
 
 
-  const fetchEquipment = async () => {
-
-    try {
-
-      const token = localStorage.getItem('token');
-
-      const res = await axios.get(`${API_BASE_URL}/api/equipment/all`, {
-
-        headers: { Authorization: `Bearer ${token}` }
-
-      });
-
-      setEquipmentList(res.data);
-
-    } catch (err) {
-
-      console.error('Failed to fetch equipment:', err);
-
-    }
-
+  const fetchEquipment = async (forceRefresh = false) => {
+    return refreshEquipment(forceRefresh);
   };
 
 
@@ -302,7 +288,9 @@ export default function AdminEquipment() {
 
 
 
-      await fetchEquipment();
+      clearEquipmentCache();
+
+      await fetchEquipment(true);
 
       resetForm();
 
@@ -508,7 +496,9 @@ export default function AdminEquipment() {
 
 
 
-    await fetchEquipment();
+    clearEquipmentCache();
+
+    await fetchEquipment(true);
 
 
 
@@ -1057,7 +1047,7 @@ const formatStatus = (status) =>
 
                   <div>
 
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Cost ($)</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Cost (Rs.)</label>
 
                     <input
 
@@ -1065,7 +1055,7 @@ const formatStatus = (status) =>
 
                       name="cost"
 
-                      placeholder="Enter cost"
+                      placeholder="Enter cost (e.g. 50000)"
 
                       value={formData.cost}
 
@@ -1548,7 +1538,7 @@ const formatStatus = (status) =>
         <div>
           <p className="text-xs text-gray-500">Cost</p>
           <p className="font-medium text-gray-800">
-            {item.cost ? `$${item.cost}` : '-'}
+            {formatCost(item.cost)}
           </p>
         </div>
 
@@ -1681,7 +1671,7 @@ const formatStatus = (status) =>
 
         <td className="px-4 py-4">{item.serialNumber || '-'}</td>
         <td className="px-4 py-4">
-          {item.cost ? `$${item.cost}` : '-'}
+          {formatCost(item.cost)}
         </td>
         <td className="px-4 py-4">{item.purchaseDate || '-'}</td>
         <td className="px-4 py-4">{item.supplier || '-'}</td>

@@ -1,13 +1,41 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { API_BASE_URL } from "../../services/api";
+import { useData } from "../../context/DataContext";
 
 export default function TechnicianEquipment() {
-  const [equipmentList, setEquipmentList] = useState([]);
+  const {
+    equipmentList: cachedEquipment,
+    setEquipmentList: setCachedEquipment,
+    refreshEquipment,
+  } = useData();
+
+  const [equipmentList, setEquipmentList] = useState(cachedEquipment || []);
   const [editingId, setEditingId] = useState(null);
-  const [statusMap, setStatusMap] = useState({});
+  const [statusMap, setStatusMap] = useState(() => {
+    const map = {};
+    (cachedEquipment || []).forEach((item) => {
+      map[item.id] = item.status;
+    });
+    return map;
+  });
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (cachedEquipment && cachedEquipment.length > 0) {
+      setEquipmentList(cachedEquipment);
+      setStatusMap((prev) => {
+        const next = { ...prev };
+        cachedEquipment.forEach((item) => {
+          if (!next[item.id]) {
+            next[item.id] = item.status;
+          }
+        });
+        return next;
+      });
+    }
+  }, [cachedEquipment]);
 
   useEffect(() => {
     fetchEquipment();
@@ -15,21 +43,24 @@ export default function TechnicianEquipment() {
 
   const fetchEquipment = async () => {
     try {
-      const token = localStorage.getItem("token");
-      const res = await axios.get(`${API_BASE_URL}/api/equipment/all`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
-      setEquipmentList(res.data);
-
-      const initialStatusMap = {};
-      res.data.forEach((item) => {
-        initialStatusMap[item.id] = item.status;
-      });
-      setStatusMap(initialStatusMap);
+      const data = await refreshEquipment(false);
+      if (Array.isArray(data)) {
+        setEquipmentList(data);
+        setStatusMap((prev) => {
+          const next = { ...prev };
+          data.forEach((item) => {
+            if (!next[item.id]) {
+              next[item.id] = item.status;
+            }
+          });
+          return next;
+        });
+      }
     } catch (err) {
       console.error("Failed to fetch equipment:", err);
-      setError("Failed to load equipment");
+      if (!cachedEquipment || cachedEquipment.length === 0) {
+        setError("Failed to load equipment");
+      }
     }
   };
 
@@ -41,6 +72,7 @@ export default function TechnicianEquipment() {
     try {
       const token = localStorage.getItem("token");
       const formData = new FormData();
+      const updatedStatus = statusMap[item.id] || item.status;
 
       formData.append("equipmentName", item.equipmentName || "");
       formData.append("laboratory", item.laboratory || "");
@@ -49,7 +81,7 @@ export default function TechnicianEquipment() {
       formData.append("cost", item.cost ?? "");
       formData.append("purchaseDate", item.purchaseDate || "");
       formData.append("supplier", item.supplier || "");
-      formData.append("status", statusMap[item.id] || item.status);
+      formData.append("status", updatedStatus);
       formData.append("grnNumber", item.grnNumber || "");
 
       await axios.put(
@@ -66,6 +98,13 @@ export default function TechnicianEquipment() {
       setMessage("Equipment status updated successfully");
       setError("");
       setEditingId(null);
+
+      setCachedEquipment((prev) =>
+        prev.map((eq) => (eq.id === item.id ? { ...eq, status: updatedStatus } : eq))
+      );
+      setEquipmentList((prev) =>
+        prev.map((eq) => (eq.id === item.id ? { ...eq, status: updatedStatus } : eq))
+      );
       fetchEquipment();
     } catch (err) {
       console.error(err);

@@ -112,7 +112,11 @@ public class SecurityConfig {
                                 .requestMatchers(HttpMethod.GET, "/api/borrow-requests/my")
                                 .authenticated()
 
-// Only admins can view all borrow requests
+// Admins and technicians can view the equipment calendar
+                                .requestMatchers(HttpMethod.GET, "/api/borrow-requests/calendar")
+                                .hasAnyRole("SUPER_ADMIN", "ADMIN", "TECHNICIAN")
+
+// Only admins can view all other borrow requests
                                 .requestMatchers(HttpMethod.GET, "/api/borrow-requests/**")
                                 .hasAnyRole("SUPER_ADMIN", "ADMIN")
 

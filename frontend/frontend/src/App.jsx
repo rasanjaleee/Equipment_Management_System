@@ -37,11 +37,16 @@ import NotificationPage from './Pages/admin/NotificationPage';
 import TechnicianDashboard from './Pages/technician/TechnicianDashboard';
 import TechnicianEquipment from './Pages/technician/TechnicianEquipment';
 import TechnicianActivityLog from './Pages/technician/TechnicianActivityLog';
+import TechnicianCalendar from './Pages/technician/TechnicianCalendar';
+
+import { DataProvider } from './context/DataContext';
 
 function AppWrapper() {
   return (
     <Router>
-      <App />
+      <DataProvider>
+        <App />
+      </DataProvider>
     </Router>
   );
 }
@@ -68,7 +73,7 @@ function App() {
     <div className="app-shell flex flex-col overflow-x-hidden">
       {shouldShowNavbar && <Navbar />}
 
-      <main className={`flex-grow w-full overflow-x-hidden ${shouldShowNavbar ? 'pt-24' : ''}`}>
+  <main className={`flex-grow w-full overflow-x-hidden ${shouldShowNavbar ? 'pt-16 sm:pt-20' : ''}`}>
         <Routes>
           {/* Public routes */}
           <Route path="/" element={<Landing />} />
@@ -126,6 +131,7 @@ function App() {
             <Route path="dashboard" element={<TechnicianDashboard />} />
             <Route path="equipment" element={<TechnicianEquipment />} />
             <Route path="maintenance" element={<MaintenancePage />} />
+            <Route path="calendar" element={<TechnicianCalendar />} />
             <Route path="activity-log" element={<TechnicianActivityLog />} />
             <Route path="notifications" element={<NotificationPage />} />
             <Route path="profile" element={<ProfilePage />} />

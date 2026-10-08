@@ -17,13 +17,14 @@ import {
   User,
   LogOut,
   ChevronDown,
-  Menu,
+  PanelLeft,
   X,
 } from "lucide-react";
 import {
   getNotifications,
   markAllAsRead as markAllAsReadApi,
 } from "../services/notificationService";
+import { useData } from "../context/DataContext";
 
 export default function AdminLayout() {
   const location = useLocation();
@@ -38,13 +39,24 @@ export default function AdminLayout() {
   const username = loggedInUser?.username || "User";
   const userId = loggedInUser?.id;
 
+  const {
+    notifications: cachedNotifs,
+    setNotifications: setCachedNotifs,
+  } = useData();
+
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [notifications, setNotifications] = useState([]);
+  const [notifications, setNotifications] = useState(cachedNotifs || []);
 
   const dropdownRef = useRef(null);
   const notificationRef = useRef(null);
+
+  useEffect(() => {
+    if (cachedNotifs && cachedNotifs.length > 0) {
+      setNotifications(cachedNotifs);
+    }
+  }, [cachedNotifs]);
 
   // 1. Initial Fetch of Navbar Notifications
   useEffect(() => {
@@ -52,8 +64,9 @@ export default function AdminLayout() {
 
     getNotifications(userId)
       .then((response) => {
-        console.log("Navbar notifications loaded:", response.data);
-        setNotifications(response.data);
+        const list = Array.isArray(response.data) ? response.data : [];
+        setNotifications(list);
+        setCachedNotifs(list);
       })
       .catch((error) => {
         console.error("Failed to load navbar notifications:", error);
@@ -168,14 +181,14 @@ export default function AdminLayout() {
   const handleMarkAllAsRead = () => {
     if (!userId || unreadCount === 0) return;
 
-    // Optimistic state update
-    setNotifications((prev) =>
+    const markAllReadUpdater = (prev) =>
       prev.map((notification) => ({
         ...notification,
         read: true,
         status: "READ",
-      }))
-    );
+      }));
+    setNotifications(markAllReadUpdater);
+    setCachedNotifs(markAllReadUpdater);
 
     // Backend sync
     markAllAsReadApi(userId).catch((error) => {
@@ -271,7 +284,9 @@ export default function AdminLayout() {
   const currentTitle = titleMap[location.pathname] || "Admin";
 
   const linkClass = ({ isActive }) =>
-    `flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition-all text-sm font-medium ${
+    `flex items-center ${
+      sidebarOpen ? "gap-3 px-3 py-2" : "justify-center p-2"
+    } rounded-lg cursor-pointer transition-all text-sm font-medium ${
       isActive
         ? "bg-yellow-500 text-white shadow-md"
         : "text-gray-700 hover:bg-orange-100"
@@ -310,19 +325,17 @@ export default function AdminLayout() {
           className="px-3 border-b border-gray-200 h-20 flex items-center"
           style={{ backgroundColor: "#E89B00" }}
         >
-          <div className="flex items-center gap-1 min-w-0 w-full">
+          <div className="flex items-center gap-2 min-w-0 w-full">
             <img
               src="/images/home_logo.png"
               alt="University Logo"
               className="w-14 h-14 object-contain flex-shrink-0"
             />
-
             {sidebarOpen && (
               <div className="leading-tight min-w-0">
                 <h1 className="text-[11px] font-bold text-white break-words">
                   Faculty of Engineering
                 </h1>
-
                 <p className="text-[11px] text-orange-100 break-words">
                   Equipment Management System
                 </p>
@@ -331,71 +344,72 @@ export default function AdminLayout() {
           </div>
         </div>
 
-        <nav className="flex-1 px-3 py-5 space-y-2">
+        {/* Sidebar Toggle Bar at the top of the sidebar */}
+        <div
+          className={`px-2 py-1.5 border-b border-gray-100 flex items-center ${
+            sidebarOpen ? "justify-between" : "justify-center"
+          }`}
+        >
+          {sidebarOpen && (
+            <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider pl-1">
+              Menu
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="p-1.5 text-gray-500 hover:text-gray-900 hover:bg-orange-100 rounded-lg transition flex items-center justify-center"
+            title={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
+            aria-label={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
+          >
+            <PanelLeft size={19} />
+          </button>
+        </div>
+
+        <nav className="flex-1 px-2 py-2 space-y-1 overflow-y-auto overflow-x-hidden">
           {menu.map((item) => {
             const Icon = item.icon;
 
             return (
               <NavLink
-  key={item.to}
-  to={item.to}
-  className={linkClass}
-  title={!sidebarOpen ? item.label : ""}
-  onClick={() => {
-    if (window.innerWidth < 1024) {
-      setSidebarOpen(false);
-    }
-  }}
->
+                key={item.to}
+                to={item.to}
+                className={linkClass}
+                title={!sidebarOpen ? item.label : ""}
+                onClick={() => {
+                  if (window.innerWidth < 1024) {
+                    setSidebarOpen(false);
+                  }
+                }}
+              >
                 <Icon size={20} className="flex-shrink-0" />
-
-                {sidebarOpen && <span>{item.label}</span>}
+                {sidebarOpen && <span className="truncate">{item.label}</span>}
               </NavLink>
             );
           })}
         </nav>
 
-        <div className="px-3 py-3 border-t border-gray-200 space-y-2">
+        <div className="px-2 py-2 border-t border-gray-200 space-y-1 flex-shrink-0">
           {bottomMenu.map((item) => {
             const Icon = item.icon;
 
             return (
               <NavLink
-  key={item.to}
-  to={item.to}
-  className={linkClass}
-  title={!sidebarOpen ? item.label : ""}
-  onClick={() => {
-    if (window.innerWidth < 1024) {
-      setSidebarOpen(false);
-    }
-  }}
->
+                key={item.to}
+                to={item.to}
+                className={linkClass}
+                title={!sidebarOpen ? item.label : ""}
+                onClick={() => {
+                  if (window.innerWidth < 1024) {
+                    setSidebarOpen(false);
+                  }
+                }}
+              >
                 <Icon size={20} className="flex-shrink-0" />
-
-                {sidebarOpen && <span>{item.label}</span>}
+                {sidebarOpen && <span className="truncate">{item.label}</span>}
               </NavLink>
             );
           })}
-        </div>
-
-        <div className="p-3 border-t border-gray-200">
-          <button
-  onClick={() => setSidebarOpen(!sidebarOpen)}
-  className="hidden lg:flex w-full p-2 hover:bg-gray-100 rounded-lg transition text-gray-600 items-center justify-center"
-  aria-label={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
->
-  {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
-</button>
-
-<button
-  onClick={() => setSidebarOpen(false)}
-  className="lg:hidden w-full p-2 hover:bg-gray-100 rounded-lg transition text-gray-600 flex items-center justify-center gap-2"
-  aria-label="Close menu"
->
-  <X size={20} />
-  <span className="text-sm font-medium">Close Menu</span>
-</button>
         </div>
       </aside>
 
@@ -420,8 +434,9 @@ export default function AdminLayout() {
     onClick={() => setSidebarOpen(true)}
     className="lg:hidden flex-shrink-0 p-2 text-white hover:bg-white/10 rounded-lg transition"
     aria-label="Open menu"
+    title="Open menu"
   >
-    <Menu size={24} />
+    <PanelLeft size={24} />
   </button>
 
   <div className="min-w-0">
