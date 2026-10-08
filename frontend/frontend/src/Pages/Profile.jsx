@@ -217,14 +217,14 @@ export default function ProfilePage() {
 
   if (!profile) {
     return (
-      <div className="p-8">
+      <div className="p-4 sm:p-8">
         <p>Loading profile...</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-gradient-to-br from-gray-50 via-gray-100 to-gray-200 p-8 min-h-full">
+    <div className="min-h-full bg-gradient-to-br from-gray-50 via-gray-100 to-gray-200 p-4 sm:p-8">
       <div className="max-w-4xl mx-auto">
         <h1 className="text-2xl font-bold mb-6">
           My Profile
@@ -251,7 +251,7 @@ export default function ProfilePage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
           {/* ACCOUNT INFORMATION */}
-          <div className="bg-white p-6 rounded-xl shadow">
+          <div className="rounded-xl bg-white p-4 shadow sm:p-6">
             <h2 className="text-lg font-semibold mb-4">
               Account Information
             </h2>

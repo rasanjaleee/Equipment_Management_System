@@ -87,10 +87,10 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex flex-col lg:flex-row">
       {/* Left side - Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center bg-white p-4 sm:p-8">
-        <div className="max-w-md w-full">
+      <div className="w-full lg:w-1/2 flex items-center justify-center bg-white p-4 sm:p-6 lg:p-8">
+        <div className="w-full max-w-md">
           {/* Logo and Title */}
           <div className="mb-8">
             <div className="flex items-center gap-3 mb-6">
