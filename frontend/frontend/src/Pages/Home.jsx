@@ -27,13 +27,13 @@ export default function HomePage() {
   const {
     equipmentList,
     refreshEquipment,
-    issuances,
-    borrowRequests,
     myIssuances,
     myRequests,
     refreshMyEquipment,
-    refreshIssuances,
-    refreshBorrowRequests,
+    loadingMyEquipment,
+    homeStats,
+    loadingHomeStats,
+    refreshHomeStats,
   } = useData();
 
   const user = (() => {
@@ -50,34 +50,31 @@ export default function HomePage() {
 
   const normalize = (v) => String(v || '').toLowerCase().trim();
 
-  // If Admin: calculate from system-wide issuances and borrow requests
-  // If Student/Technician: calculate from user's personal issuances and requests
-  const activeBorrowedList = isAdmin && Array.isArray(issuances) && issuances.length > 0
-    ? issuances.filter((i) => normalize(i.status) === 'issued')
-    : Array.isArray(myIssuances)
+  const activeBorrowedList = Array.isArray(myIssuances)
     ? myIssuances.filter((i) => normalize(i.status) === 'issued')
     : [];
 
-  const pendingRequestsList = isAdmin && Array.isArray(borrowRequests) && borrowRequests.length > 0
-    ? borrowRequests.filter((r) => normalize(r.status) === 'pending')
-    : Array.isArray(myRequests)
+  const pendingRequestsList = Array.isArray(myRequests)
     ? myRequests.filter((r) => normalize(r.status) === 'pending')
     : [];
 
-  const borrowedCount = activeBorrowedList.length;
-  const pendingCount = pendingRequestsList.length;
-  const totalCount = Array.isArray(equipmentList) ? equipmentList.length : 0;
+  const isPersonalView = isLoggedIn && !isAdmin;
+  const borrowedCount = isPersonalView
+    ? activeBorrowedList.length
+    : homeStats?.borrowedItems ?? 0;
+  const pendingCount = isPersonalView
+    ? pendingRequestsList.length
+    : homeStats?.pendingRequests ?? 0;
+  const totalEquipmentCount = homeStats?.totalEquipment
+    ?? (Array.isArray(equipmentList) ? equipmentList.length : 0);
 
   useEffect(() => {
-    refreshEquipment(false);
+    refreshEquipment(true);
+    refreshHomeStats();
     if (isLoggedIn) {
-      refreshMyEquipment(false);
-      if (isAdmin) {
-        refreshIssuances(false);
-        refreshBorrowRequests();
-      }
+      refreshMyEquipment(true);
     }
-  }, [isLoggedIn, isAdmin, refreshEquipment, refreshMyEquipment, refreshIssuances, refreshBorrowRequests]);
+  }, [isLoggedIn, refreshEquipment, refreshHomeStats, refreshMyEquipment]);
 
   const featuredLaboratories = [
     {
@@ -193,19 +190,19 @@ export default function HomePage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           <StatCard
             title={isLoggedIn && !isAdmin ? "My Borrowed Items" : "Borrowed Items"}
-            value={borrowedCount.toString().padStart(2, '0')}
+            value={((isPersonalView ? loadingMyEquipment : loadingHomeStats) && !homeStats ? '...' : borrowedCount.toString().padStart(2, '0'))}
             subtitle={isLoggedIn && !isAdmin ? "Items in your possession" : "Active faculty issuances"}
             onClick={() => navigate(isAdmin ? '/admin/issuance' : '/equipment?view=my-equipment')}
           />
           <StatCard
             title={isLoggedIn && !isAdmin ? "My Pending Requests" : "Pending Requests"}
-            value={pendingCount.toString().padStart(2, '0')}
+            value={((isPersonalView ? loadingMyEquipment : loadingHomeStats) && !homeStats ? '...' : pendingCount.toString().padStart(2, '0'))}
             subtitle={isLoggedIn && !isAdmin ? "Awaiting technician review" : "Requests needing approval"}
             onClick={() => navigate(isAdmin ? '/admin/borrow-requests' : '/equipment?view=my-equipment')}
           />
           <StatCard
-            title="Total Available Equipment"
-            value={totalCount.toString().padStart(2, '0')}
+            title="Total Equipment"
+            value={(loadingHomeStats && !homeStats ? '...' : totalEquipmentCount.toString().padStart(2, '0'))}
             subtitle="Catalog devices & tools"
             onClick={() => navigate('/equipment')}
           />

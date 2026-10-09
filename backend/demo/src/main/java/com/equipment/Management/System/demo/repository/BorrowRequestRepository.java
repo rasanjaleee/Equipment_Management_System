@@ -10,6 +10,8 @@ import java.util.List;
 
 public interface BorrowRequestRepository extends JpaRepository<BorrowRequest, Long> {
 
+        long countByStatusIgnoreCase(String status);
+
     @Query("""
             SELECT br
             FROM BorrowRequest br
