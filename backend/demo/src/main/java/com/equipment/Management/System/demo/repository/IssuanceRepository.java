@@ -21,6 +21,8 @@ public interface IssuanceRepository extends JpaRepository<Issuance, Long> {
 
     List<Issuance> findByStatus(String status);
 
+    long countByStatusIgnoreCase(String status);
+
     List<Issuance> findByUser_Id(Long userId);
 
     List<Issuance> findByEquipment_Id(Long equipmentId);
