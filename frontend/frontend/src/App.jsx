@@ -102,6 +102,7 @@ function App() {
             <Route path="equipment/bulk-upload" element={<BulkUploadEquipment />} />
             <Route path="laboratories" element={<LaboratoryPage />} />
             <Route path="maintenance" element={<MaintenancePage />} />
+            <Route path="calendar" element={<TechnicianCalendar />} />
             <Route path="issuance" element={<Issuance />} />
             <Route path="profile" element={<ProfilePage />} />
             <Route path="reports" element={<ReportsPage />} />
