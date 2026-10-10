@@ -19,6 +19,7 @@ import {
   ChevronDown,
   PanelLeft,
   X,
+  CalendarDays,
 } from "lucide-react";
 import {
   getNotifications,
@@ -230,6 +231,11 @@ export default function AdminLayout() {
       icon: History,
     },
     {
+      to: "/admin/calendar",
+      label: "Calendar",
+      icon: CalendarDays,
+    },
+    {
       to: "/admin/reports",
       label: "Reports",
       icon: FileBarChart,
@@ -273,6 +279,7 @@ export default function AdminLayout() {
     "/admin/laboratories": "Laboratories",
     "/admin/issuance": "Issuance",
     "/admin/maintenance": "Maintenance",
+    "/admin/calendar": "Equipment Calendar",
     "/admin/reports": "Reports",
     "/admin/users": "User Management",
     "/admin/activity-log": "Activity Log",
