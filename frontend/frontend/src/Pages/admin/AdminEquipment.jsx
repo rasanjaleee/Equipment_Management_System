@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 
-import {Plus,Save,X,Package,Edit,Trash2,ArrowLeft,Eye} from 'lucide-react';
+import {Plus,Save,X,Package,Edit,Trash2,ArrowLeft,Eye,QrCode} from 'lucide-react';
 
 import axios from 'axios';
 
@@ -717,6 +717,46 @@ const formatStatus = (status) =>
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');
 
+  const [isRegeneratingQr, setIsRegeneratingQr] = useState(false);
+
+  const handleRegenerateAllQr = async () => {
+    const confirm = await Swal.fire({
+      title: 'Sync All QR Codes?',
+      text: 'This will regenerate QR codes for all existing equipment with the current website URL. Existing physical stickers will need to be reprinted.',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#f59e0b',
+      confirmButtonText: 'Yes, Sync All',
+      cancelButtonText: 'Cancel'
+    });
+
+    if (!confirm.isConfirmed) return;
+
+    try {
+      setIsRegeneratingQr(true);
+      const token = localStorage.getItem('token');
+      const response = await axios.post(`${API_BASE_URL}/api/equipment/regenerate-all-qr`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      await fetchEquipment(true);
+
+      Swal.fire({
+        title: 'Success!',
+        text: response.data?.message || 'All equipment QR codes have been updated successfully.',
+        icon: 'success'
+      });
+    } catch (err) {
+      Swal.fire({
+        title: 'Error',
+        text: err.response?.data?.message || err.message || 'Failed to regenerate QR codes',
+        icon: 'error'
+      });
+    } finally {
+      setIsRegeneratingQr(false);
+    }
+  };
+
   return (
 
     <div className="bg-gradient-to-br from-gray-50 via-gray-100 to-gray-200 min-h-full w-full">
@@ -738,6 +778,15 @@ const formatStatus = (status) =>
           {!showForm && (
 
             <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 sm:gap-3 w-full sm:w-auto">
+
+              <button
+                onClick={handleRegenerateAllQr}
+                disabled={isRegeneratingQr}
+                className="btn btn-secondary flex items-center justify-center gap-1.5 text-sm"
+                title="Regenerate QR codes for all equipment with the current URL"
+              >
+                <QrCode size={18} /> {isRegeneratingQr ? 'Syncing...' : 'Sync QR Codes'}
+              </button>
 
               <button
 
