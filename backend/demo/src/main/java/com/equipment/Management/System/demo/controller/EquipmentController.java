@@ -270,4 +270,50 @@ public class EquipmentController {
                 .header("Content-Type", "text/csv")
                 .body(csvTemplate);
     }
+
+    @PostMapping("/regenerate-all-qr")
+    public ResponseEntity<?> regenerateAllQr() {
+        try {
+            Map<String, Object> result = equipmentService.regenerateAllQrCodes();
+
+            try {
+                Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+                String username = (authentication != null) ? authentication.getName() : "SYSTEM";
+                String role = (authentication != null) ? authentication.getAuthorities().stream()
+                        .findFirst()
+                        .map(auth -> auth.getAuthority())
+                        .orElse("ROLE_UNKNOWN") : "ROLE_UNKNOWN";
+
+                activityLogService.logActivity(
+                        username,
+                        role,
+                        "REGENERATED_QR_CODES",
+                        null,
+                        "Regenerated QR codes for all equipment: " + result
+                );
+            } catch (Exception logEx) {
+                // Ignore logging failure to avoid breaking main operation
+            }
+
+            return ResponseEntity.ok(Map.of(
+                    "message", "QR codes regenerated successfully",
+                    "details", result
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error regenerating QR codes: " + e.getMessage());
+        }
+    }
+
+    @PostMapping("/{id}/regenerate-qr")
+    public ResponseEntity<?> regenerateQrById(@PathVariable Long id) {
+        try {
+            Equipment updated = equipmentService.regenerateQrCode(id);
+            return ResponseEntity.ok(Map.of(
+                    "message", "QR code regenerated successfully for equipment ID: " + id,
+                    "equipment", updated
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error regenerating QR code: " + e.getMessage());
+        }
+    }
 }
