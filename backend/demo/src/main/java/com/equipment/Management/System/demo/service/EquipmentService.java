@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -136,7 +137,12 @@ public class EquipmentService {
             savedEquipment.setEquipmentCode("EQ-" + savedEquipment.getId());
         }
 
-        String qrTargetUrl = frontendBaseUrl + "/equipment/item/" + savedEquipment.getId();
+        String baseUrl = (frontendBaseUrl != null) ? frontendBaseUrl.trim() : "";
+        if (baseUrl.endsWith("/")) {
+            baseUrl = baseUrl.substring(0, baseUrl.length() - 1);
+        }
+
+        String qrTargetUrl = baseUrl + "/equipment/item/" + savedEquipment.getId();
         String qrImagePath = qrCodeService.generateQrCodeImage(qrTargetUrl, savedEquipment.getId());
 
         savedEquipment.setQrCode(qrImagePath);
@@ -153,6 +159,57 @@ public class EquipmentService {
         );
 
         return finalSaved;
+    }
+
+    public Map<String, Object> regenerateAllQrCodes() {
+        List<Equipment> all = equipmentRepository.findAll();
+        int updatedCount = 0;
+        int errorCount = 0;
+
+        String baseUrl = (frontendBaseUrl != null) ? frontendBaseUrl.trim() : "";
+        if (baseUrl.endsWith("/")) {
+            baseUrl = baseUrl.substring(0, baseUrl.length() - 1);
+        }
+
+        for (Equipment eq : all) {
+            try {
+                if (eq.getEquipmentCode() == null || eq.getEquipmentCode().isBlank()) {
+                    eq.setEquipmentCode("EQ-" + eq.getId());
+                }
+
+                String qrTargetUrl = baseUrl + "/equipment/item/" + eq.getId();
+                String qrImagePath = qrCodeService.generateQrCodeImage(qrTargetUrl, eq.getId());
+
+                eq.setQrCode(qrImagePath);
+                equipmentRepository.save(eq);
+                updatedCount++;
+            } catch (Exception e) {
+                errorCount++;
+            }
+        }
+
+        return Map.of(
+                "total", all.size(),
+                "updated", updatedCount,
+                "failed", errorCount
+        );
+    }
+
+    public Equipment regenerateQrCode(Long id) throws IOException, WriterException {
+        Equipment eq = getById(id);
+        if (eq.getEquipmentCode() == null || eq.getEquipmentCode().isBlank()) {
+            eq.setEquipmentCode("EQ-" + eq.getId());
+        }
+
+        String baseUrl = (frontendBaseUrl != null) ? frontendBaseUrl.trim() : "";
+        if (baseUrl.endsWith("/")) {
+            baseUrl = baseUrl.substring(0, baseUrl.length() - 1);
+        }
+
+        String qrTargetUrl = baseUrl + "/equipment/item/" + eq.getId();
+        String qrImagePath = qrCodeService.generateQrCodeImage(qrTargetUrl, eq.getId());
+        eq.setQrCode(qrImagePath);
+        return equipmentRepository.save(eq);
     }
 
     public List<Equipment> getAllEquipment() {
