@@ -3,33 +3,57 @@
 @tailwind utilities;
 
 @layer base {
-	html {
-		font-size: 15px;
-	}
+  html {
+    font-size: 15px;
+    scroll-behavior: smooth;
+  }
 
-	body {
-		@apply text-gray-800 antialiased;
-	}
+  body {
+    @apply min-h-screen overflow-x-hidden bg-gray-50 text-gray-800 antialiased;
+  }
+
+  #root {
+    @apply min-h-screen;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  img {
+    display: block;
+    max-width: 100%;
+  }
 }
 
 @layer components {
-	.btn {
-		@apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60;
-	}
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60;
+  }
 
-	.btn-primary {
-		@apply btn bg-[#4b0000] text-white shadow-sm hover:bg-[#3b0000] hover:shadow-md focus:ring-[#4b0000];
-	}
+  .btn-primary {
+    @apply btn bg-[#4b0000] text-white shadow-sm hover:bg-[#3b0000] hover:shadow-md focus:ring-[#4b0000];
+  }
 
-	.btn-accent {
-		@apply btn bg-yellow-500 text-white shadow-sm hover:bg-yellow-600 hover:shadow-md focus:ring-yellow-500;
-	}
+  .btn-accent {
+    @apply btn bg-yellow-500 text-white shadow-sm hover:bg-yellow-600 hover:shadow-md focus:ring-yellow-500;
+  }
 
-	.btn-secondary {
-		@apply btn border border-gray-300 bg-white text-gray-700 hover:border-gray-400 hover:bg-gray-50 focus:ring-gray-400;
-	}
+  .btn-secondary {
+    @apply btn border border-gray-300 bg-white text-gray-700 hover:border-gray-400 hover:bg-gray-50 focus:ring-gray-400;
+  }
 
-	.btn-icon {
-		@apply rounded-md p-2 transition-colors;
-	}
+  .btn-icon {
+    @apply rounded-md p-2 transition-colors;
+  }
+}
+
+@layer utilities {
+  .app-shell {
+    @apply min-h-screen overflow-x-hidden bg-gray-50 text-gray-800;
+  }
+
+  .section-shell {
+    @apply mx-auto w-full max-w-7xl px-3 sm:px-5 lg:px-8;
+  }
 }
