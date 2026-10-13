@@ -206,9 +206,13 @@ export const DataProvider = ({ children }) => {
     }
   }, []);
 
-  // 9. Fetch GRN Report
+  // 9. Fetch GRN & Inventory Reports
   const [grnData, setGrnData] = useState([]);
   const [loadingGrn, setLoadingGrn] = useState(false);
+  const [inventorySummary, setInventorySummary] = useState(null);
+  const [inventoryList, setInventoryList] = useState([]);
+  const [allSuppliers, setAllSuppliers] = useState([]);
+  const [allLaboratories, setAllLaboratories] = useState([]);
 
   const refreshGrn = useCallback(async (showLoading = false) => {
     if (showLoading) setLoadingGrn(true);
@@ -218,12 +222,37 @@ export const DataProvider = ({ children }) => {
       });
       const data = Array.isArray(res.data) ? res.data : [];
       setGrnData(data);
+      if (data.length > 0) {
+        const sups = [...new Set(data.map((r) => r.supplier).filter(Boolean))].sort();
+        setAllSuppliers(sups);
+      }
       return data;
     } catch (err) {
       console.error('Failed to load GRN report:', err);
       return [];
     } finally {
       setLoadingGrn(false);
+    }
+  }, []);
+
+  const refreshInventoryReport = useCallback(async () => {
+    try {
+      const [summaryRes, listRes] = await Promise.all([
+        axios.get(`${API_BASE_URL}/api/reports/inventory-summary`, { headers: getHeaders() }),
+        axios.get(`${API_BASE_URL}/api/reports/inventory-list`, { headers: getHeaders() }),
+      ]);
+      const summary = summaryRes.data || null;
+      const list = Array.isArray(listRes.data) ? listRes.data : [];
+      setInventorySummary(summary);
+      setInventoryList(list);
+      if (list.length > 0) {
+        const labs = [...new Set(list.map((i) => i.laboratory).filter(Boolean))].sort();
+        setAllLaboratories(labs);
+      }
+      return { summary, list };
+    } catch (err) {
+      console.error('Failed to load inventory report:', err);
+      return { summary: null, list: [] };
     }
   }, []);
 
@@ -327,6 +356,8 @@ export const DataProvider = ({ children }) => {
       if (isAdmin) {
         refreshBorrowRequests();
         refreshIssuances(false);
+        refreshGrn(false);
+        refreshInventoryReport();
       }
       refreshMyEquipment(false);
       if (isAdmin || isTech) {
@@ -340,7 +371,7 @@ export const DataProvider = ({ children }) => {
         }
       } catch {}
     }
-  }, [refreshEquipment, refreshLaboratories, refreshMaintenance, refreshBorrowRequests, refreshIssuances, refreshCalendar, refreshUserActivityLogs, refreshMyEquipment]);
+  }, [refreshEquipment, refreshLaboratories, refreshMaintenance, refreshBorrowRequests, refreshIssuances, refreshCalendar, refreshUserActivityLogs, refreshMyEquipment, refreshGrn, refreshInventoryReport]);
 
   const value = {
     equipmentList,
@@ -389,6 +420,15 @@ export const DataProvider = ({ children }) => {
     setGrnData,
     loadingGrn,
     refreshGrn,
+    inventorySummary,
+    setInventorySummary,
+    inventoryList,
+    setInventoryList,
+    allSuppliers,
+    setAllSuppliers,
+    allLaboratories,
+    setAllLaboratories,
+    refreshInventoryReport,
 
     calendarCache,
     setCalendarCache,
@@ -440,8 +480,18 @@ export const useData = () => {
       settings: null,
       refreshSettings: async () => null,
       grnData: [],
+      setGrnData: () => {},
       loadingGrn: false,
       refreshGrn: async () => [],
+      inventorySummary: null,
+      setInventorySummary: () => {},
+      inventoryList: [],
+      setInventoryList: () => {},
+      allSuppliers: [],
+      setAllSuppliers: () => {},
+      allLaboratories: [],
+      setAllLaboratories: () => {},
+      refreshInventoryReport: async () => ({ summary: null, list: [] }),
       calendarCache: {},
       setCalendarCache: () => {},
       refreshCalendar: async () => [],
