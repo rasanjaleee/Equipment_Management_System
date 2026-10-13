@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import axios from "axios";
 import { API_BASE_URL } from "../../services/api";
+import { useData } from "../../context/DataContext";
 import {
   Calendar,
   Search,
@@ -20,30 +21,43 @@ import {
 } from "lucide-react";
 
 export default function ReportsPage() {
+  const {
+    grnData: cachedGrn,
+    setGrnData: setCachedGrn,
+    inventorySummary: cachedInvSummary,
+    setInventorySummary: setCachedInvSummary,
+    inventoryList: cachedInvList,
+    setInventoryList: setCachedInvList,
+    allSuppliers: cachedSuppliers,
+    setAllSuppliers: setCachedSuppliers,
+    allLaboratories: cachedLaboratories,
+    setAllLaboratories: setCachedLaboratories,
+  } = useData();
+
   const [activeTab, setActiveTab] = useState("grn");
   const [error, setError] = useState("");
 
   // ===================== GRN STATE =====================
-  const [grnData, setGrnData] = useState([]);
+  const [grnData, setGrnData] = useState(cachedGrn && cachedGrn.length > 0 ? cachedGrn : []);
   const [grnPeriod, setGrnPeriod] = useState("all"); // all, week, month, year, custom
   const [grnCustomStart, setGrnCustomStart] = useState("");
   const [grnCustomEnd, setGrnCustomEnd] = useState("");
   const [grnSupplier, setGrnSupplier] = useState("");
   const [grnSearch, setGrnSearch] = useState("");
   const [grnSortBy, setGrnSortBy] = useState("date_desc");
-  const [allSuppliers, setAllSuppliers] = useState([]);
+  const [allSuppliers, setAllSuppliers] = useState(cachedSuppliers && cachedSuppliers.length > 0 ? cachedSuppliers : []);
   const [grnLoading, setGrnLoading] = useState(false);
 
   // ===================== INVENTORY STATE =====================
-  const [inventorySummary, setInventorySummary] = useState(null);
-  const [inventoryList, setInventoryList] = useState([]);
+  const [inventorySummary, setInventorySummary] = useState(cachedInvSummary || null);
+  const [inventoryList, setInventoryList] = useState(cachedInvList && cachedInvList.length > 0 ? cachedInvList : []);
   const [laboratoryFilter, setLaboratoryFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [invPeriod, setInvPeriod] = useState("all"); // all, week, month, year, custom
   const [invCustomStart, setInvCustomStart] = useState("");
   const [invCustomEnd, setInvCustomEnd] = useState("");
   const [invSearch, setInvSearch] = useState("");
-  const [allLaboratories, setAllLaboratories] = useState([]);
+  const [allLaboratories, setAllLaboratories] = useState(cachedLaboratories && cachedLaboratories.length > 0 ? cachedLaboratories : []);
   const [invLoading, setInvLoading] = useState(false);
 
   const getHeaders = () => {
@@ -98,32 +112,65 @@ export default function ReportsPage() {
     return getDateRangeForPeriod(invPeriod);
   }, [invPeriod, invCustomStart, invCustomEnd]);
 
-  // Initial suppliers and laboratories load
+  // Check if filters are actively applied
+  const hasGrnFilters = useMemo(() => {
+    return Boolean(
+      grnPeriod !== "all" ||
+      grnSupplier ||
+      grnSearch.trim() ||
+      grnDates.startDate ||
+      grnDates.endDate
+    );
+  }, [grnPeriod, grnSupplier, grnSearch, grnDates]);
+
+  const hasInvFilters = useMemo(() => {
+    return Boolean(
+      invPeriod !== "all" ||
+      laboratoryFilter ||
+      statusFilter ||
+      invSearch.trim() ||
+      invDates.startDate ||
+      invDates.endDate
+    );
+  }, [invPeriod, laboratoryFilter, statusFilter, invSearch, invDates]);
+
+  // Sync with context if cached data becomes available after initial render
   useEffect(() => {
-    const loadInitialOptions = async () => {
-      try {
-        const [grnRes, invRes] = await Promise.all([
-          axios.get(`${API_BASE_URL}/api/reports/grn`, { headers: getHeaders() }),
-          axios.get(`${API_BASE_URL}/api/reports/inventory-list`, { headers: getHeaders() })
-        ]);
-        if (Array.isArray(grnRes.data)) {
-          const suppliers = [...new Set(grnRes.data.map((r) => r.supplier).filter(Boolean))].sort();
-          setAllSuppliers(suppliers);
-        }
-        if (Array.isArray(invRes.data)) {
-          const labs = [...new Set(invRes.data.map((i) => i.laboratory).filter(Boolean))].sort();
-          setAllLaboratories(labs);
-        }
-      } catch (err) {
-        console.warn("Could not load initial dropdown lists:", err);
-      }
-    };
-    loadInitialOptions();
-  }, []);
+    if (cachedGrn && cachedGrn.length > 0 && grnData.length === 0 && !hasGrnFilters) {
+      setGrnData(cachedGrn);
+    }
+  }, [cachedGrn, grnData.length, hasGrnFilters]);
+
+  useEffect(() => {
+    if (cachedInvSummary && !inventorySummary && !hasInvFilters) {
+      setInventorySummary(cachedInvSummary);
+    }
+  }, [cachedInvSummary, inventorySummary, hasInvFilters]);
+
+  useEffect(() => {
+    if (cachedInvList && cachedInvList.length > 0 && inventoryList.length === 0 && !hasInvFilters) {
+      setInventoryList(cachedInvList);
+    }
+  }, [cachedInvList, inventoryList.length, hasInvFilters]);
+
+  useEffect(() => {
+    if (cachedSuppliers && cachedSuppliers.length > 0 && allSuppliers.length === 0) {
+      setAllSuppliers(cachedSuppliers);
+    }
+  }, [cachedSuppliers, allSuppliers.length]);
+
+  useEffect(() => {
+    if (cachedLaboratories && cachedLaboratories.length > 0 && allLaboratories.length === 0) {
+      setAllLaboratories(cachedLaboratories);
+    }
+  }, [cachedLaboratories, allLaboratories.length]);
 
   // Fetch GRN report with active filters
   const fetchGrnReport = async () => {
-    setGrnLoading(true);
+    // Only show visible loading indicator if no data is shown yet or if actively filtering
+    if (grnData.length === 0 || hasGrnFilters) {
+      setGrnLoading(true);
+    }
     try {
       const params = {};
       if (grnSupplier) params.supplier = grnSupplier;
@@ -135,7 +182,16 @@ export default function ReportsPage() {
         headers: getHeaders(),
         params
       });
-      setGrnData(Array.isArray(res.data) ? res.data : []);
+      const data = Array.isArray(res.data) ? res.data : [];
+      setGrnData(data);
+      if (!hasGrnFilters) {
+        setCachedGrn(data);
+        const suppliers = [...new Set(data.map((r) => r.supplier).filter(Boolean))].sort();
+        if (suppliers.length > 0) {
+          setAllSuppliers(suppliers);
+          setCachedSuppliers(suppliers);
+        }
+      }
       setError("");
     } catch (err) {
       console.error(err);
@@ -151,7 +207,10 @@ export default function ReportsPage() {
 
   // Fetch Inventory report with active filters
   const fetchInventoryReport = async () => {
-    setInvLoading(true);
+    // Only show visible loading indicator if no data is shown yet or if actively filtering
+    if (inventoryList.length === 0 || hasInvFilters) {
+      setInvLoading(true);
+    }
     try {
       const params = {};
       if (laboratoryFilter) params.laboratory = laboratoryFilter;
@@ -171,8 +230,21 @@ export default function ReportsPage() {
         })
       ]);
 
-      setInventorySummary(summaryRes.data || null);
-      setInventoryList(listRes.data || []);
+      const summary = summaryRes.data || null;
+      const list = Array.isArray(listRes.data) ? listRes.data : [];
+
+      setInventorySummary(summary);
+      setInventoryList(list);
+
+      if (!hasInvFilters) {
+        setCachedInvSummary(summary);
+        setCachedInvList(list);
+        const labs = [...new Set(list.map((i) => i.laboratory).filter(Boolean))].sort();
+        if (labs.length > 0) {
+          setAllLaboratories(labs);
+          setCachedLaboratories(labs);
+        }
+      }
       setError("");
     } catch (err) {
       console.error(err);
@@ -229,6 +301,9 @@ export default function ReportsPage() {
     setGrnSupplier("");
     setGrnSearch("");
     setGrnSortBy("date_desc");
+    if (cachedGrn && cachedGrn.length > 0) {
+      setGrnData(cachedGrn);
+    }
   };
 
   const handleResetInvFilters = () => {
@@ -238,6 +313,12 @@ export default function ReportsPage() {
     setLaboratoryFilter("");
     setStatusFilter("");
     setInvSearch("");
+    if (cachedInvList && cachedInvList.length > 0) {
+      setInventoryList(cachedInvList);
+    }
+    if (cachedInvSummary) {
+      setInventorySummary(cachedInvSummary);
+    }
   };
 
   // Export Handlers with active filters
