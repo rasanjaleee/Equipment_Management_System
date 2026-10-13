@@ -8,6 +8,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -21,34 +22,67 @@ public class ReportController {
         this.reportService = reportService;
     }
 
+    private LocalDate parseDate(String dateStr) {
+        if (dateStr == null || dateStr.isBlank()) {
+            return null;
+        }
+        try {
+            return LocalDate.parse(dateStr.trim());
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     @GetMapping("/grn")
-    public ResponseEntity<?> getGrnReport() {
-        return ResponseEntity.ok(reportService.getGrnReport());
+    public ResponseEntity<?> getGrnReport(
+            @RequestParam(required = false) String supplier,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate
+    ) {
+        return ResponseEntity.ok(reportService.getGrnReport(
+                supplier, search, parseDate(startDate), parseDate(endDate)
+        ));
     }
 
     @GetMapping("/inventory-summary")
     public ResponseEntity<?> getInventorySummary(
             @RequestParam(required = false) String laboratory,
-            @RequestParam(required = false) String status
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate
     ) {
-        List<Equipment> filtered = reportService.getFilteredInventory(laboratory, status);
+        List<Equipment> filtered = reportService.getFilteredInventory(
+                laboratory, status, search, parseDate(startDate), parseDate(endDate)
+        );
         return ResponseEntity.ok(reportService.getInventorySummary(filtered));
     }
 
     @GetMapping("/inventory-list")
     public ResponseEntity<?> getInventoryList(
             @RequestParam(required = false) String laboratory,
-            @RequestParam(required = false) String status
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate
     ) {
-        return ResponseEntity.ok(reportService.getFilteredInventory(laboratory, status));
+        return ResponseEntity.ok(reportService.getFilteredInventory(
+                laboratory, status, search, parseDate(startDate), parseDate(endDate)
+        ));
     }
 
     @GetMapping("/inventory/export/csv")
     public ResponseEntity<?> exportInventoryCsv(
             @RequestParam(required = false) String laboratory,
-            @RequestParam(required = false) String status
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate
     ) throws Exception {
-        List<Equipment> filtered = reportService.getFilteredInventory(laboratory, status);
+        List<Equipment> filtered = reportService.getFilteredInventory(
+                laboratory, status, search, parseDate(startDate), parseDate(endDate)
+        );
         byte[] csv = reportService.generateInventoryCsv(filtered);
 
         return ResponseEntity.ok()
@@ -60,9 +94,14 @@ public class ReportController {
     @GetMapping("/inventory/export/pdf")
     public ResponseEntity<?> exportInventoryPdf(
             @RequestParam(required = false) String laboratory,
-            @RequestParam(required = false) String status
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate
     ) throws Exception {
-        List<Equipment> filtered = reportService.getFilteredInventory(laboratory, status);
+        List<Equipment> filtered = reportService.getFilteredInventory(
+                laboratory, status, search, parseDate(startDate), parseDate(endDate)
+        );
         byte[] pdf = reportService.generateInventoryPdf(filtered);
 
         return ResponseEntity.ok()
@@ -72,8 +111,15 @@ public class ReportController {
     }
 
     @GetMapping("/grn/export/csv")
-    public ResponseEntity<?> exportGrnCsv() throws Exception {
-        List<GrnReportDto> grnReport = reportService.getGrnReport();
+    public ResponseEntity<?> exportGrnCsv(
+            @RequestParam(required = false) String supplier,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate
+    ) throws Exception {
+        List<GrnReportDto> grnReport = reportService.getGrnReport(
+                supplier, search, parseDate(startDate), parseDate(endDate)
+        );
         byte[] csv = reportService.generateGrnCsv(grnReport);
 
         return ResponseEntity.ok()
@@ -83,8 +129,15 @@ public class ReportController {
     }
 
     @GetMapping("/grn/export/pdf")
-    public ResponseEntity<?> exportGrnPdf() throws Exception {
-        List<GrnReportDto> grnReport = reportService.getGrnReport();
+    public ResponseEntity<?> exportGrnPdf(
+            @RequestParam(required = false) String supplier,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate
+    ) throws Exception {
+        List<GrnReportDto> grnReport = reportService.getGrnReport(
+                supplier, search, parseDate(startDate), parseDate(endDate)
+        );
         byte[] pdf = reportService.generateGrnPdf(grnReport);
 
         return ResponseEntity.ok()
