@@ -13,11 +13,11 @@ public interface EquipmentRepository extends JpaRepository<Equipment, Long> {
     List<Equipment> findByLaboratoryIgnoreCase(String laboratory);
 
     @Query("""
-        SELECT e.grnNumber, e.supplier, COUNT(e), COALESCE(SUM(e.cost), 0)
+        SELECT e.grnNumber, e.supplier, COUNT(e), COALESCE(SUM(e.cost), 0), MAX(e.purchaseDate)
         FROM Equipment e
         WHERE e.grnNumber IS NOT NULL AND e.grnNumber <> ''
         GROUP BY e.grnNumber, e.supplier
-        ORDER BY e.grnNumber
+        ORDER BY MAX(e.purchaseDate) DESC, e.grnNumber ASC
     """)
     List<Object[]> getGrnReportSummary();
 }
