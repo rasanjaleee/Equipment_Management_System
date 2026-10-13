@@ -69,14 +69,15 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PUT, "/api/equipment/**").hasAnyRole("SUPER_ADMIN", "ADMIN", "TECHNICIAN")
                         .requestMatchers(HttpMethod.DELETE, "/api/equipment/**").hasAnyRole("SUPER_ADMIN", "ADMIN", "TECHNICIAN")
 
-                        // EQUIPMENT ACCESSORIES
-                        .requestMatchers(HttpMethod.GET, "/api/equipment-accessories/**").authenticated()
-                        .requestMatchers(HttpMethod.POST, "/api/equipment-accessories/**")
-                        .hasAnyRole("SUPER_ADMIN", "ADMIN", "TECHNICIAN")
-                        .requestMatchers(HttpMethod.PUT, "/api/equipment-accessories/**")
-                        .hasAnyRole("SUPER_ADMIN", "ADMIN", "TECHNICIAN")
-                        .requestMatchers(HttpMethod.DELETE, "/api/equipment-accessories/**")
-                        .hasAnyRole("SUPER_ADMIN", "ADMIN", "TECHNICIAN")
+                                // EQUIPMENT ACCESSORIES
+                                .requestMatchers(HttpMethod.GET, "/api/equipment-accessories/**")
+                                .permitAll()
+                                .requestMatchers(HttpMethod.POST, "/api/equipment-accessories/**")
+                                .hasAnyRole("SUPER_ADMIN", "ADMIN")
+                                .requestMatchers(HttpMethod.PUT, "/api/equipment-accessories/**")
+                                .hasAnyRole("SUPER_ADMIN", "ADMIN")
+                                .requestMatchers(HttpMethod.DELETE, "/api/equipment-accessories/**")
+                                .hasAnyRole("SUPER_ADMIN", "ADMIN")
 
                         // MAINTENANCE
                         .requestMatchers(HttpMethod.GET, "/api/maintenance/**").authenticated()
