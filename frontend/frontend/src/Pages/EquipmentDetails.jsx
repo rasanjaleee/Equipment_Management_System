@@ -66,6 +66,15 @@ const EquipmentDetails = () => {
     description: ''
   });
 
+  const loggedInUser = JSON.parse(localStorage.getItem('user') || '{}');
+
+const currentUserRole = String(loggedInUser?.role || '')
+  .replace(/^ROLE_/i, '')
+  .toUpperCase();
+
+const canManageAccessories =
+  currentUserRole === 'ADMIN' || currentUserRole === 'SUPER_ADMIN';
+
   useEffect(() => {
     if (id) {
       fetchSingleEquipment();
@@ -564,26 +573,28 @@ const handleDeleteAccessory = async (accessory) => {
       Accessories
     </h2>
 
-    <button
-  type="button"
-  onClick={() => {
-  setEditingAccessoryId(null);
+    {canManageAccessories && (
+  <button
+    type="button"
+    onClick={() => {
+      setEditingAccessoryId(null);
 
-  setAccessoryForm({
-    accessoryName: '',
-    quantity: 1,
-    status: 'AVAILABLE',
-    description: ''
-  });
+      setAccessoryForm({
+        accessoryName: '',
+        quantity: 1,
+        status: 'AVAILABLE',
+        description: ''
+      });
 
-  setShowAccessoryForm(true);
-}}
-  className="w-full sm:w-auto bg-yellow-500 hover:bg-yellow-400 text-black font-semibold px-4 py-2 rounded-lg"
->
-  + Add Accessory
-</button>
+      setShowAccessoryForm(true);
+    }}
+    className="w-full sm:w-auto bg-yellow-500 hover:bg-yellow-400 text-black font-semibold px-4 py-2 rounded-lg"
+  >
+    + Add Accessory
+  </button>
+)}
   </div>
-  {showAccessoryForm && (
+  {canManageAccessories && showAccessoryForm && (
   <div className="mb-6 p-5 bg-gray-50 border border-gray-200 rounded-lg">
     <h3 className="text-lg font-semibold text-gray-900 mb-4">
       Add Accessory
@@ -732,9 +743,11 @@ const handleDeleteAccessory = async (accessory) => {
                     <th className="px-4 py-3 text-left border-b">
                       Description
                     </th>
+                    {canManageAccessories && (
                     <th className="px-4 py-3 text-center border-b">
                       Actions
                     </th>
+                  )}
                   </tr>
                 </thead>
 
@@ -765,29 +778,29 @@ const handleDeleteAccessory = async (accessory) => {
                 </td>
 
                 {/* Actions */}
-                <td className="px-4 py-3 border-b">
-                <div className="flex justify-center gap-3">
+                {canManageAccessories && (
+  <td className="px-4 py-3 border-b">
+    <div className="flex justify-center gap-3">
+      <button
+        type="button"
+        onClick={() => handleEditAccessory(accessory)}
+        className="text-blue-600 hover:text-blue-800"
+        title="Edit Accessory"
+      >
+        <Edit size={18} />
+      </button>
 
-                <button
-                  type="button"
-                  onClick={() => handleEditAccessory(accessory)}
-                  className="text-blue-600 hover:text-blue-800"
-                  title="Edit Accessory"
-                >
-                  <Edit size={18} />
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleDeleteAccessory(accessory)}
-                  className="text-red-600 hover:text-red-800"
-                  title="Delete Accessory"
-                >
-                  <Trash2 size={18} />
-                </button>
-
-                </div>
-              </td>
+      <button
+        type="button"
+        onClick={() => handleDeleteAccessory(accessory)}
+        className="text-red-600 hover:text-red-800"
+        title="Delete Accessory"
+      >
+        <Trash2 size={18} />
+      </button>
+    </div>
+  </td>
+)}
 
               </tr>
                   ))}
