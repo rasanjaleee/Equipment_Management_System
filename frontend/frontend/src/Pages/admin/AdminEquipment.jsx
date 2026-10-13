@@ -1585,7 +1585,7 @@ const formatStatus = (status) =>
         </div>
 
         <div>
-          <p className="text-xs text-gray-500">Cost</p>
+          <p className="text-xs text-gray-500">Cost (Rs.)</p>
           <p className="font-medium text-gray-800">
             {formatCost(item.cost)}
           </p>
@@ -1674,7 +1674,7 @@ const formatStatus = (status) =>
     <tr className="text-left">
       <th className="px-4 py-4 font-bold">Equipment</th>
       <th className="px-4 py-4 font-bold">Serial</th>
-      <th className="px-4 py-4 font-bold">Cost</th>
+      <th className="px-4 py-4 font-bold">Cost (Rs.)</th>
       <th className="px-4 py-4 font-bold">Purchase Date</th>
       <th className="px-4 py-4 font-bold">Supplier</th>
       <th className="px-4 py-4 font-bold">GRN</th>

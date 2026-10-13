@@ -187,6 +187,9 @@ export default function BulkUploadEquipment() {
               <li>
                 Date format: <span className="font-semibold">YYYY-MM-DD</span> (Excel format like 6/27/2022 is also supported)
               </li>
+              <li>
+                Cost: Enter value in Rupees (Rs.), numeric only (e.g. 50000)
+              </li>
             </ul>
           </div>
 
