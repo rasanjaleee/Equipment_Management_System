@@ -1,4 +1,4 @@
-﻿import React, {
+import React, {
   memo,
   useCallback,
   useEffect,
@@ -6,7 +6,7 @@
   useRef,
   useState
 } from 'react';
-import { Bell, LogOut, User, Check, CheckCheck, Menu, X } from 'lucide-react';
+import { Bell, LogOut, User, Check, CheckCheck, Menu, X, LayoutDashboard } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import useNotificationSocket from '../services/useNotificationSocket';
 
@@ -336,7 +336,7 @@ const useNotifications = (userId) => {
 /*                              Desktop Navigation                            */
 /* -------------------------------------------------------------------------- */
 
-const DesktopLinks = memo(() => (
+const DesktopLinks = memo(({ dashboardLink, dashboardLabel }) => (
   <div className="hidden md:flex items-center gap-5 lg:gap-8 shrink-0">
     {NAV_LINKS.map(
       ({ to, label }) => (
@@ -349,6 +349,15 @@ const DesktopLinks = memo(() => (
         </Link>
       )
     )}
+    {dashboardLink && (
+      <Link
+        to={dashboardLink}
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-black/25 hover:bg-black/40 border border-white/30 backdrop-blur-sm transition-all shadow-sm"
+      >
+        <LayoutDashboard size={14} />
+        <span>{dashboardLabel}</span>
+      </Link>
+    )}
   </div>
 ));
 
@@ -360,12 +369,22 @@ DesktopLinks.displayName =
 /* -------------------------------------------------------------------------- */
 
 const MobileMenu = memo(
-  ({ onNavigate, currentPath }) => (
+  ({ onNavigate, currentPath, dashboardLink, dashboardLabel }) => (
     <div
       id="mobile-navigation"
       className="md:hidden bg-white border-t border-gray-200 shadow-lg"
     >
       <div className="flex flex-col px-4 sm:px-6 py-2">
+        {dashboardLink && (
+          <Link
+            to={dashboardLink}
+            onClick={onNavigate}
+            className="flex items-center gap-2 py-3 text-sm font-bold text-yellow-800 bg-yellow-50 px-3 rounded-lg my-1 border border-yellow-200"
+          >
+            <LayoutDashboard size={16} className="text-yellow-700" />
+            <span>{dashboardLabel}</span>
+          </Link>
+        )}
         {NAV_LINKS.map(
           ({ to, label }, index) => {
             const active =
@@ -632,7 +651,9 @@ const ProfileMenu = memo(
     username,
     email,
     initials,
-    onLogout
+    onLogout,
+    dashboardLink,
+    dashboardLabel
   }) => {
     const containerRef =
       useRef(null);
@@ -672,6 +693,21 @@ const ProfileMenu = memo(
                 {email || 'Logged in'}
               </p>
             </div>
+
+            {/* Dashboard Link for Admin / Technician */}
+            {dashboardLink && (
+              <Link
+                to={dashboardLink}
+                onClick={onDismiss}
+                className="flex items-center gap-3 px-4 py-2.5 bg-yellow-50/70 hover:bg-yellow-100/70 text-sm font-semibold text-yellow-800 transition-colors border-b border-gray-100"
+              >
+                <LayoutDashboard
+                  size={16}
+                  className="text-yellow-700"
+                />
+                {dashboardLabel}
+              </Link>
+            )}
 
             {/* Profile */}
             <Link
@@ -746,6 +782,17 @@ const Navbar = () => {
       initials: getInitials(name)
     };
   }, []);
+
+  const userRole = useMemo(() => {
+    const user = readJSON('user');
+    return String(user?.role || '').replace(/^ROLE_/i, '').toUpperCase();
+  }, []);
+
+  const isAdmin = userRole === 'ADMIN' || userRole === 'SUPER_ADMIN';
+  const isTechnician = userRole === 'TECHNICIAN';
+
+  const dashboardLink = isAdmin ? '/admin/dashboard' : isTechnician ? '/technician/dashboard' : null;
+  const dashboardLabel = isAdmin ? 'Admin Dashboard' : isTechnician ? 'Technician Dashboard' : null;
 
   /* -------------------------- Notifications ---------------------------- */
 
@@ -865,7 +912,7 @@ const Navbar = () => {
 
           {/* ================= DESKTOP LINKS ================= */}
 
-          <DesktopLinks />
+          <DesktopLinks dashboardLink={dashboardLink} dashboardLabel={dashboardLabel} />
 
           {/* ================= RIGHT SIDE ================= */}
 
@@ -920,6 +967,8 @@ const Navbar = () => {
               email={email}
               initials={initials}
               onLogout={handleLogout}
+              dashboardLink={dashboardLink}
+              dashboardLabel={dashboardLabel}
             />
           </div>
         </div>
@@ -934,6 +983,8 @@ const Navbar = () => {
             currentPath={
               location.pathname
             }
+            dashboardLink={dashboardLink}
+            dashboardLabel={dashboardLabel}
           />
         )}
       </div>

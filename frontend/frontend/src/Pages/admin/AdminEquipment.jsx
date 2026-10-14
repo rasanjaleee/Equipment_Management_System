@@ -40,6 +40,8 @@ export default function AdminEquipment() {
 
   const [editingId, setEditingId] = useState(null);
 
+  const [viewingItem, setViewingItem] = useState(null);
+
   const [equipmentNameSelection, setEquipmentNameSelection] = useState('');
 
   const ITEMS_PER_PAGE = 10;
@@ -1632,7 +1634,7 @@ const formatStatus = (status) =>
       <div className="grid grid-cols-3 gap-2 mt-4 pt-3 border-t border-gray-100">
         <button
           type="button"
-          onClick={() => navigate(`/equipment/item/${item.id}`)}
+          onClick={() => setViewingItem(item)}
           className="flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg bg-green-50 text-green-700 text-sm font-medium hover:bg-green-100"
         >
           <Eye size={16} />
@@ -1669,47 +1671,47 @@ const formatStatus = (status) =>
 
             <div className="hidden md:block bg-white rounded-lg shadow overflow-hidden">
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[1100px] text-sm text-gray-800">
-  <thead className="bg-gray-200 text-gray-900">
+                <table className="w-full text-sm text-gray-800">
+  <thead className="bg-gray-200 text-gray-900 text-xs uppercase tracking-wider">
     <tr className="text-left">
-      <th className="px-4 py-4 font-bold">Equipment</th>
-      <th className="px-4 py-4 font-bold">Serial</th>
-      <th className="px-4 py-4 font-bold">Cost (Rs.)</th>
-      <th className="px-4 py-4 font-bold">Purchase Date</th>
-      <th className="px-4 py-4 font-bold">Supplier</th>
-      <th className="px-4 py-4 font-bold">GRN</th>
-      <th className="px-4 py-4 font-bold">Status</th>
-      <th className="px-4 py-4 font-bold">QR</th>
-      <th className="px-4 py-4 font-bold">Actions</th>
+      <th className="px-3 py-3.5 font-bold">Equipment</th>
+      <th className="px-2.5 py-3.5 font-bold">Serial</th>
+      <th className="px-2.5 py-3.5 font-bold whitespace-nowrap">Cost (Rs.)</th>
+      <th className="px-2.5 py-3.5 font-bold whitespace-nowrap">Purchase Date</th>
+      <th className="px-2.5 py-3.5 font-bold">Supplier</th>
+      <th className="px-2.5 py-3.5 font-bold">GRN</th>
+      <th className="px-2.5 py-3.5 font-bold text-center">Status</th>
+      <th className="px-2.5 py-3.5 font-bold text-center">QR</th>
+      <th className="px-2.5 py-3.5 font-bold text-center">Actions</th>
     </tr>
   </thead>
 
-  <tbody>
+  <tbody className="divide-y divide-gray-100">
     {paginatedEquipment.map((item) => (
       <tr
         key={item.id}
-        className="border-b border-gray-100 hover:bg-gray-50"
+        className="hover:bg-gray-50/80 transition-colors"
       >
-        <td className="px-4 py-4">
-          <div className="flex items-center gap-3">
+        <td className="px-3 py-3">
+          <div className="flex items-center gap-2.5">
             {item.photoPath ? (
               <img
                 src={getImageUrl(item.photoPath)}
                 alt={item.equipmentName || 'Equipment'}
-                className="w-12 h-12 object-cover rounded-lg"
+                className="w-10 h-10 object-cover rounded-lg shrink-0"
               />
             ) : (
-              <div className="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400">
-                <Package size={20} />
+              <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400 shrink-0">
+                <Package size={18} />
               </div>
             )}
 
             <div className="min-w-0">
-              <div className="font-semibold text-gray-900">
+              <div className="font-semibold text-gray-900 leading-tight">
                 {item.equipmentName}
               </div>
 
-              <div className="text-xs text-gray-500">
+              <div className="text-[11px] text-gray-500 mt-0.5 leading-tight">
                 ID: {item.id}
                 {item.laboratory && <> • {item.laboratory}</>}
                 {item.model && <> • {item.model}</>}
@@ -1718,17 +1720,17 @@ const formatStatus = (status) =>
           </div>
         </td>
 
-        <td className="px-4 py-4">{item.serialNumber || '-'}</td>
-        <td className="px-4 py-4">
+        <td className="px-2.5 py-3 text-xs text-gray-700">{item.serialNumber || '-'}</td>
+        <td className="px-2.5 py-3 font-semibold text-gray-900 text-xs whitespace-nowrap">
           {formatCost(item.cost)}
         </td>
-        <td className="px-4 py-4">{item.purchaseDate || '-'}</td>
-        <td className="px-4 py-4">{item.supplier || '-'}</td>
-        <td className="px-4 py-4">{item.grnNumber || '-'}</td>
+        <td className="px-2.5 py-3 text-xs text-gray-600 whitespace-nowrap">{item.purchaseDate || '-'}</td>
+        <td className="px-2.5 py-3 text-xs text-gray-700">{item.supplier || '-'}</td>
+        <td className="px-2.5 py-3 text-xs text-gray-700">{item.grnNumber || '-'}</td>
 
-        <td className="px-4 py-4">
+        <td className="px-2.5 py-3 text-center">
           <span
-            className={`inline-flex px-2.5 py-1 rounded-full text-xs font-semibold ${
+            className={`inline-flex px-2 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap ${
               statusStyles[item.status] || 'bg-gray-100 text-gray-700'
             }`}
           >
@@ -1736,20 +1738,20 @@ const formatStatus = (status) =>
           </span>
         </td>
 
-        <td className="px-4 py-4">
+        <td className="px-2.5 py-3 text-center">
           {item.qrCode ? (
-            <div className="flex flex-col items-center gap-2">
+            <div className="flex flex-col items-center gap-1">
               <img
                 src={getImageUrl(item.qrCode)}
                 alt="QR code"
-                className="w-14 h-14 object-contain"
+                className="w-10 h-10 object-contain"
               />
 
               <div className="flex gap-1">
                 <button
                   type="button"
                   onClick={() => handlePrintQR(item)}
-                  className="text-xs bg-gray-500 text-white px-2 py-1 rounded hover:bg-gray-600"
+                  className="text-[10px] bg-gray-600 hover:bg-gray-700 text-white px-1.5 py-0.5 rounded transition shadow-xs"
                 >
                   Print
                 </button>
@@ -1757,7 +1759,7 @@ const formatStatus = (status) =>
                 <button
                   type="button"
                   onClick={() => handleDownloadQR(item)}
-                  className="text-xs bg-slate-600 text-white px-2 py-1 rounded hover:bg-slate-700"
+                  className="text-[10px] bg-slate-600 hover:bg-slate-700 text-white px-1.5 py-0.5 rounded transition shadow-xs"
                 >
                   Download
                 </button>
@@ -1768,33 +1770,33 @@ const formatStatus = (status) =>
           )}
         </td>
 
-        <td className="px-4 py-4">
-          <div className="flex items-center gap-2">
+        <td className="px-2.5 py-3 text-center">
+          <div className="flex items-center justify-center gap-1">
             <button
               type="button"
-              onClick={() => navigate(`/equipment/item/${item.id}`)}
-              className="p-2 rounded-lg text-green-600 hover:bg-green-50 hover:text-green-800"
+              onClick={() => setViewingItem(item)}
+              className="p-1.5 rounded-lg text-green-600 hover:bg-green-50 hover:text-green-800 transition"
               title="View Details"
             >
-              <Eye size={18} />
+              <Eye size={17} />
             </button>
 
             <button
               type="button"
               onClick={() => handleEdit(item)}
-              className="p-2 rounded-lg text-blue-600 hover:bg-blue-50 hover:text-blue-800"
+              className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50 hover:text-blue-800 transition"
               title="Edit"
             >
-              <Edit size={18} />
+              <Edit size={17} />
             </button>
 
             <button
               type="button"
               onClick={() => handleDelete(item.id)}
-              className="p-2 rounded-lg text-red-600 hover:bg-red-50 hover:text-red-800"
+              className="p-1.5 rounded-lg text-red-600 hover:bg-red-50 hover:text-red-800 transition"
               title="Delete"
             >
-              <Trash2 size={18} />
+              <Trash2 size={17} />
             </button>
           </div>
         </td>
@@ -1853,6 +1855,171 @@ const formatStatus = (status) =>
 </>
 
 )}
+
+        {/* ================= IN-PLACE EQUIPMENT VIEW MODAL ================= */}
+        {viewingItem && (
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto"
+            onClick={() => setViewingItem(null)}
+          >
+            <div
+              className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-gray-200"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Modal Header */}
+              <div className="flex items-start justify-between p-5 border-b border-gray-100 bg-gray-50/80 rounded-t-2xl">
+                <div className="min-w-0 pr-4">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-gray-500 bg-gray-200 px-2 py-0.5 rounded">
+                      ID #{viewingItem.id}
+                    </span>
+                    <span
+                      className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                        statusStyles[viewingItem.status] || 'bg-gray-100 text-gray-700'
+                      }`}
+                    >
+                      {formatStatus(viewingItem.status)}
+                    </span>
+                  </div>
+                  <h2 className="text-xl font-bold text-gray-900 mt-1.5 break-words">
+                    {viewingItem.equipmentName}
+                  </h2>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    {viewingItem.laboratory || 'No laboratory assigned'}
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setViewingItem(null)}
+                  className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 p-2 rounded-lg transition-colors shrink-0"
+                  title="Close modal"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Modal Body */}
+              <div className="p-5 sm:p-6 space-y-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                  {/* Photo Preview */}
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                      Equipment Photo
+                    </label>
+                    <div className="h-48 w-full rounded-xl bg-gray-100 border border-gray-200 flex items-center justify-center overflow-hidden">
+                      {viewingItem.photoPath ? (
+                        <img
+                          src={getImageUrl(viewingItem.photoPath)}
+                          alt={viewingItem.equipmentName}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="text-center text-gray-400 p-4">
+                          <Package size={40} className="mx-auto mb-1 text-gray-300" />
+                          <p className="text-xs">No photo uploaded</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* QR Code */}
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                      QR Code
+                    </label>
+                    <div className="h-48 w-full rounded-xl bg-gray-50 border border-gray-200 flex flex-col items-center justify-center p-3">
+                      {viewingItem.qrCode ? (
+                        <>
+                          <img
+                            src={getImageUrl(viewingItem.qrCode)}
+                            alt="Equipment QR Code"
+                            className="w-28 h-28 object-contain"
+                          />
+                          <div className="flex gap-2 mt-2">
+                            <button
+                              type="button"
+                              onClick={() => handlePrintQR(viewingItem)}
+                              className="text-xs bg-gray-700 hover:bg-gray-800 text-white font-medium px-3 py-1 rounded transition shadow-sm"
+                            >
+                              Print QR
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDownloadQR(viewingItem)}
+                              className="text-xs bg-blue-600 hover:bg-blue-700 text-white font-medium px-3 py-1 rounded transition shadow-sm"
+                            >
+                              Download
+                            </button>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="text-center text-gray-400">
+                          <QrCode size={36} className="mx-auto mb-1 text-gray-300" />
+                          <p className="text-xs">No QR Code available</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Specifications Grid */}
+                <div className="border border-gray-200 rounded-xl overflow-hidden divide-y divide-gray-100 text-sm">
+                  <div className="grid grid-cols-2 p-3 bg-gray-50/50">
+                    <span className="text-gray-500 font-medium">Model</span>
+                    <span className="text-gray-900 font-semibold text-right">{viewingItem.model || '-'}</span>
+                  </div>
+                  <div className="grid grid-cols-2 p-3">
+                    <span className="text-gray-500 font-medium">Serial Number</span>
+                    <span className="text-gray-900 font-semibold text-right">{viewingItem.serialNumber || '-'}</span>
+                  </div>
+                  <div className="grid grid-cols-2 p-3 bg-gray-50/50">
+                    <span className="text-gray-500 font-medium">Cost</span>
+                    <span className="text-gray-900 font-bold text-right text-yellow-700">{formatCost(viewingItem.cost)}</span>
+                  </div>
+                  <div className="grid grid-cols-2 p-3">
+                    <span className="text-gray-500 font-medium">Purchase Date</span>
+                    <span className="text-gray-900 font-semibold text-right">{viewingItem.purchaseDate || '-'}</span>
+                  </div>
+                  <div className="grid grid-cols-2 p-3 bg-gray-50/50">
+                    <span className="text-gray-500 font-medium">Supplier</span>
+                    <span className="text-gray-900 font-semibold text-right">{viewingItem.supplier || '-'}</span>
+                  </div>
+                  <div className="grid grid-cols-2 p-3">
+                    <span className="text-gray-500 font-medium">GRN Number</span>
+                    <span className="text-gray-900 font-semibold text-right">{viewingItem.grnNumber || '-'}</span>
+                  </div>
+                  <div className="grid grid-cols-2 p-3 bg-gray-50/50">
+                    <span className="text-gray-500 font-medium">Laboratory</span>
+                    <span className="text-gray-900 font-semibold text-right">{viewingItem.laboratory || '-'}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="flex items-center justify-end gap-3 p-4 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const itemToEdit = viewingItem;
+                    setViewingItem(null);
+                    handleEdit(itemToEdit);
+                  }}
+                  className="btn btn-primary text-sm flex items-center gap-1.5"
+                >
+                  <Edit size={16} /> Edit Equipment
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewingItem(null)}
+                  className="btn btn-secondary text-sm"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
       </div>
 
