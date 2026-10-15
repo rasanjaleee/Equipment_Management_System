@@ -115,21 +115,20 @@ const canManageAccessories =
   try {
     setAccessoriesLoading(true);
 
-    const token = localStorage.getItem('token');
-
     const res = await axios.get(
-      `${API_BASE_URL}/api/equipment-accessories/equipment/${equipmentId}`,
-      {
-        headers: token
-          ? { Authorization: `Bearer ${token}` }
-          : {}
-      }
+      `${API_BASE_URL}/api/equipment-accessories/equipment/${equipmentId}`
     );
 
-    setAccessories(Array.isArray(res.data) ? res.data : []);
+    
 
+    setAccessories(Array.isArray(res.data) ? res.data : []);
   } catch (err) {
-    console.error('Failed to fetch accessories:', err);
+    console.error(
+      'Failed to fetch accessories:',
+      err.response?.status,
+      err.response?.data || err.message
+    );
+
     setAccessories([]);
   } finally {
     setAccessoriesLoading(false);
@@ -727,7 +726,7 @@ const handleDeleteAccessory = async (accessory) => {
               No accessories registered for this equipment.
             </p>
           ) : (
-            <div className="hidden md:block overflow-x-auto">
+            <div className="block overflow-x-auto">
               <table className="min-w-full border border-gray-200">
                 <thead className="bg-gray-100">
                   <tr>
