@@ -50,6 +50,22 @@ const EquipmentDetails = () => {
     setIsBorrowModalOpen(true);
   };
 
+  const handleBack = () => {
+    try {
+      const u = JSON.parse(localStorage.getItem('user'));
+      const role = String(u?.role || '').replace(/^ROLE_/i, '').toUpperCase();
+      if (role === 'ADMIN' || role === 'SUPER_ADMIN') {
+        navigate('/admin/equipment');
+        return;
+      }
+      if (role === 'TECHNICIAN') {
+        navigate('/technician/equipment');
+        return;
+      }
+    } catch {}
+    navigate('/equipment');
+  };
+
   const [currentIssuance, setCurrentIssuance] = useState(null);
   const [currentIssuanceLoading, setCurrentIssuanceLoading] = useState(false);
 
@@ -369,7 +385,7 @@ const handleDeleteAccessory = async (accessory) => {
               <h2 className="text-2xl font-bold text-gray-900 mb-2">Equipment Not Found</h2>
               <p className="text-gray-600 mb-6">{error || 'The equipment you are looking for does not exist.'}</p>
               <button
-                onClick={() => navigate('/equipment')}
+                onClick={handleBack}
                 className="bg-yellow-500 hover:bg-yellow-400 text-black font-semibold px-6 py-2 rounded-lg inline-flex items-center gap-2"
               >
                 <ArrowLeft size={20} />
@@ -386,7 +402,7 @@ const handleDeleteAccessory = async (accessory) => {
     <div className="max-w-5xl mx-auto px-3 sm:px-4">
 
       <button
-        onClick={() => navigate('/equipment')}
+        onClick={handleBack}
         className="mb-4 sm:mb-6 inline-flex items-center gap-2 text-sm sm:text-base text-gray-600 hover:text-gray-900 font-medium"
       >
         <ArrowLeft size={18} />
@@ -842,7 +858,7 @@ const handleDeleteAccessory = async (accessory) => {
             <h2 className="text-2xl font-bold text-gray-900 mb-2">Equipment Not Found</h2>
             <p className="text-gray-600 mb-6">{error || 'The equipment you are looking for does not exist.'}</p>
             <button
-              onClick={() => navigate('/equipment')}
+              onClick={handleBack}
               className="bg-yellow-500 hover:bg-yellow-400 text-black font-semibold px-6 py-2 rounded-lg inline-flex items-center gap-2"
             >
               <ArrowLeft size={20} />
@@ -858,7 +874,7 @@ const handleDeleteAccessory = async (accessory) => {
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-[95%] mx-auto px-4 sm:px-6 lg:px-8">
         <button
-          onClick={() => navigate('/equipment')}
+          onClick={handleBack}
           className="mb-6 inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 font-medium"
         >
           <ArrowLeft size={20} />
