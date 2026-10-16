@@ -40,6 +40,18 @@ export default function AdminEquipment() {
 
   const [editingId, setEditingId] = useState(null);
 
+  const [accessories, setAccessories] = useState([]);
+const [accessoriesLoading, setAccessoriesLoading] = useState(false);
+const [showAccessoryForm, setShowAccessoryForm] = useState(false);
+const [editingAccessoryId, setEditingAccessoryId] = useState(null);
+
+const [accessoryForm, setAccessoryForm] = useState({
+  accessoryName: '',
+  quantity: 1,
+  status: 'AVAILABLE',
+  description: ''
+});
+
   const [viewingItem, setViewingItem] = useState(null);
 
   const [equipmentNameSelection, setEquipmentNameSelection] = useState('');
@@ -162,7 +174,216 @@ export default function AdminEquipment() {
     return refreshEquipment(forceRefresh);
   };
 
+const fetchAccessories = async (equipmentId) => {
+  try {
+    setAccessoriesLoading(true);
 
+    const res = await axios.get(
+      `${API_BASE_URL}/api/equipment-accessories/equipment/${equipmentId}`
+    );
+
+    setAccessories(Array.isArray(res.data) ? res.data : []);
+  } catch (err) {
+    console.error(
+      'Failed to fetch accessories:',
+      err.response?.status,
+      err.response?.data || err.message
+    );
+
+    setAccessories([]);
+  } finally {
+    setAccessoriesLoading(false);
+  }
+};
+
+const openEquipmentView = async (item) => {
+  setViewingItem(item);
+
+  setAccessories([]);
+  setShowAccessoryForm(false);
+  setEditingAccessoryId(null);
+
+  setAccessoryForm({
+    accessoryName: '',
+    quantity: 1,
+    status: 'AVAILABLE',
+    description: ''
+  });
+
+  await fetchAccessories(item.id);
+};
+
+const resetAccessoryForm = () => {
+  setAccessoryForm({
+    accessoryName: '',
+    quantity: 1,
+    status: 'AVAILABLE',
+    description: ''
+  });
+
+  setEditingAccessoryId(null);
+  setShowAccessoryForm(false);
+};
+
+const handleAddAccessory = async () => {
+  if (!accessoryForm.accessoryName.trim()) {
+    alert('Please enter accessory name.');
+    return;
+  }
+
+  if (Number(accessoryForm.quantity) < 1) {
+    alert('Quantity must be at least 1.');
+    return;
+  }
+
+  if (!viewingItem) return;
+
+  try {
+    const token = localStorage.getItem('token');
+
+    await axios.post(
+      `${API_BASE_URL}/api/equipment-accessories/equipment/${viewingItem.id}`,
+      {
+        accessoryName: accessoryForm.accessoryName.trim(),
+        quantity: Number(accessoryForm.quantity),
+        status: accessoryForm.status,
+        description: accessoryForm.description.trim()
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    );
+
+    await fetchAccessories(viewingItem.id);
+    resetAccessoryForm();
+
+  } catch (err) {
+    console.error('Failed to add accessory:', err);
+
+    alert(
+      err.response?.data?.message ||
+      err.response?.data ||
+      'Failed to add accessory.'
+    );
+  }
+};
+
+const handleEditAccessory = (accessory) => {
+  setEditingAccessoryId(accessory.id);
+
+  setAccessoryForm({
+    accessoryName: accessory.accessoryName || '',
+    quantity: accessory.quantity || 1,
+    status: accessory.status || 'AVAILABLE',
+    description: accessory.description || ''
+  });
+
+  setShowAccessoryForm(true);
+};
+
+const handleUpdateAccessory = async () => {
+  if (!accessoryForm.accessoryName.trim()) {
+    alert('Please enter accessory name.');
+    return;
+  }
+
+  if (Number(accessoryForm.quantity) < 1) {
+    alert('Quantity must be at least 1.');
+    return;
+  }
+
+  if (!viewingItem || !editingAccessoryId) return;
+
+  try {
+    const token = localStorage.getItem('token');
+
+    await axios.put(
+      `${API_BASE_URL}/api/equipment-accessories/${editingAccessoryId}`,
+      {
+        accessoryName: accessoryForm.accessoryName.trim(),
+        quantity: Number(accessoryForm.quantity),
+        status: accessoryForm.status,
+        description: accessoryForm.description.trim()
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    );
+
+    await fetchAccessories(viewingItem.id);
+    resetAccessoryForm();
+
+  } catch (err) {
+    console.error('Failed to update accessory:', err);
+
+    alert(
+      err.response?.data?.message ||
+      err.response?.data ||
+      'Failed to update accessory.'
+    );
+  }
+};
+
+const handleDeleteAccessory = async (accessory) => {
+  if (!viewingItem) return;
+
+  const result = await Swal.fire({
+    title: 'Delete Accessory?',
+    text: `Are you sure you want to delete "${accessory.accessoryName}"?`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'Yes, Delete',
+    cancelButtonText: 'Cancel',
+    confirmButtonColor: '#dc2626',
+    cancelButtonColor: '#6b7280',
+    reverseButtons: true
+  });
+
+  if (!result.isConfirmed) {
+    return;
+  }
+
+  try {
+    const token = localStorage.getItem('token');
+
+    await axios.delete(
+      `${API_BASE_URL}/api/equipment-accessories/${accessory.id}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    );
+
+    await fetchAccessories(viewingItem.id);
+
+    await Swal.fire({
+      title: 'Deleted!',
+      text: 'Accessory deleted successfully.',
+      icon: 'success',
+      confirmButtonText: 'OK',
+      confirmButtonColor: '#16a34a'
+    });
+
+  } catch (err) {
+    console.error('Failed to delete accessory:', err);
+
+    await Swal.fire({
+      title: 'Delete Failed',
+      text:
+        err.response?.data?.message ||
+        err.response?.data ||
+        'Failed to delete accessory.',
+      icon: 'error',
+      confirmButtonText: 'OK',
+      confirmButtonColor: '#dc2626'
+    });
+  }
+};
 
   const handleChange = (e) => {
 
@@ -1634,7 +1855,7 @@ const formatStatus = (status) =>
       <div className="grid grid-cols-3 gap-2 mt-4 pt-3 border-t border-gray-100">
         <button
           type="button"
-          onClick={() => setViewingItem(item)}
+          onClick={() => openEquipmentView(item)}
           className="flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg bg-green-50 text-green-700 text-sm font-medium hover:bg-green-100"
         >
           <Eye size={16} />
@@ -1774,7 +1995,7 @@ const formatStatus = (status) =>
           <div className="flex items-center justify-center gap-1">
             <button
               type="button"
-              onClick={() => setViewingItem(item)}
+              onClick={() => openEquipmentView(item)}
               className="p-1.5 rounded-lg text-green-600 hover:bg-green-50 hover:text-green-800 transition"
               title="View Details"
             >
@@ -1989,9 +2210,229 @@ const formatStatus = (status) =>
                     <span className="text-gray-500 font-medium">GRN Number</span>
                     <span className="text-gray-900 font-semibold text-right">{viewingItem.grnNumber || '-'}</span>
                   </div>
-                  <div className="grid grid-cols-2 p-3 bg-gray-50/50">
+                                    <div className="grid grid-cols-2 p-3 bg-gray-50/50">
                     <span className="text-gray-500 font-medium">Laboratory</span>
-                    <span className="text-gray-900 font-semibold text-right">{viewingItem.laboratory || '-'}</span>
+                    <span className="text-gray-900 font-semibold text-right">
+                      {viewingItem.laboratory || '-'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Accessories Section */}
+                <div className="border border-gray-200 rounded-xl overflow-hidden">
+                  <div className="flex items-center justify-between gap-3 p-4 bg-gray-50 border-b border-gray-200">
+                    <div>
+                      <h3 className="font-bold text-gray-900">
+                        Accessories
+                      </h3>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        Manage accessories assigned to this equipment
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingAccessoryId(null);
+                        setAccessoryForm({
+                          accessoryName: '',
+                          quantity: 1,
+                          status: 'AVAILABLE',
+                          description: ''
+                        });
+                        setShowAccessoryForm(true);
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-2 bg-yellow-500 hover:bg-yellow-600 text-white text-sm font-semibold rounded-lg transition-colors shrink-0"
+                    >
+                      <Plus size={16} />
+                      Add Accessory
+                    </button>
+                  </div>
+
+                  {/* Add / Edit Accessory Form */}
+                  {showAccessoryForm && (
+                    <div className="p-4 bg-yellow-50/50 border-b border-gray-200">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-600 mb-1">
+                            Accessory Name
+                          </label>
+                          <input
+                            type="text"
+                            value={accessoryForm.accessoryName}
+                            onChange={(e) =>
+                              setAccessoryForm({
+                                ...accessoryForm,
+                                accessoryName: e.target.value
+                              })
+                            }
+                            placeholder="e.g. Power Cable"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-yellow-500"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-600 mb-1">
+                            Quantity
+                          </label>
+                          <input
+                            type="number"
+                            min="1"
+                            value={accessoryForm.quantity}
+                            onChange={(e) =>
+                              setAccessoryForm({
+                                ...accessoryForm,
+                                quantity: e.target.value
+                              })
+                            }
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-yellow-500"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-600 mb-1">
+                            Status
+                          </label>
+                          <select
+                            value={accessoryForm.status}
+                            onChange={(e) =>
+                              setAccessoryForm({
+                                ...accessoryForm,
+                                status: e.target.value
+                              })
+                            }
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white outline-none focus:ring-2 focus:ring-yellow-500"
+                          >
+                            <option value="AVAILABLE">Available</option>
+                            <option value="UNAVAILABLE">Unavailable</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-600 mb-1">
+                            Description
+                          </label>
+                          <input
+                            type="text"
+                            value={accessoryForm.description}
+                            onChange={(e) =>
+                              setAccessoryForm({
+                                ...accessoryForm,
+                                description: e.target.value
+                              })
+                            }
+                            placeholder="Optional description"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-yellow-500"
+                          />
+                        </div>
+
+                      </div>
+
+                      <div className="flex justify-end gap-2 mt-3">
+                        <button
+                          type="button"
+                          onClick={resetAccessoryForm}
+                          className="px-3 py-2 border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-lg"
+                        >
+                          Cancel
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={
+                            editingAccessoryId
+                              ? handleUpdateAccessory
+                              : handleAddAccessory
+                          }
+                          className="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white text-sm font-semibold rounded-lg"
+                        >
+                          {editingAccessoryId
+                            ? 'Update Accessory'
+                            : 'Save Accessory'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Accessories List */}
+                  <div className="p-4">
+                    {accessoriesLoading ? (
+                      <div className="py-5 text-center text-sm text-gray-500">
+                        Loading accessories...
+                      </div>
+                    ) : accessories.length === 0 ? (
+                      <div className="py-5 text-center">
+                        <Package
+                          size={28}
+                          className="mx-auto text-gray-300 mb-2"
+                        />
+                        <p className="text-sm text-gray-500">
+                          No accessories registered for this equipment.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {accessories.map((accessory) => (
+                          <div
+                            key={accessory.id}
+                            className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 border border-gray-200 rounded-lg bg-white"
+                          >
+                            <div className="min-w-0 flex-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <p className="font-semibold text-gray-900 text-sm">
+                                  {accessory.accessoryName}
+                                </p>
+
+                                <span
+                                  className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${
+                                    accessory.status === 'AVAILABLE'
+                                      ? 'bg-green-100 text-green-700'
+                                      : 'bg-red-100 text-red-700'
+                                  }`}
+                                >
+                                  {accessory.status}
+                                </span>
+                              </div>
+
+                              <p className="text-xs text-gray-500 mt-1">
+                                Quantity: {accessory.quantity}
+                              </p>
+
+                              {accessory.description && (
+                                <p className="text-xs text-gray-500 mt-1 break-words">
+                                  {accessory.description}
+                                </p>
+                              )}
+                            </div>
+
+                            <div className="flex items-center gap-2 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleEditAccessory(accessory)
+                                }
+                                className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg"
+                              >
+                                <Edit size={14} />
+                                Edit
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleDeleteAccessory(accessory)
+                                }
+                                className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-red-700 bg-red-50 hover:bg-red-100 rounded-lg"
+                              >
+                                <Trash2 size={14} />
+                                Delete
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
