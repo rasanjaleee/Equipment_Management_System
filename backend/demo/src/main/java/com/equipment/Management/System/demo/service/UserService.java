@@ -41,16 +41,7 @@ public class UserService {
 
         return userRepository.save(user);
     }
-
-    // ✅ Login verification and retrieval in a single DB query
-    public Optional<User> authenticateUser(String username, String password) {
-        String normalizedUsername = username.trim().toLowerCase();
-        Optional<User> userOptional = userRepository.findByUsername(normalizedUsername);
-        if (userOptional.isPresent() && passwordEncoder.matches(password, userOptional.get().getPassword())) {
-            return userOptional;
-        }
-        return Optional.empty();
-    }
+    
 
     // ✅ Backwards compatible verifyUser
     public boolean verifyUser(String username, String password) {
@@ -67,5 +58,23 @@ public class UserService {
 
     public User saveUser(User user) {
         return userRepository.save(user);
+    }
+
+    // Authenticate user and return the user if credentials are valid
+    public Optional<User> authenticateUser(String username, String password) {
+        String normalizedUsername = username.trim().toLowerCase();
+
+        Optional<User> userOptional =
+                userRepository.findByUsername(normalizedUsername);
+
+        if (userOptional.isPresent()) {
+            User user = userOptional.get();
+
+            if (passwordEncoder.matches(password, user.getPassword())) {
+                return Optional.of(user);
+            }
+        }
+
+        return Optional.empty();
     }
 }

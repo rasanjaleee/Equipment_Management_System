@@ -4,6 +4,7 @@ import com.equipment.Management.System.demo.dto.BulkUploadResponse;
 import com.equipment.Management.System.demo.model.Equipment;
 import com.equipment.Management.System.demo.model.EquipmentStatus;
 import com.equipment.Management.System.demo.service.ActivityLogService;
+import com.equipment.Management.System.demo.service.AdminSettingService;
 import com.equipment.Management.System.demo.service.BorrowRequestService;
 import com.equipment.Management.System.demo.service.CloudinaryService;
 import com.equipment.Management.System.demo.service.EquipmentCsvService;
@@ -31,17 +32,20 @@ public class EquipmentController {
     private final ActivityLogService activityLogService;
     private final BorrowRequestService borrowRequestService;
     private final CloudinaryService cloudinaryService;
+    private final AdminSettingService adminSettingService;
 
     public EquipmentController(EquipmentService equipmentService,
                                EquipmentCsvService equipmentCsvService,
                                ActivityLogService activityLogService,
                                BorrowRequestService borrowRequestService,
-                               CloudinaryService cloudinaryService) {
+                               CloudinaryService cloudinaryService,
+                               AdminSettingService adminSettingService) {
         this.equipmentService = equipmentService;
         this.equipmentCsvService = equipmentCsvService;
         this.activityLogService = activityLogService;
         this.borrowRequestService = borrowRequestService;
         this.cloudinaryService = cloudinaryService;
+        this.adminSettingService = adminSettingService;
     }
 
     @GetMapping("/lab/{labName}")
@@ -61,11 +65,25 @@ public class EquipmentController {
             @RequestParam(required = false) Double cost,
             @RequestParam(required = false) String purchaseDate,
             @RequestParam(required = false) String supplier,
-            @RequestParam EquipmentStatus status,
+            @RequestParam(required = false) EquipmentStatus status,
             @RequestParam(required = false) String grnNumber,
             @RequestParam(required = false) MultipartFile photo
     ) {
         try {
+            if (serialNumber != null && !serialNumber.isBlank() && !adminSettingService.isAllowManualSerialEntry()) {
+                return ResponseEntity.badRequest().body("Manual serial number entry is disabled in system settings.");
+            }
+
+            EquipmentStatus effectiveStatus = status;
+            if (effectiveStatus == null) {
+                String defStatusStr = adminSettingService.getDefaultEquipmentStatus();
+                try {
+                    effectiveStatus = EquipmentStatus.valueOf(defStatusStr.toUpperCase());
+                } catch (Exception e) {
+                    effectiveStatus = EquipmentStatus.WORKING;
+                }
+            }
+
             String uploadedPhotoUrl = (photo != null && !photo.isEmpty())
                     ? cloudinaryService.uploadImage(photo, "equipment")
                     : null;
@@ -77,7 +95,7 @@ public class EquipmentController {
             equipment.setSerialNumber(serialNumber);
             equipment.setCost(cost);
             equipment.setSupplier(supplier);
-            equipment.setStatus(status);
+            equipment.setStatus(effectiveStatus);
             equipment.setGrnNumber(grnNumber);
             equipment.setPhotoPath(uploadedPhotoUrl);
 
@@ -131,6 +149,12 @@ public class EquipmentController {
     ) {
         try {
             Equipment equipment = equipmentService.getById(id);
+
+            if (serialNumber != null && !serialNumber.isBlank()
+                    && !serialNumber.equals(equipment.getSerialNumber())
+                    && !adminSettingService.isAllowManualSerialEntry()) {
+                return ResponseEntity.badRequest().body("Manual serial number entry is disabled in system settings.");
+            }
 
             String oldStatus = equipment.getStatus() != null
                     ? equipment.getStatus().name()
@@ -203,6 +227,54 @@ public class EquipmentController {
             );
 
             return ResponseEntity.ok("Equipment deleted successfully");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error: " + e.getMessage());
+        }
+    }
+
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<?> updateEquipmentStatusPatch(
+            @PathVariable Long id,
+            @RequestParam(required = false) String status,
+            @RequestBody(required = false) Map<String, String> body) {
+        return handleStatusUpdate(id, status, body);
+    }
+
+    @PutMapping("/{id}/status")
+    public ResponseEntity<?> updateEquipmentStatusPut(
+            @PathVariable Long id,
+            @RequestParam(required = false) String status,
+            @RequestBody(required = false) Map<String, String> body) {
+        return handleStatusUpdate(id, status, body);
+    }
+
+    private ResponseEntity<?> handleStatusUpdate(Long id, String statusParam, Map<String, String> body) {
+        try {
+            String newStatus = statusParam;
+            if ((newStatus == null || newStatus.isBlank()) && body != null && body.containsKey("status")) {
+                newStatus = body.get("status");
+            }
+            if (newStatus == null || newStatus.isBlank()) {
+                return ResponseEntity.badRequest().body("Status parameter is required");
+            }
+
+            Equipment updated = equipmentService.updateStatus(id, newStatus);
+
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String username = authentication != null ? authentication.getName() : "SYSTEM";
+            String role = (authentication != null && !authentication.getAuthorities().isEmpty())
+                    ? authentication.getAuthorities().iterator().next().getAuthority()
+                    : "ROLE_UNKNOWN";
+
+            activityLogService.logActivity(
+                    username,
+                    role,
+                    "UPDATED_EQUIPMENT_STATUS",
+                    updated.getId(),
+                    "Status changed to " + updated.getStatus().name() + " for " + updated.getEquipmentName()
+            );
+
+            return ResponseEntity.ok(updated);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Error: " + e.getMessage());
         }

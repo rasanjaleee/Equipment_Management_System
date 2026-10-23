@@ -22,14 +22,24 @@ public class JwtUtil {
     private final Key SECRET_KEY = Keys.hmacShaKeyFor(SECRET.getBytes());
 
     public String generateToken(String username, String role) {
-        logger.info("Generating token for username: {} with role: {}", username, role);
+        return generateToken(username, role, 30);
+    }
+
+    public String generateToken(String username, String role, int expirationMinutes) {
+        if (expirationMinutes <= 0) {
+            expirationMinutes = 30;
+        }
+        String normalizedRole = role == null ? "" : role.trim().toUpperCase();
+        if (normalizedRole.startsWith("ROLE_")) {
+            normalizedRole = normalizedRole.substring("ROLE_".length());
+        }
+        logger.info("Generating token for username: {} with role: {}, expiration: {} minutes", username, role, expirationMinutes);
+        long expirationMillis = (long) expirationMinutes * 60 * 1000;
         return Jwts.builder()
                 .setSubject(username)
-                .claim("role", role) // 👈 role stored here
+                .claim("role", normalizedRole)
                 .setIssuedAt(new Date())
-                .setExpiration(
-                        new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 24)
-                ) // 24 hours
+                .setExpiration(new Date(System.currentTimeMillis() + expirationMillis))
                 .signWith(SECRET_KEY, SignatureAlgorithm.HS256)
                 .compact();
     }

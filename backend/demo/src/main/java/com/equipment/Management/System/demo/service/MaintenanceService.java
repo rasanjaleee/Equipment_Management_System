@@ -79,6 +79,12 @@ public class MaintenanceService {
                 .dueDate(dto.dueDate())
                 .build();
 
+        // Automatically ensure equipment status transitions to UNDER_REPAIR when maintenance is logged
+        if (eq.getStatus() != com.equipment.Management.System.demo.model.EquipmentStatus.UNDER_REPAIR) {
+            eq.setStatus(com.equipment.Management.System.demo.model.EquipmentStatus.UNDER_REPAIR);
+            equipmentRepo.save(eq);
+        }
+
         Maintenance saved = repo.save(m);
 
         notifyMaintenanceManagers(
@@ -153,6 +159,18 @@ public class MaintenanceService {
 
         if ("COMPLETED".equalsIgnoreCase(dto.status())) {
             m.setCompletedDate(LocalDate.now());
+            // Automatically return equipment to WORKING condition when fixed / completed
+            if (m.getEquipment() != null) {
+                Equipment eq = m.getEquipment();
+                eq.setStatus(com.equipment.Management.System.demo.model.EquipmentStatus.WORKING);
+                equipmentRepo.save(eq);
+            }
+        } else if ("IN_PROGRESS".equalsIgnoreCase(dto.status()) || "PENDING".equalsIgnoreCase(dto.status())) {
+            if (m.getEquipment() != null && m.getEquipment().getStatus() == com.equipment.Management.System.demo.model.EquipmentStatus.WORKING) {
+                Equipment eq = m.getEquipment();
+                eq.setStatus(com.equipment.Management.System.demo.model.EquipmentStatus.UNDER_REPAIR);
+                equipmentRepo.save(eq);
+            }
         }
 
         Maintenance updated = repo.save(m);

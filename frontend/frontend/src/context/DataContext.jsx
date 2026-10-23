@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
+import api from '../api/axios';
 import { API_BASE_URL } from '../services/api';
 
 const DataContext = createContext(null);
@@ -29,19 +29,12 @@ export const DataProvider = ({ children }) => {
 
   const [settings, setSettings] = useState(null);
 
-  // Helper for auth headers
-  const getHeaders = () => {
-    const token = localStorage.getItem('token');
-    return token ? { Authorization: `Bearer ${token}` } : {};
-  };
 
   // 1. Fetch Equipment
   const refreshEquipment = useCallback(async (showLoading = false) => {
     if (showLoading) setLoadingEquipment(true);
     try {
-      const res = await axios.get(`${API_BASE_URL}/api/equipment/all`, {
-        headers: getHeaders(),
-      });
+      const res = await api.get(`${API_BASE_URL}/api/equipment/all`);
       const data = Array.isArray(res.data) ? res.data : [];
       setEquipmentList(data);
       return data;
@@ -57,17 +50,13 @@ export const DataProvider = ({ children }) => {
   const refreshLaboratories = useCallback(async (showLoading = false) => {
     if (showLoading) setLoadingLaboratories(true);
     try {
-      const res = await axios.get(`${API_BASE_URL}/api/lab`, {
-        headers: getHeaders(),
-      });
+      const res = await api.get(`${API_BASE_URL}/api/lab`);
       const data = Array.isArray(res.data) ? res.data : [];
       setLaboratories(data);
       return data;
     } catch (err) {
       try {
-        const fallbackRes = await axios.get(`${API_BASE_URL}/api/laboratories`, {
-          headers: getHeaders(),
-        });
+        const fallbackRes = await api.get(`${API_BASE_URL}/api/laboratories`);
         const data = Array.isArray(fallbackRes.data) ? fallbackRes.data : [];
         setLaboratories(data);
         return data;
@@ -84,9 +73,7 @@ export const DataProvider = ({ children }) => {
   const refreshMaintenance = useCallback(async (showLoading = false) => {
     if (showLoading) setLoadingMaintenance(true);
     try {
-      const res = await axios.get(`${API_BASE_URL}/api/maintenance`, {
-        headers: getHeaders(),
-      });
+      const res = await api.get(`${API_BASE_URL}/api/maintenance`);
       const data = Array.isArray(res.data) ? res.data : [];
       setMaintenanceList(data);
       return data;
@@ -102,9 +89,7 @@ export const DataProvider = ({ children }) => {
   const refreshActivityLogs = useCallback(async (showLoading = false) => {
     if (showLoading) setLoadingActivityLogs(true);
     try {
-      const res = await axios.get(`${API_BASE_URL}/api/activity-logs`, {
-        headers: getHeaders(),
-      });
+      const res = await api.get(`${API_BASE_URL}/api/activity-logs`);
       const data = Array.isArray(res.data) ? res.data : [];
       setActivityLogs(data);
       return data;
@@ -119,9 +104,7 @@ export const DataProvider = ({ children }) => {
   // 5. Fetch Borrow Requests & Issuances
   const refreshBorrowRequests = useCallback(async () => {
     try {
-      const res = await axios.get(`${API_BASE_URL}/api/borrow-requests`, {
-        headers: getHeaders(),
-      });
+      const res = await api.get(`${API_BASE_URL}/api/borrow-requests`);
       const data = Array.isArray(res.data) ? res.data : [];
       setBorrowRequests(data);
       return data;
@@ -134,9 +117,7 @@ export const DataProvider = ({ children }) => {
   const refreshIssuances = useCallback(async (showLoading = false) => {
     if (showLoading) setLoadingIssuance(true);
     try {
-      const res = await axios.get(`${API_BASE_URL}/api/issuances`, {
-        headers: getHeaders(),
-      });
+      const res = await api.get(`${API_BASE_URL}/api/issuances`);
       const data = Array.isArray(res.data) ? res.data : [];
       setIssuances(data);
       return data;
@@ -152,9 +133,7 @@ export const DataProvider = ({ children }) => {
   const refreshUsers = useCallback(async (showLoading = false) => {
     if (showLoading) setLoadingUsers(true);
     try {
-      const res = await axios.get(`${API_BASE_URL}/api/admin/users`, {
-        headers: getHeaders(),
-      });
+      const res = await api.get(`${API_BASE_URL}/api/admin/users`);
       const data = Array.isArray(res.data) ? res.data : [];
       setUsers(data);
       return data;
@@ -171,9 +150,7 @@ export const DataProvider = ({ children }) => {
     if (!userId) return [];
     if (showLoading) setLoadingNotifications(true);
     try {
-      const res = await axios.get(`${API_BASE_URL}/api/notifications/${userId}`, {
-        headers: getHeaders(),
-      });
+      const res = await api.get(`${API_BASE_URL}/api/notifications/${userId}`);
       const data = Array.isArray(res.data)
         ? res.data
         : res.data?.notifications && Array.isArray(res.data.notifications)
@@ -192,9 +169,7 @@ export const DataProvider = ({ children }) => {
   // 8. Fetch Admin Settings
   const refreshSettings = useCallback(async () => {
     try {
-      const res = await axios.get(`${API_BASE_URL}/api/admin/settings`, {
-        headers: getHeaders(),
-      });
+      const res = await api.get(`${API_BASE_URL}/api/admin/settings`);
       if (res?.data) {
         setSettings(res.data);
         return res.data;
@@ -206,53 +181,22 @@ export const DataProvider = ({ children }) => {
     }
   }, []);
 
-  // 9. Fetch GRN & Inventory Reports
+  // 9. Fetch GRN Report
   const [grnData, setGrnData] = useState([]);
   const [loadingGrn, setLoadingGrn] = useState(false);
-  const [inventorySummary, setInventorySummary] = useState(null);
-  const [inventoryList, setInventoryList] = useState([]);
-  const [allSuppliers, setAllSuppliers] = useState([]);
-  const [allLaboratories, setAllLaboratories] = useState([]);
 
   const refreshGrn = useCallback(async (showLoading = false) => {
     if (showLoading) setLoadingGrn(true);
     try {
-      const res = await axios.get(`${API_BASE_URL}/api/reports/grn`, {
-        headers: getHeaders(),
-      });
+      const res = await api.get(`${API_BASE_URL}/api/reports/grn`);
       const data = Array.isArray(res.data) ? res.data : [];
       setGrnData(data);
-      if (data.length > 0) {
-        const sups = [...new Set(data.map((r) => r.supplier).filter(Boolean))].sort();
-        setAllSuppliers(sups);
-      }
       return data;
     } catch (err) {
       console.error('Failed to load GRN report:', err);
       return [];
     } finally {
       setLoadingGrn(false);
-    }
-  }, []);
-
-  const refreshInventoryReport = useCallback(async () => {
-    try {
-      const [summaryRes, listRes] = await Promise.all([
-        axios.get(`${API_BASE_URL}/api/reports/inventory-summary`, { headers: getHeaders() }),
-        axios.get(`${API_BASE_URL}/api/reports/inventory-list`, { headers: getHeaders() }),
-      ]);
-      const summary = summaryRes.data || null;
-      const list = Array.isArray(listRes.data) ? listRes.data : [];
-      setInventorySummary(summary);
-      setInventoryList(list);
-      if (list.length > 0) {
-        const labs = [...new Set(list.map((i) => i.laboratory).filter(Boolean))].sort();
-        setAllLaboratories(labs);
-      }
-      return { summary, list };
-    } catch (err) {
-      console.error('Failed to load inventory report:', err);
-      return { summary: null, list: [] };
     }
   }, []);
 
@@ -269,12 +213,11 @@ export const DataProvider = ({ children }) => {
       const m2 = String(lastDay.getMonth() + 1).padStart(2, "0");
       const d2 = String(lastDay.getDate()).padStart(2, "0");
 
-      const res = await axios.get(`${API_BASE_URL}/api/borrow-requests/calendar`, {
+      const res = await api.get(`${API_BASE_URL}/api/borrow-requests/calendar`, {
         params: {
           startDate: `${y}-${m1}-${d1}`,
           endDate: `${y}-${m2}-${d2}`,
         },
-        headers: getHeaders(),
       });
       const data = Array.isArray(res.data) ? res.data : [];
       setCalendarCache((prev) => ({ ...prev, [key]: data }));
@@ -293,11 +236,8 @@ export const DataProvider = ({ children }) => {
     if (!username) return [];
     if (showLoading) setLoadingUserActivityLogs(true);
     try {
-      const res = await axios.get(
-        `${API_BASE_URL}/api/activity-logs/user/${username}`,
-        {
-          headers: getHeaders(),
-        }
+      const res = await api.get(
+        `${API_BASE_URL}/api/activity-logs/user/${username}`
       );
       const data = Array.isArray(res.data) ? res.data : [];
       setUserActivityLogs(data);
@@ -320,10 +260,9 @@ export const DataProvider = ({ children }) => {
     if (!token) return { requests: [], issuances: [] };
     if (showLoading) setLoadingMyEquipment(true);
     try {
-      const headers = { Authorization: `Bearer ${token}` };
       const [reqRes, issRes] = await Promise.all([
-        axios.get(`${API_BASE_URL}/api/borrow-requests/my`, { headers }).catch(() => ({ data: [] })),
-        axios.get(`${API_BASE_URL}/api/issuances/my`, { headers }).catch(() => ({ data: [] })),
+        api.get(`${API_BASE_URL}/api/borrow-requests/my`).catch(() => ({ data: [] })),
+        api.get(`${API_BASE_URL}/api/issuances/my`).catch(() => ({ data: [] })),
       ]);
       const reqData = Array.isArray(reqRes.data) ? reqRes.data : [];
       const issData = Array.isArray(issRes.data) ? issRes.data : [];
@@ -356,8 +295,6 @@ export const DataProvider = ({ children }) => {
       if (isAdmin) {
         refreshBorrowRequests();
         refreshIssuances(false);
-        refreshGrn(false);
-        refreshInventoryReport();
       }
       refreshMyEquipment(false);
       if (isAdmin || isTech) {
@@ -371,7 +308,7 @@ export const DataProvider = ({ children }) => {
         }
       } catch {}
     }
-  }, [refreshEquipment, refreshLaboratories, refreshMaintenance, refreshBorrowRequests, refreshIssuances, refreshCalendar, refreshUserActivityLogs, refreshMyEquipment, refreshGrn, refreshInventoryReport]);
+  }, [refreshEquipment, refreshLaboratories, refreshMaintenance, refreshBorrowRequests, refreshIssuances, refreshCalendar, refreshUserActivityLogs, refreshMyEquipment]);
 
   const value = {
     equipmentList,
@@ -420,15 +357,6 @@ export const DataProvider = ({ children }) => {
     setGrnData,
     loadingGrn,
     refreshGrn,
-    inventorySummary,
-    setInventorySummary,
-    inventoryList,
-    setInventoryList,
-    allSuppliers,
-    setAllSuppliers,
-    allLaboratories,
-    setAllLaboratories,
-    refreshInventoryReport,
 
     calendarCache,
     setCalendarCache,
@@ -480,18 +408,8 @@ export const useData = () => {
       settings: null,
       refreshSettings: async () => null,
       grnData: [],
-      setGrnData: () => {},
       loadingGrn: false,
       refreshGrn: async () => [],
-      inventorySummary: null,
-      setInventorySummary: () => {},
-      inventoryList: [],
-      setInventoryList: () => {},
-      allSuppliers: [],
-      setAllSuppliers: () => {},
-      allLaboratories: [],
-      setAllLaboratories: () => {},
-      refreshInventoryReport: async () => ({ summary: null, list: [] }),
       calendarCache: {},
       setCalendarCache: () => {},
       refreshCalendar: async () => [],
@@ -509,5 +427,5 @@ export const useData = () => {
   }
   return context;
 };
-
 export default DataContext;
+

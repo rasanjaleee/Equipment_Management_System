@@ -4,6 +4,7 @@ import java.util.Map;
 import com.equipment.Management.System.demo.model.LoginRequest;
 import com.equipment.Management.System.demo.model.User;
 import com.equipment.Management.System.demo.model.UserRegistrationRequest;
+import com.equipment.Management.System.demo.service.AdminSettingService;
 import com.equipment.Management.System.demo.service.LoginAttemptService;
 import com.equipment.Management.System.demo.service.UserService;
 import com.equipment.Management.System.demo.util.JwtUtil;
@@ -28,6 +29,9 @@ public class AuthController {
 
     @Autowired
     private LoginAttemptService loginAttemptService;
+
+    @Autowired
+    private AdminSettingService adminSettingService;
 
 
     @PostMapping("/register")
@@ -123,12 +127,31 @@ public class AuthController {
 
         User user = userOpt.get();
 
+        // 4️⃣ Check maintenance mode — block non-admin users from logging in
+        if (adminSettingService.isMaintenanceActive()) {
+            String role = user.getRole() != null ? user.getRole().toUpperCase() : "";
+            boolean isAdmin = role.equals("ROLE_ADMIN") || role.equals("ROLE_SUPER_ADMIN")
+                    || role.equals("ADMIN") || role.equals("SUPER_ADMIN");
+
+            if (!isAdmin) {
+                String maintenanceMessage = adminSettingService.getSettingsDTO().getMaintenanceMessage();
+                if (maintenanceMessage == null || maintenanceMessage.isBlank()) {
+                    maintenanceMessage = "The system is currently undergoing scheduled maintenance. Please check back later.";
+                }
+                return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(Map.of(
+                        "maintenance", true,
+                        "message", maintenanceMessage
+                ));
+            }
+        }
+
         // Save successful login time
         user.setLastLogin(LocalDateTime.now());
         userService.saveUser(user);
 
-        // Generate JWT
-        String token = jwtUtil.generateToken(user.getUsername(), user.getRole());
+        // Generate JWT with configured session timeout
+        int sessionTimeout = adminSettingService.getSessionTimeoutMinutes();
+        String token = jwtUtil.generateToken(user.getUsername(), user.getRole(), sessionTimeout);
 
         return ResponseEntity.ok(Map.of(
                 "token", token,
@@ -136,7 +159,8 @@ public class AuthController {
                 "username", user.getUsername(),
                 "email", user.getEmail(),
                 "role", user.getRole(),
-                "mustChangePassword", user.isMustChangePassword()
+                "mustChangePassword", user.isMustChangePassword(),
+                "sessionTimeoutMinutes", sessionTimeout
         ));
     }
     @PostMapping("/change-password")
@@ -174,6 +198,69 @@ public class AuthController {
     @GetMapping("/ping")
     public ResponseEntity<?> ping() {
         return ResponseEntity.ok(Map.of("status", "UP", "message", "Backend service is active"));
+    }
+
+    /**
+     * Refresh JWT - called by the client when the user is still active but the
+     * existing token is close to expiry. The current (still-valid) token is
+     * validated, then a fresh token with a renewed expiry window is issued.
+     */
+    @PostMapping("/refresh-token")
+    public ResponseEntity<?> refreshToken(HttpServletRequest request) {
+        String authHeader = request.getHeader("Authorization");
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("message", "No token provided"));
+        }
+
+        String token = authHeader.substring(7);
+        try {
+            String username = jwtUtil.extractUsername(token);
+
+            if (username == null || !jwtUtil.validateToken(token, username)) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("message", "Token is invalid or expired"));
+            }
+
+            // Verify the user still exists in the system
+            java.util.Optional<User> userOpt = userService.getUserByUsername(username);
+            if (userOpt.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("message", "User not found"));
+            }
+
+            User user = userOpt.get();
+
+            // Check maintenance mode — block non-admin users from refreshing token
+            if (adminSettingService.isMaintenanceActive()) {
+                String role = user.getRole() != null ? user.getRole().toUpperCase() : "";
+                boolean isAdmin = role.equals("ROLE_ADMIN") || role.equals("ROLE_SUPER_ADMIN")
+                        || role.equals("ADMIN") || role.equals("SUPER_ADMIN");
+
+                if (!isAdmin) {
+                    String maintenanceMessage = adminSettingService.getSettingsDTO().getMaintenanceMessage();
+                    if (maintenanceMessage == null || maintenanceMessage.isBlank()) {
+                        maintenanceMessage = "The system is currently undergoing scheduled maintenance. Please check back later.";
+                    }
+                    return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(Map.of(
+                            "maintenance", true,
+                            "message", maintenanceMessage
+                    ));
+                }
+            }
+
+            int sessionTimeout = adminSettingService.getSessionTimeoutMinutes();
+            String newToken = jwtUtil.generateToken(user.getUsername(), user.getRole(), sessionTimeout);
+
+            return ResponseEntity.ok(Map.of(
+                    "token", newToken,
+                    "sessionTimeoutMinutes", sessionTimeout
+            ));
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("message", "Token refresh failed"));
+        }
     }
 
 }

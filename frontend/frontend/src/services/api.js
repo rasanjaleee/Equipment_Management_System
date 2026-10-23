@@ -34,6 +34,26 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
+// Response interceptor: Handle auth expiry consistently
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      const isLoginRequest = error.config?.url?.includes('/auth/login');
+      if (!isLoginRequest) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        localStorage.removeItem('sessionTimeoutMinutes');
+        delete axios.defaults.headers.common['Authorization'];
+        if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+          window.location.href = '/login?reason=timeout';
+        }
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 export default api;
 
 // ==========================================

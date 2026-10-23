@@ -51,8 +51,15 @@ public class JwtFilter extends OncePerRequestFilter {
                     jwtUtil.validateToken(token, username)) {
 
                 String role = jwtUtil.extractRole(token);
+                if (role == null || role.isBlank()) {
+                    throw new IllegalArgumentException("JWT role claim is missing");
+                }
 
-                String authority = "ROLE_" + role.toUpperCase();
+                String normalizedRole = role.trim().toUpperCase();
+                if (normalizedRole.startsWith("ROLE_")) {
+                    normalizedRole = normalizedRole.substring("ROLE_".length());
+                }
+                String authority = "ROLE_" + normalizedRole;
 
                 UsernamePasswordAuthenticationToken auth =
                         new UsernamePasswordAuthenticationToken(
