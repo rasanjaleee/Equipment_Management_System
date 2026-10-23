@@ -5,7 +5,7 @@ export default function AddMaintenanceModal({ onClose, onSaved, equipment, initi
   const [form, setForm] = useState({
     equipmentId: initialEquipmentId ? String(initialEquipmentId) : "",
     issueDescription: "",
-    status: "PENDING",
+    status: "BROKEN",
     priority: "LOW",
     dueDate: "",
   });
@@ -24,7 +24,7 @@ export default function AddMaintenanceModal({ onClose, onSaved, equipment, initi
     }
 
     const payload = {
-      equipmentId: Number(form.equipmentId), // ✅ ManyToOne format
+      equipmentId: Number(form.equipmentId), // ? ManyToOne format
       issueDescription: form.issueDescription,
       status: form.status,
       priority: form.priority,
@@ -111,9 +111,9 @@ export default function AddMaintenanceModal({ onClose, onSaved, equipment, initi
                 onChange={handleChange}
                 className="w-full px-3 py-2 rounded border"
               >
-                <option value="PENDING">PENDING</option>
-                <option value="IN_PROGRESS">IN_PROGRESS</option>
-                <option value="COMPLETED">COMPLETED</option>
+                <option value="BROKEN">Maintenance Required</option>
+                <option value="UNDER_REPAIR">Currently Under Repair</option>
+                <option value="WORKING">Fixed / Working</option>
               </select>
             </Field>
           </div>

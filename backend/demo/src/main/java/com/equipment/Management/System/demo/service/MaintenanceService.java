@@ -77,13 +77,10 @@ public class MaintenanceService {
                 .issueDescription(dto.issueDescription())
                 .priority(dto.priority())
                 .dueDate(dto.dueDate())
+                .status(normalizeStatus(dto.status()))
                 .build();
 
-        // Automatically ensure equipment status transitions to UNDER_REPAIR when maintenance is logged
-        if (eq.getStatus() != com.equipment.Management.System.demo.model.EquipmentStatus.UNDER_REPAIR) {
-            eq.setStatus(com.equipment.Management.System.demo.model.EquipmentStatus.UNDER_REPAIR);
-            equipmentRepo.save(eq);
-        }
+        syncEquipmentStatus(eq, m.getStatus());
 
         Maintenance saved = repo.save(m);
 
@@ -110,7 +107,7 @@ public class MaintenanceService {
                         m.getEquipment().getModel(),
                         m.getEquipment().getSerialNumber(),
                         m.getIssueDescription(),
-                        m.getStatus(),
+                        normalizeStatus(m.getStatus()),
                         m.getPriority(),
                         m.getReportedDate(),
                         m.getDueDate(),
@@ -128,7 +125,7 @@ public class MaintenanceService {
         Maintenance m = repo.findById(id)
                 .orElseThrow(() -> new RuntimeException("Maintenance not found with id: " + id));
 
-        String oldStatus = m.getStatus();
+        String oldStatus = normalizeStatus(m.getStatus());
 
         if (dto.equipment() != null && dto.equipment().id() != null) {
             Equipment eq = equipmentRepo.findById(dto.equipment().id())
@@ -148,7 +145,7 @@ public class MaintenanceService {
             m.setDueDate(dto.dueDate());
         }
         if (dto.status() != null) {
-            m.setStatus(dto.status());
+            m.setStatus(normalizeStatus(dto.status()));
         }
         if (dto.repairNote() != null) {
             m.setRepairNote(dto.repairNote());
@@ -157,39 +154,32 @@ public class MaintenanceService {
             m.setCost(dto.cost());
         }
 
-        if ("COMPLETED".equalsIgnoreCase(dto.status())) {
-            m.setCompletedDate(LocalDate.now());
-            // Automatically return equipment to WORKING condition when fixed / completed
-            if (m.getEquipment() != null) {
-                Equipment eq = m.getEquipment();
-                eq.setStatus(com.equipment.Management.System.demo.model.EquipmentStatus.WORKING);
-                equipmentRepo.save(eq);
+        if (dto.status() != null) {
+            String newStatus = normalizeStatus(dto.status());
+            m.setStatus(newStatus);
+            if ("WORKING".equals(newStatus)) {
+                m.setCompletedDate(LocalDate.now());
             }
-        } else if ("IN_PROGRESS".equalsIgnoreCase(dto.status()) || "PENDING".equalsIgnoreCase(dto.status())) {
-            if (m.getEquipment() != null && m.getEquipment().getStatus() == com.equipment.Management.System.demo.model.EquipmentStatus.WORKING) {
-                Equipment eq = m.getEquipment();
-                eq.setStatus(com.equipment.Management.System.demo.model.EquipmentStatus.UNDER_REPAIR);
-                equipmentRepo.save(eq);
-            }
+            syncEquipmentStatus(m.getEquipment(), newStatus);
         }
 
         Maintenance updated = repo.save(m);
 
-        if (dto.status() != null && !dto.status().equalsIgnoreCase(oldStatus)) {
+        if (dto.status() != null && !normalizeStatus(dto.status()).equalsIgnoreCase(oldStatus)) {
 
             String priority = "LOW";
 
-            if ("COMPLETED".equalsIgnoreCase(dto.status())) {
+            if ("WORKING".equalsIgnoreCase(normalizeStatus(dto.status()))) {
                 priority = "MEDIUM";
             }
 
-            if ("PENDING".equalsIgnoreCase(dto.status())) {
+            if ("BROKEN".equalsIgnoreCase(normalizeStatus(dto.status()))) {
                 priority = "HIGH";
             }
 
             notifyMaintenanceManagers(
                     "Maintenance Status Updated",
-                    "Status changed from " + oldStatus + " to " + dto.status() +
+                    "Status changed from " + oldStatus + " to " + normalizeStatus(dto.status()) +
                             " for equipment: " + m.getEquipment().getEquipmentName(),
                     "MAINTENANCE",
                     updated.getId(),
@@ -199,6 +189,22 @@ public class MaintenanceService {
         }
 
         return updated;
+    }
+
+    private String normalizeStatus(String status) {
+        if (status == null || status.isBlank()) return "BROKEN";
+        return switch (status.trim().toUpperCase()) {
+            case "PENDING", "BROKEN" -> "BROKEN";
+            case "IN_PROGRESS", "UNDER_REPAIR" -> "UNDER_REPAIR";
+            case "COMPLETED", "WORKING", "FIXED" -> "WORKING";
+            default -> throw new IllegalArgumentException("Invalid maintenance status: " + status);
+        };
+    }
+
+    private void syncEquipmentStatus(Equipment equipment, String maintenanceStatus) {
+        if (equipment == null) return;
+        equipment.setStatus(com.equipment.Management.System.demo.model.EquipmentStatus.valueOf(normalizeStatus(maintenanceStatus)));
+        equipmentRepo.save(equipment);
     }
 
     // ================= DELETE =================

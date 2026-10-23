@@ -7,19 +7,49 @@ import { useData } from "../../context/DataContext";
 import {
   Wrench,
   AlertTriangle,
-  Clock,
   CheckCircle2,
   DollarSign,
   Search,
   Plus,
   RefreshCw,
   FileText,
-  Filter,
   Check,
   Edit,
   Trash2,
-  ExternalLink,
 } from "lucide-react";
+
+// -------------------------------------------------------------
+// ?? HELPERS
+// -------------------------------------------------------------
+const SOURCE_MANUAL = "MANUAL"; // added from the "Add Maintenance Record" button
+const SOURCE_EQUIPMENT = "EQUIPMENT"; // created from the Action Items table (equipment page flow)
+const MANUAL_IDS_KEY = "manualMaintenanceIds";
+
+const isFixedStatus = (s) => s === "WORKING" || s === "COMPLETED";
+const isActiveStatus = (s) => !isFixedStatus(s);
+
+const getRecordEquipmentId = (r) => {
+  const id = r?.equipmentId ?? r?.equipment?.id;
+  return id != null && id !== "" ? Number(id) : null;
+};
+
+const loadManualIds = () => {
+  try {
+    const raw = localStorage.getItem(MANUAL_IDS_KEY);
+    const arr = raw ? JSON.parse(raw) : [];
+    return new Set(Array.isArray(arr) ? arr : []);
+  } catch {
+    return new Set();
+  }
+};
+
+const saveManualIds = (set) => {
+  try {
+    localStorage.setItem(MANUAL_IDS_KEY, JSON.stringify(Array.from(set)));
+  } catch {
+    /* ignore */
+  }
+};
 
 export default function MaintenancePage() {
   const {
@@ -32,11 +62,15 @@ export default function MaintenancePage() {
 
   const [activeTab, setActiveTab] = useState("active"); // "active" | "history"
   const [showAdd, setShowAdd] = useState(false);
+  const [addSource, setAddSource] = useState(SOURCE_MANUAL);
   const [selectedEquipmentForAdd, setSelectedEquipmentForAdd] = useState("");
   const [editItem, setEditItem] = useState(null);
 
   const [records, setRecords] = useState(cachedRecords || []);
   const [equipment, setEquipment] = useState(cachedEquipment || []);
+
+  // IDs of records that were added manually (fallback when the backend has no `source` field)
+  const [manualIds, setManualIds] = useState(() => loadManualIds());
 
   const [search, setSearch] = useState("");
   const [labFilter, setLabFilter] = useState("ALL");
@@ -46,14 +80,14 @@ export default function MaintenancePage() {
 
   // Sync with context
   useEffect(() => {
-    if (cachedRecords && cachedRecords.length > 0) {
+    if (Array.isArray(cachedRecords)) {
       setRecords(cachedRecords);
-      setLoading(false);
+      if (cachedRecords.length > 0) setLoading(false);
     }
   }, [cachedRecords]);
 
   useEffect(() => {
-    if (cachedEquipment && cachedEquipment.length > 0) {
+    if (Array.isArray(cachedEquipment)) {
       setEquipment(cachedEquipment);
     }
   }, [cachedEquipment]);
@@ -76,26 +110,36 @@ export default function MaintenancePage() {
 
   useEffect(() => {
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Is this record a manually added one?
+  const isManualRecord = (r) => r?.source === SOURCE_MANUAL || manualIds.has(r?.id);
 
   // Quick lookup map of equipment by ID
   const equipmentMap = useMemo(() => {
     const map = new Map();
-    equipment.forEach((e) => map.set(e.id, e));
+    equipment.forEach((e) => map.set(Number(e.id), e));
     return map;
   }, [equipment]);
 
-  // Map of active maintenance records by equipmentId (PENDING or IN_PROGRESS)
-  const activeRecordByEquipmentId = useMemo(() => {
+  // Open (not fixed) records grouped by equipment:
+  // { manual: record|null, linked: record|null, all: record[] }
+  const openByEquipmentId = useMemo(() => {
     const map = new Map();
     records.forEach((r) => {
-      const eqId = r?.equipmentId ?? r?.equipment?.id;
-      if (eqId && (r.status === "PENDING" || r.status === "IN_PROGRESS")) {
-        map.set(Number(eqId), r);
-      }
+      if (!isActiveStatus(r.status)) return;
+      const eqId = getRecordEquipmentId(r);
+      if (!eqId) return;
+      if (!map.has(eqId)) map.set(eqId, { manual: null, linked: null, all: [] });
+      const entry = map.get(eqId);
+      entry.all.push(r);
+      if (isManualRecord(r)) entry.manual = entry.manual || r;
+      else entry.linked = entry.linked || r;
     });
     return map;
-  }, [records]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [records, manualIds]);
 
   // Helper: extract equipment info
   const getEquipmentInfo = (r) => {
@@ -117,8 +161,8 @@ export default function MaintenancePage() {
         serialNumber: r?.equipment?.serialNumber ?? "",
       };
     }
-    const eqId = r?.equipmentId ?? r?.equipment?.id;
-    const eq = eqId ? equipmentMap.get(Number(eqId)) : null;
+    const eqId = getRecordEquipmentId(r);
+    const eq = eqId ? equipmentMap.get(eqId) : null;
     return {
       id: eq?.id ?? eqId ?? null,
       equipmentName: eq?.equipmentName ?? "",
@@ -129,68 +173,65 @@ export default function MaintenancePage() {
   };
 
   // -------------------------------------------------------------
-  // 📊 DASHBOARD METRICS CALCULATION
+  // ? ACTION ITEMS (equipment-page flow only)
+  // = equipment that is BROKEN / UNDER_REPAIR
+  //   + equipment with an open NON-manual ticket
+  // Equipment that only has an open MANUAL record is NOT shown here.
+  // Fixed equipment never appears.
   // -------------------------------------------------------------
-  const metrics = useMemo(() => {
-    const brokenItems = equipment.filter((e) => e.status === "BROKEN");
-    const underRepairItems = equipment.filter((e) => e.status === "UNDER_REPAIR");        // Total items needing attention (BROKEN + UNDER_REPAIR + any with active ticket)
-    const activeEqIds = new Set();
-    brokenItems.forEach((e) => activeEqIds.add(e.id));
-    underRepairItems.forEach((e) => activeEqIds.add(e.id));
-    records.forEach((r) => {
-      if (r.status === "PENDING" || r.status === "IN_PROGRESS") {
-        const id = r.equipmentId ?? r.equipment?.id;
-        if (id) activeEqIds.add(Number(id));
-      }
+  const actionItems = useMemo(() => {
+    const result = [];
+    const coveredIds = new Set();
+
+    equipment.forEach((e) => {
+      if (e.status !== "BROKEN" && e.status !== "UNDER_REPAIR") return;
+      const open = openByEquipmentId.get(Number(e.id));
+      // belongs to a manual record -> history table only
+      if (open?.manual && !open?.linked) return;
+      coveredIds.add(Number(e.id));
+      result.push({
+        equipment: e,
+        activeTicket: open?.linked || null,
+        isBroken: e.status === "BROKEN",
+        isUnderRepair: e.status === "UNDER_REPAIR",
+      });
     });
 
-    const completedTickets = records.filter((r) => r.status === "COMPLETED");
+    // Open non-manual tickets whose equipment status has not synced yet
+    openByEquipmentId.forEach((open, eqId) => {
+      if (!open.linked || coveredIds.has(eqId)) return;
+      const eq = equipmentMap.get(eqId);
+      if (!eq) return;
+      coveredIds.add(eqId);
+      result.push({
+        equipment: eq,
+        activeTicket: open.linked,
+        isBroken: eq.status === "BROKEN",
+        isUnderRepair: eq.status === "UNDER_REPAIR",
+      });
+    });
+
+    return result;
+  }, [equipment, openByEquipmentId, equipmentMap]);
+
+  // History table = manually added records only
+  const historyRecords = useMemo(() => records.filter((r) => isManualRecord(r)), [records, manualIds]);
+
+  // -------------------------------------------------------------
+  // ?? DASHBOARD METRICS
+  // -------------------------------------------------------------
+  const metrics = useMemo(() => {
+    const completedTickets = records.filter((r) => isFixedStatus(r.status));
     const totalCost = completedTickets.reduce((sum, r) => sum + (Number(r.cost) || 0), 0);
 
     return {
-      totalNeedingAttention: activeEqIds.size,
-      brokenCount: brokenItems.length,
-      underRepairCount: underRepairItems.length,
+      totalNeedingAttention: actionItems.length,
+      brokenCount: actionItems.filter((i) => i.isBroken).length,
+      underRepairCount: actionItems.filter((i) => i.isUnderRepair).length,
       completedCount: completedTickets.length,
       totalCost,
     };
-  }, [equipment, records]);
-
-  // -------------------------------------------------------------
-  // ⚡ ACTION ITEMS LIST (HYBRID METHOD 1 VIEW)
-  // Combines BROKEN/UNDER_REPAIR equipment + active tickets
-  // -------------------------------------------------------------
-  const actionItems = useMemo(() => {
-    // 1. All equipment currently BROKEN or UNDER_REPAIR
-    const needingMaintenance = equipment.filter(
-      (e) => e.status === "BROKEN" || e.status === "UNDER_REPAIR"
-    );
-
-    // Also include any equipment that has an active maintenance ticket even if status hasn't synced
-    const coveredIds = new Set(needingMaintenance.map((e) => e.id));
-    records.forEach((r) => {
-      if (r.status === "PENDING" || r.status === "IN_PROGRESS") {
-        const eqId = Number(r.equipmentId ?? r.equipment?.id);
-        if (eqId && !coveredIds.has(eqId)) {
-          const eq = equipmentMap.get(eqId);
-          if (eq) {
-            needingMaintenance.push(eq);
-            coveredIds.add(eqId);
-          }
-        }
-      }
-    });
-
-    return needingMaintenance.map((eq) => {
-      const activeTicket = activeRecordByEquipmentId.get(eq.id);
-      return {
-        equipment: eq,
-        activeTicket,
-        isBroken: eq.status === "BROKEN",
-        isUnderRepair: eq.status === "UNDER_REPAIR",
-      };
-    });
-  }, [equipment, records, equipmentMap, activeRecordByEquipmentId]);
+  }, [actionItems, records]);
 
   // Filtered action items
   const filteredActionItems = useMemo(() => {
@@ -221,13 +262,18 @@ export default function MaintenancePage() {
     });
   }, [actionItems, search, labFilter, statusFilter]);
 
-  // Filtered maintenance history records
+  // Filtered maintenance history records (manual only)
   const filteredRecords = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return records.filter((r) => {
+    return historyRecords.filter((r) => {
       const eq = getEquipmentInfo(r);
       if (labFilter !== "ALL" && eq.laboratory !== labFilter) return false;
-      if (statusFilter !== "ALL" && r.status !== statusFilter) return false;
+
+      // Status filter
+      if (statusFilter === "OPEN" && isFixedStatus(r.status)) return false; // default: hide fixed
+      if (statusFilter === "BROKEN" && !(r.status === "BROKEN" || r.status === "PENDING")) return false;
+      if (statusFilter === "UNDER_REPAIR" && !(r.status === "UNDER_REPAIR" || r.status === "IN_PROGRESS")) return false;
+      if (statusFilter === "WORKING" && !isFixedStatus(r.status)) return false;
 
       if (!q) return true;
       const eqId = String(eq.id ?? "").toLowerCase();
@@ -246,7 +292,14 @@ export default function MaintenancePage() {
         serial.includes(q)
       );
     });
-  }, [records, search, labFilter, statusFilter, equipmentMap]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [historyRecords, search, labFilter, statusFilter, equipmentMap]);
+
+  // Count shown on the history tab = open manual records
+  const openHistoryCount = useMemo(
+    () => historyRecords.filter((r) => !isFixedStatus(r.status)).length,
+    [historyRecords]
+  );
 
   // Unique laboratories for dropdown
   const laboratories = useMemo(() => {
@@ -257,30 +310,45 @@ export default function MaintenancePage() {
     return Array.from(set).sort();
   }, [equipment]);
 
+  // Equipment list offered inside the Add modal
+  const equipmentForAddModal = useMemo(() => {
+    if (addSource === SOURCE_EQUIPMENT && selectedEquipmentForAdd) {
+      // Coming from the Action Items table -> locked to that equipment
+      return equipment.filter((e) => String(e.id) === String(selectedEquipmentForAdd));
+    }
+    // Manual add -> only equipment that is healthy and has no open record
+    return equipment.filter((e) => {
+      if (e.status === "BROKEN" || e.status === "UNDER_REPAIR") return false;
+      if (openByEquipmentId.has(Number(e.id))) return false;
+      return true;
+    });
+  }, [equipment, addSource, selectedEquipmentForAdd, openByEquipmentId]);
+
   // -------------------------------------------------------------
-  // ⚡ HANDLERS
+  // ? HANDLERS
   // -------------------------------------------------------------
 
-  // Quick Fix: Mark equipment as WORKING (Leaves action list immediately)
-  const handleQuickFix = async (equipmentId, activeTicket) => {
-    const confirmed = confirm(
-      "Mark this equipment as FIXED and return to WORKING condition?"
-    );
+  // Quick Fix: mark equipment as WORKING and close ALL its open tickets
+  const handleQuickFix = async (equipmentId) => {
+    const confirmed = confirm("Mark this equipment as FIXED and return to WORKING condition?");
     if (!confirmed) return;
 
     setActionLoadingId(equipmentId);
     try {
-      // 1. Update equipment status to WORKING
       await api.patch(`/api/equipment/${equipmentId}/status?status=WORKING`);
 
-      // 2. If an active maintenance ticket exists, complete it
-      if (activeTicket?.id) {
-        await api.put(`/api/maintenance/${activeTicket.id}`, {
+      const open = openByEquipmentId.get(Number(equipmentId));
+      const tickets = open?.all || [];
+      for (const t of tickets) {
+        await api.put(`/api/maintenance/${t.id}`, {
           equipment: { id: equipmentId },
-          issueDescription: activeTicket.issueDescription || "Repaired and returned to working condition",
-          status: "COMPLETED",
-          dueDate: activeTicket.dueDate || new Date().toISOString().split("T")[0],
-          priority: activeTicket.priority || "MEDIUM",
+          issueDescription: t.issueDescription || "Repaired and returned to working condition",
+          status: "WORKING",
+          dueDate: t.dueDate || new Date().toISOString().split("T")[0],
+          priority: t.priority || "MEDIUM",
+          cost: t.cost,
+          repairNote: t.repairNote,
+          ...(t.source ? { source: t.source } : {}),
         });
       }
 
@@ -293,19 +361,22 @@ export default function MaintenancePage() {
     }
   };
 
-  // Start Repair: Transition equipment status to UNDER_REPAIR
+  // Start Repair: transition equipment status to UNDER_REPAIR
   const handleStartRepair = async (equipmentId, activeTicket) => {
     setActionLoadingId(equipmentId);
     try {
       await api.patch(`/api/equipment/${equipmentId}/status?status=UNDER_REPAIR`);
 
-      if (activeTicket?.id && activeTicket.status === "PENDING") {
+      if (activeTicket?.id && (activeTicket.status === "BROKEN" || activeTicket.status === "PENDING")) {
         await api.put(`/api/maintenance/${activeTicket.id}`, {
           equipment: { id: equipmentId },
           issueDescription: activeTicket.issueDescription,
-          status: "IN_PROGRESS",
+          status: "UNDER_REPAIR",
           dueDate: activeTicket.dueDate,
           priority: activeTicket.priority,
+          cost: activeTicket.cost,
+          repairNote: activeTicket.repairNote,
+          ...(activeTicket.source ? { source: activeTicket.source } : {}),
         });
       }
 
@@ -318,28 +389,26 @@ export default function MaintenancePage() {
     }
   };
 
-  // Mark a record as COMPLETED directly from the Records & History table
+  // Mark a record as fixed directly from the Records & History table
   const handleMarkRecordCompleted = async (record) => {
-    const eqId = record.equipmentId ?? record.equipment?.id;
-    const ok = confirm(
-      "Mark this maintenance as FIXED/COMPLETED and return the equipment to WORKING condition?"
-    );
+    const eqId = getRecordEquipmentId(record);
+    const ok = confirm("Mark this maintenance as FIXED and return the equipment to WORKING condition?");
     if (!ok) return;
 
     setActionLoadingId(`record-${record.id}`);
     try {
-      // 1. Update maintenance record to COMPLETED
       await api.put(`/api/maintenance/${record.id}`, {
         equipment: eqId ? { id: eqId } : undefined,
         issueDescription: record.issueDescription,
-        status: "COMPLETED",
+        status: "WORKING",
         priority: record.priority,
         dueDate: record.dueDate || new Date().toISOString().split("T")[0],
         cost: record.cost,
         repairNote: record.repairNote,
+        ...(record.source ? { source: record.source } : {}),
       });
 
-      // 2. Also ensure equipment status is set to WORKING
+      // Make sure the equipment itself goes back to WORKING
       if (eqId) {
         await api.patch(`/api/equipment/${eqId}/status?status=WORKING`);
       }
@@ -353,20 +422,48 @@ export default function MaintenancePage() {
     }
   };
 
-  // Open Add Maintenance modal pre-selected for this equipment
+  // Header button: manual maintenance (history table only)
+  const handleOpenManualAdd = () => {
+    setAddSource(SOURCE_MANUAL);
+    setSelectedEquipmentForAdd("");
+    setShowAdd(true);
+  };
+
+  // Action items "Log Details": ticket linked to equipment (action items table only)
   const handleOpenAddForEquipment = (equipmentId) => {
+    setAddSource(SOURCE_EQUIPMENT);
     setSelectedEquipmentForAdd(equipmentId ? String(equipmentId) : "");
     setShowAdd(true);
   };
 
-  const handleDeleteRecord = async (id) => {
+  const handleDeleteRecord = async (record) => {
     const ok = confirm("Delete this maintenance record?");
     if (!ok) return;
 
     try {
-      await api.delete(`/api/maintenance/${id}`);
-      setRecords((prev) => prev.filter((x) => x.id !== id));
-      setCachedRecords((prev) => prev.filter((x) => x.id !== id));
+      await api.delete(`/api/maintenance/${record.id}`);
+
+      // If an open record is deleted, make sure the equipment is not left stuck as BROKEN
+      const eqId = getRecordEquipmentId(record);
+      if (eqId && isActiveStatus(record.status) && isManualRecord(record)) {
+        try {
+          await api.patch(`/api/equipment/${eqId}/status?status=WORKING`);
+        } catch (e) {
+          console.error("Failed to reset equipment status:", e);
+        }
+      }
+
+      setRecords((prev) => prev.filter((x) => x.id !== record.id));
+      setCachedRecords((prev) => prev.filter((x) => x.id !== record.id));
+
+      if (manualIds.has(record.id)) {
+        const next = new Set(manualIds);
+        next.delete(record.id);
+        setManualIds(next);
+        saveManualIds(next);
+      }
+
+      await loadData();
     } catch (err) {
       console.error("Delete failed:", err);
       alert("Delete failed.");
@@ -374,8 +471,34 @@ export default function MaintenancePage() {
   };
 
   const handleAddSave = async (payload) => {
+    const eqId = Number(payload?.equipment?.id ?? payload?.equipmentId ?? selectedEquipmentForAdd);
+
+    // ?? Prevent duplicate open maintenance for the same equipment
+    if (eqId && openByEquipmentId.has(eqId)) {
+      alert("This equipment already has an open maintenance record. Mark it as fixed before creating a new one.");
+      return;
+    }
+
+    if (addSource === SOURCE_MANUAL && eqId) {
+      const eq = equipmentMap.get(eqId);
+      if (eq && (eq.status === "BROKEN" || eq.status === "UNDER_REPAIR")) {
+        alert("This equipment is already under maintenance. Handle it from the Action Items tab.");
+        return;
+      }
+    }
+
     try {
-      await api.post("/api/maintenance", payload);
+      const res = await api.post("/api/maintenance", { ...payload, source: addSource });
+
+      // Remember manual records (fallback if backend does not store `source`)
+      const newId = res?.data?.id;
+      if (addSource === SOURCE_MANUAL && newId != null) {
+        const next = new Set(manualIds);
+        next.add(newId);
+        setManualIds(next);
+        saveManualIds(next);
+      }
+
       setShowAdd(false);
       setSelectedEquipmentForAdd("");
       await loadData();
@@ -387,17 +510,16 @@ export default function MaintenancePage() {
 
   const handleEditSave = async (id, payload) => {
     try {
-      await api.put(`/api/maintenance/${id}`, payload);
+      const body = editItem?.source ? { ...payload, source: editItem.source } : payload;
+      await api.put(`/api/maintenance/${id}`, body);
 
-      // If status was changed to COMPLETED, ensure equipment is set to WORKING
-      if (payload.status === "COMPLETED") {
-        const eqId = payload.equipment?.id ?? editItem?.equipmentId ?? editItem?.equipment?.id;
-        if (eqId) {
-          try {
-            await api.patch(`/api/equipment/${eqId}/status?status=WORKING`);
-          } catch (e) {
-            console.warn("Could not patch equipment status:", e);
-          }
+      // If the edit set the record to fixed, return equipment to WORKING
+      const eqId = Number(payload?.equipment?.id ?? payload?.equipmentId ?? getRecordEquipmentId(editItem));
+      if (isFixedStatus(payload?.status) && eqId) {
+        try {
+          await api.patch(`/api/equipment/${eqId}/status?status=WORKING`);
+        } catch (e) {
+          console.error("Failed to reset equipment status:", e);
         }
       }
 
@@ -412,7 +534,7 @@ export default function MaintenancePage() {
   return (
     <div className="w-full pb-10">
       {/* ========================================================= */}
-      {/* 🧭 HEADER */}
+      {/* ?? HEADER */}
       {/* ========================================================= */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
         <div>
@@ -437,7 +559,7 @@ export default function MaintenancePage() {
           </button>
 
           <button
-            onClick={() => handleOpenAddForEquipment("")}
+            onClick={handleOpenManualAdd}
             className="flex items-center gap-1.5 bg-yellow-500 hover:bg-yellow-600 text-white font-semibold px-4 py-2 rounded-lg shadow-sm transition whitespace-nowrap"
           >
             <Plus className="w-4 h-4" />
@@ -447,10 +569,9 @@ export default function MaintenancePage() {
       </div>
 
       {/* ========================================================= */}
-      {/* 📊 MAINTENANCE DASHBOARD METRICS CARDS */}
+      {/* ?? MAINTENANCE DASHBOARD METRICS CARDS */}
       {/* ========================================================= */}
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 mb-6">
-        {/* Total Needing Attention */}
         <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm flex items-center gap-3">
           <div className="w-11 h-11 rounded-lg bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 flex-shrink-0">
             <AlertTriangle className="w-6 h-6" />
@@ -461,7 +582,6 @@ export default function MaintenancePage() {
           </div>
         </div>
 
-        {/* Maintenance Required (Broken) */}
         <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm flex items-center gap-3">
           <div className="w-11 h-11 rounded-lg bg-red-50 border border-red-200 flex items-center justify-center text-red-600 flex-shrink-0">
             <AlertTriangle className="w-6 h-6" />
@@ -472,7 +592,6 @@ export default function MaintenancePage() {
           </div>
         </div>
 
-        {/* Under Repair */}
         <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm flex items-center gap-3">
           <div className="w-11 h-11 rounded-lg bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 flex-shrink-0">
             <Wrench className="w-6 h-6" />
@@ -483,7 +602,6 @@ export default function MaintenancePage() {
           </div>
         </div>
 
-        {/* Completed Repairs */}
         <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm flex items-center gap-3">
           <div className="w-11 h-11 rounded-lg bg-green-50 border border-green-200 flex items-center justify-center text-green-600 flex-shrink-0">
             <CheckCircle2 className="w-6 h-6" />
@@ -494,7 +612,6 @@ export default function MaintenancePage() {
           </div>
         </div>
 
-        {/* Total Cost */}
         <div className="col-span-2 sm:col-span-2 lg:col-span-1 bg-white rounded-xl p-4 border border-gray-200 shadow-sm flex items-center gap-3">
           <div className="w-11 h-11 rounded-lg bg-purple-50 border border-purple-200 flex items-center justify-center text-purple-600 flex-shrink-0">
             <DollarSign className="w-6 h-6" />
@@ -509,7 +626,7 @@ export default function MaintenancePage() {
       </div>
 
       {/* ========================================================= */}
-      {/* 📑 TABS & CONTROLS */}
+      {/* ?? TABS & CONTROLS */}
       {/* ========================================================= */}
       <div className="bg-white rounded-t-xl border border-gray-200 p-4 border-b-0">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
@@ -521,18 +638,14 @@ export default function MaintenancePage() {
                 setStatusFilter("ALL");
               }}
               className={`px-4 py-2 rounded-lg text-sm font-semibold transition flex items-center gap-2 ${
-                activeTab === "active"
-                  ? "bg-yellow-500 text-white shadow-sm"
-                  : "text-gray-600 hover:bg-gray-100"
+                activeTab === "active" ? "bg-yellow-500 text-white shadow-sm" : "text-gray-600 hover:bg-gray-100"
               }`}
             >
               <AlertTriangle className="w-4 h-4" />
               <span>Action Items & Broken Equipment</span>
               <span
                 className={`text-xs px-2 py-0.5 rounded-full font-bold ${
-                  activeTab === "active"
-                    ? "bg-white text-yellow-700"
-                    : "bg-gray-200 text-gray-700"
+                  activeTab === "active" ? "bg-white text-yellow-700" : "bg-gray-200 text-gray-700"
                 }`}
               >
                 {actionItems.length}
@@ -542,31 +655,26 @@ export default function MaintenancePage() {
             <button
               onClick={() => {
                 setActiveTab("history");
-                setStatusFilter("ALL");
+                setStatusFilter("OPEN");
               }}
               className={`px-4 py-2 rounded-lg text-sm font-semibold transition flex items-center gap-2 ${
-                activeTab === "history"
-                  ? "bg-yellow-500 text-white shadow-sm"
-                  : "text-gray-600 hover:bg-gray-100"
+                activeTab === "history" ? "bg-yellow-500 text-white shadow-sm" : "text-gray-600 hover:bg-gray-100"
               }`}
             >
               <FileText className="w-4 h-4" />
               <span>Maintenance Records & History</span>
               <span
                 className={`text-xs px-2 py-0.5 rounded-full font-bold ${
-                  activeTab === "history"
-                    ? "bg-white text-yellow-700"
-                    : "bg-gray-200 text-gray-700"
+                  activeTab === "history" ? "bg-white text-yellow-700" : "bg-gray-200 text-gray-700"
                 }`}
               >
-                {records.length}
+                {openHistoryCount}
               </span>
             </button>
           </div>
 
           {/* Search & Filters */}
           <div className="flex flex-col sm:flex-row items-center gap-2.5">
-            {/* Search Input */}
             <div className="relative w-full sm:w-64">
               <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
@@ -578,7 +686,6 @@ export default function MaintenancePage() {
               />
             </div>
 
-            {/* Laboratory Filter */}
             <select
               value={labFilter}
               onChange={(e) => setLabFilter(e.target.value)}
@@ -592,7 +699,6 @@ export default function MaintenancePage() {
               ))}
             </select>
 
-            {/* Status Filter */}
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
@@ -608,10 +714,11 @@ export default function MaintenancePage() {
                 </>
               ) : (
                 <>
-                  <option value="ALL">All Record Statuses</option>
-                  <option value="PENDING">PENDING</option>
-                  <option value="IN_PROGRESS">IN_PROGRESS</option>
-                  <option value="COMPLETED">COMPLETED</option>
+                  <option value="OPEN">Open Records (Fixed Hidden)</option>
+                  <option value="ALL">All Records (Incl. Fixed)</option>
+                  <option value="BROKEN">Maintenance Required</option>
+                  <option value="UNDER_REPAIR">Currently Under Repair</option>
+                  <option value="WORKING">Fixed / Working</option>
                 </>
               )}
             </select>
@@ -620,7 +727,7 @@ export default function MaintenancePage() {
       </div>
 
       {/* ========================================================= */}
-      {/* 📋 TAB 1: ACTION ITEMS (STATUS-BASED HYBRID VIEW) */}
+      {/* ?? TAB 1: ACTION ITEMS */}
       {/* ========================================================= */}
       {activeTab === "active" && (
         <div className="bg-white rounded-b-xl border border-gray-200 shadow-sm overflow-x-auto">
@@ -654,22 +761,17 @@ export default function MaintenancePage() {
 
                   return (
                     <tr key={eq.id} className="hover:bg-gray-50/80 transition">
-                      {/* Equipment Info */}
                       <td className="p-3.5">
                         <div className="font-semibold text-gray-900">{eq.equipmentName}</div>
                         <div className="text-xs text-gray-500 mt-0.5">
                           ID: <span className="font-mono">{eq.id}</span>
-                          {eq.model && ` • Model: ${eq.model}`}
-                          {eq.serialNumber && ` • S/N: ${eq.serialNumber}`}
+                          {eq.model && ` . Model: ${eq.model}`}
+                          {eq.serialNumber && ` . S/N: ${eq.serialNumber}`}
                         </div>
                       </td>
 
-                      {/* Laboratory */}
-                      <td className="p-3.5 text-gray-700 font-medium">
-                        {eq.laboratory || "—"}
-                      </td>
+                      <td className="p-3.5 text-gray-700 font-medium">{eq.laboratory || "-"}</td>
 
-                      {/* Status Badge (Method 1) */}
                       <td className="p-3.5">
                         {isBroken ? (
                           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-red-100 text-red-800 border border-red-200">
@@ -688,7 +790,6 @@ export default function MaintenancePage() {
                         )}
                       </td>
 
-                      {/* Linked Ticket Details */}
                       <td className="p-3.5">
                         {activeTicket ? (
                           <div className="text-xs space-y-1">
@@ -696,9 +797,13 @@ export default function MaintenancePage() {
                               {activeTicket.issueDescription || "No issue details"}
                             </div>
                             <div className="text-gray-500 flex items-center gap-2">
-                              <span>Priority: <span className="font-semibold">{activeTicket.priority ?? "—"}</span></span>
-                              <span>•</span>
-                              <span>Due: <span className="font-semibold">{activeTicket.dueDate ?? "—"}</span></span>
+                              <span>
+                                Priority: <span className="font-semibold">{activeTicket.priority ?? "-"}</span>
+                              </span>
+                              <span>.</span>
+                              <span>
+                                Due: <span className="font-semibold">{activeTicket.dueDate ?? "-"}</span>
+                              </span>
                             </div>
                           </div>
                         ) : (
@@ -708,12 +813,10 @@ export default function MaintenancePage() {
                         )}
                       </td>
 
-                      {/* Actions */}
                       <td className="p-3.5 text-right">
                         <div className="flex items-center justify-end gap-2">
-                          {/* 1. Quick Fix -> Mark as Fixed (WORKING) */}
                           <button
-                            onClick={() => handleQuickFix(eq.id, activeTicket)}
+                            onClick={() => handleQuickFix(eq.id)}
                             disabled={isActionLoading}
                             className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold bg-green-500 hover:bg-green-600 text-white shadow-sm transition disabled:opacity-50"
                             title="Quick Fix: Immediately mark as Working and return to inventory"
@@ -722,7 +825,6 @@ export default function MaintenancePage() {
                             <span>Mark as Fixed</span>
                           </button>
 
-                          {/* 2. Start Repair (if BROKEN) */}
                           {isBroken && (
                             <button
                               onClick={() => handleStartRepair(eq.id, activeTicket)}
@@ -735,7 +837,6 @@ export default function MaintenancePage() {
                             </button>
                           )}
 
-                          {/* 3. Add / Edit Full Maintenance Details */}
                           {activeTicket ? (
                             <button
                               onClick={() => setEditItem(activeTicket)}
@@ -769,7 +870,7 @@ export default function MaintenancePage() {
       )}
 
       {/* ========================================================= */}
-      {/* 📋 TAB 2: MAINTENANCE HISTORY & LOGS */}
+      {/* ?? TAB 2: MAINTENANCE HISTORY & LOGS (manual records) */}
       {/* ========================================================= */}
       {activeTab === "history" && (
         <div className="bg-white rounded-b-xl border border-gray-200 shadow-sm overflow-x-auto">
@@ -783,7 +884,7 @@ export default function MaintenancePage() {
               <FileText className="w-12 h-12 text-gray-300 mx-auto mb-3" />
               <p className="font-semibold text-gray-700 text-lg">No Maintenance Logs Found</p>
               <p className="text-sm text-gray-400 mt-1">
-                No formal maintenance records match your search or filters.
+                No maintenance records match your search or filters.
               </p>
             </div>
           ) : (
@@ -813,23 +914,17 @@ export default function MaintenancePage() {
                           {eq.equipmentName || "Unknown equipment"}
                         </div>
                         <div className="text-xs text-gray-500 mt-0.5">
-                          ID: <span className="font-mono">{eq.id ?? "—"}</span>
-                          {eq.laboratory && ` • ${eq.laboratory}`}
-                          {eq.model && ` • ${eq.model}`}
+                          ID: <span className="font-mono">{eq.id ?? "-"}</span>
+                          {eq.laboratory && ` . ${eq.laboratory}`}
+                          {eq.model && ` . ${eq.model}`}
                         </div>
                       </td>
 
-                      <td className="p-3.5 max-w-xs text-gray-800">
-                        {r.issueDescription || "—"}
-                      </td>
+                      <td className="p-3.5 max-w-xs text-gray-800">{r.issueDescription || "-"}</td>
 
-                      <td className="p-3.5 text-gray-600 whitespace-nowrap">
-                        {r.reportedDate || "—"}
-                      </td>
+                      <td className="p-3.5 text-gray-600 whitespace-nowrap">{r.reportedDate || "-"}</td>
 
-                      <td className="p-3.5 text-gray-600 whitespace-nowrap font-medium">
-                        {r.dueDate || "—"}
-                      </td>
+                      <td className="p-3.5 text-gray-600 whitespace-nowrap font-medium">{r.dueDate || "-"}</td>
 
                       <td className="p-3.5">
                         <PriorityBadge priority={r.priority} />
@@ -840,17 +935,18 @@ export default function MaintenancePage() {
                       </td>
 
                       <td className="p-3.5 text-gray-800 font-medium whitespace-nowrap">
-                        {r.cost != null && r.cost !== "" ? `Rs. ${Number(r.cost).toLocaleString(undefined, { minimumFractionDigits: 2 })}` : "—"}
+                        {r.cost != null && r.cost !== ""
+                          ? `Rs. ${Number(r.cost).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
+                          : "-"}
                       </td>
 
                       <td className="p-3.5 text-xs text-gray-500 max-w-xs truncate" title={r.repairNote}>
-                        {r.repairNote || "—"}
+                        {r.repairNote || "-"}
                       </td>
 
                       <td className="p-3.5 text-right whitespace-nowrap">
                         <div className="flex items-center justify-end gap-1.5">
-                          {/* If not completed, show direct Mark as Fixed button */}
-                          {r.status !== "COMPLETED" && (
+                          {isActiveStatus(r.status) && (
                             <button
                               onClick={() => handleMarkRecordCompleted(r)}
                               disabled={isRecordActionLoading}
@@ -870,7 +966,7 @@ export default function MaintenancePage() {
                             <Edit className="w-4 h-4" />
                           </button>
                           <button
-                            onClick={() => handleDeleteRecord(r.id)}
+                            onClick={() => handleDeleteRecord(r)}
                             className="p-1.5 rounded-lg bg-gray-100 hover:bg-red-100 text-red-600 transition"
                             title="Delete Record"
                           >
@@ -888,11 +984,11 @@ export default function MaintenancePage() {
       )}
 
       {/* ========================================================= */}
-      {/* 🛠️ MODALS */}
+      {/* ??? MODALS */}
       {/* ========================================================= */}
       {showAdd && (
         <AddMaintenanceModal
-          equipment={equipment}
+          equipment={equipmentForAddModal}
           initialEquipmentId={selectedEquipmentForAdd}
           onClose={() => {
             setShowAdd(false);
@@ -915,13 +1011,13 @@ export default function MaintenancePage() {
 }
 
 function StatusBadge({ status }) {
-  if (status === "COMPLETED")
+  if (status === "WORKING" || status === "COMPLETED")
     return (
       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800 border border-green-200">
         Fixed / Working
       </span>
     );
-  if (status === "IN_PROGRESS")
+  if (status === "UNDER_REPAIR" || status === "IN_PROGRESS")
     return (
       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 border border-blue-200">
         Under Repair
@@ -929,7 +1025,7 @@ function StatusBadge({ status }) {
     );
   return (
     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800 border border-yellow-200">
-      Pending
+      Maintenance Required
     </span>
   );
 }

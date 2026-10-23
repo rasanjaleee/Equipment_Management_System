@@ -9,7 +9,7 @@ export default function EditMaintenanceModal({ item, onClose, onSaved, equipment
     equipmentId: initialEquipmentId,
     issueDescription: item?.issueDescription || "",
     dueDate: item?.dueDate || "",
-    status: item?.status || "PENDING",
+    status: item?.status || "BROKEN",
     priority: item?.priority || "LOW",
     repairNote: item?.repairNote || "",
     cost: item?.cost ?? "",
@@ -30,7 +30,7 @@ export default function EditMaintenanceModal({ item, onClose, onSaved, equipment
     }
 
     const payload = {
-      equipment: { id: Number(form.equipmentId) }, // ✅ ManyToOne format
+      equipment: { id: Number(form.equipmentId) }, // ? ManyToOne format
       issueDescription: form.issueDescription,
       dueDate: form.dueDate,
       status: form.status,
@@ -117,9 +117,9 @@ export default function EditMaintenanceModal({ item, onClose, onSaved, equipment
                 onChange={handleChange}
                 className="w-full px-3 py-2 rounded border"
               >
-                <option value="PENDING">PENDING</option>
-                <option value="IN_PROGRESS">IN_PROGRESS</option>
-                <option value="COMPLETED">COMPLETED</option>
+                <option value="BROKEN">Maintenance Required</option>
+                <option value="UNDER_REPAIR">Currently Under Repair</option>
+                <option value="WORKING">Fixed / Working</option>
               </select>
             </Field>
           </div>

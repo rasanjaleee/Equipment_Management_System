@@ -50,10 +50,10 @@ public class MaintenanceDueNotificationScheduler {
         System.out.println("Date: " + today);
         System.out.println("======================================");
 
-        // Check BOTH PENDING and IN_PROGRESS
+        // Check active maintenance records in the canonical status model.
         List<Maintenance> maintenanceList =
                 maintenanceRepository.findByStatusInWithEquipment(
-                        List.of("PENDING", "IN_PROGRESS")
+                        List.of("BROKEN", "UNDER_REPAIR", "PENDING", "IN_PROGRESS")
                 );
 
         System.out.println(
@@ -63,7 +63,7 @@ public class MaintenanceDueNotificationScheduler {
 
         for (Maintenance maintenance : maintenanceList) {
 
-            // No due date → nothing to check
+            // No due date ? nothing to check
             if (maintenance.getDueDate() == null) {
                 continue;
             }

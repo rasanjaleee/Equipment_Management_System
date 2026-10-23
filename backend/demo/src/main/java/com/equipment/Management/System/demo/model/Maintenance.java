@@ -156,7 +156,7 @@ public class Maintenance {
         this.createdAt   = LocalDateTime.now();
         this.updatedAt   = LocalDateTime.now();
         this.reportedDate = LocalDate.now();
-        if (this.status == null) this.status = "PENDING";
+        if (this.status == null) this.status = "BROKEN";
     }
 
     @PreUpdate
