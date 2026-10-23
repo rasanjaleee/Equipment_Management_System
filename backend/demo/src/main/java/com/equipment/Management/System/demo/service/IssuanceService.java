@@ -30,6 +30,9 @@ public class IssuanceService {
     @Autowired
     private NotificationService notificationService;
 
+    @Autowired
+    private AdminSettingService adminSettingService;
+
     private List<User> getAdminUsers() {
         return userRepository.findAll().stream()
                 .filter(user -> user.getRole() != null &&
@@ -42,6 +45,20 @@ public class IssuanceService {
     // ================= CREATE =================
     @Transactional
     public IssuanceDTO createIssuance(IssuanceRequest request) {
+
+        if (request.getIssueDate() == null || request.getReturnDueDate() == null) {
+            throw new RuntimeException("Issue date and return due date are required");
+        }
+
+        long daysBetween = java.time.temporal.ChronoUnit.DAYS.between(request.getIssueDate(), request.getReturnDueDate());
+        if (daysBetween < 0) {
+            throw new RuntimeException("Return due date cannot be before issue date");
+        }
+
+        int maxDays = adminSettingService.getMaxIssuanceDays();
+        if (daysBetween > maxDays) {
+            throw new RuntimeException("Issuance duration of " + daysBetween + " days exceeds the maximum allowed duration of " + maxDays + " days");
+        }
 
         Equipment equipment = equipmentRepository.findById(request.getEquipmentId())
                 .orElseThrow(() -> new RuntimeException("Equipment not found"));

@@ -18,15 +18,21 @@ public class MaintenanceDueNotificationScheduler {
     private final MaintenanceRepository maintenanceRepository;
     private final NotificationService notificationService;
     private final UserRepository userRepository;
+    private final AdminSettingService adminSettingService;
+    private final com.equipment.Management.System.demo.repository.IssuanceRepository issuanceRepository;
 
     public MaintenanceDueNotificationScheduler(
             MaintenanceRepository maintenanceRepository,
             NotificationService notificationService,
-            UserRepository userRepository
+            UserRepository userRepository,
+            AdminSettingService adminSettingService,
+            com.equipment.Management.System.demo.repository.IssuanceRepository issuanceRepository
     ) {
         this.maintenanceRepository = maintenanceRepository;
         this.notificationService = notificationService;
         this.userRepository = userRepository;
+        this.adminSettingService = adminSettingService;
+        this.issuanceRepository = issuanceRepository;
     }
 
     // =========================================================
@@ -81,17 +87,18 @@ public class MaintenanceDueNotificationScheduler {
             );
 
             // ================================================
-            // DUE SOON
+            // DUE SOON (Configured Days)
             // ================================================
 
-            if (daysRemaining == 2) {
+            int reminderDays = adminSettingService.getMaintenanceReminderDays();
+            if (daysRemaining == reminderDays) {
 
                 sendDueNotification(
                         maintenance,
                         "Maintenance Due Soon",
                         "Maintenance for equipment \""
                                 + maintenance.getEquipment().getEquipmentName()
-                                + "\" is due in 2 days.",
+                                + "\" is due in " + reminderDays + " days.",
                         "DUE_SOON",
                         "MEDIUM"
                 );
@@ -191,5 +198,40 @@ public class MaintenanceDueNotificationScheduler {
                         )
                 )
                 .collect(Collectors.toList());
+    }
+
+    // =========================================================
+    // CHECK OVERDUE ISSUANCES
+    // Runs every day at 8:30 AM
+    // =========================================================
+
+    @Scheduled(cron = "0 30 8 * * *")
+    public void checkOverdueIssuances() {
+        if (!adminSettingService.isNotificationsGloballyEnabled() || !adminSettingService.isAlertOverdueIssuances()) {
+            return;
+        }
+
+        LocalDate today = LocalDate.now();
+        List<com.equipment.Management.System.demo.model.Issuance> issuedList = issuanceRepository.findByStatus("Issued");
+        List<User> managers = getMaintenanceManagers();
+
+        for (com.equipment.Management.System.demo.model.Issuance issuance : issuedList) {
+            if (issuance.getReturnDueDate() != null && issuance.getReturnDueDate().isBefore(today)) {
+                String alertKey = "ISSUANCE_" + issuance.getId() + "_OVERDUE_" + today;
+                String equipmentName = (issuance.getEquipment() != null) ? issuance.getEquipment().getEquipmentName() : "Equipment";
+                String message = "Issuance " + issuance.getIssuanceId() + " for \"" + equipmentName + "\" was due on " + issuance.getReturnDueDate() + " and is now overdue.";
+
+                for (User manager : managers) {
+                    notificationService.createMaintenanceDueNotification(
+                            manager.getId(),
+                            "Overdue Issuance Alert",
+                            message,
+                            issuance.getId(),
+                            alertKey,
+                            "HIGH"
+                    );
+                }
+            }
+        }
     }
 }

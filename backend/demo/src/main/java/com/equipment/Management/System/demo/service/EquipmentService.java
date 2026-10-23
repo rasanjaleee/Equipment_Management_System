@@ -20,6 +20,7 @@ public class EquipmentService {
     private final NotificationService notificationService;
     private final QrCodeService qrCodeService;
     private final UserRepository userRepository;
+    private final AdminSettingService adminSettingService;
 
     @Value("${app.frontend-base-url:http://localhost:5173}")
     private String frontendBaseUrl;
@@ -27,11 +28,13 @@ public class EquipmentService {
     public EquipmentService(EquipmentRepository equipmentRepository,
                             NotificationService notificationService,
                             QrCodeService qrCodeService,
-                            UserRepository userRepository) {
+                            UserRepository userRepository,
+                            AdminSettingService adminSettingService) {
         this.equipmentRepository = equipmentRepository;
         this.notificationService = notificationService;
         this.qrCodeService = qrCodeService;
         this.userRepository = userRepository;
+        this.adminSettingService = adminSettingService;
     }
 
     private List<Long> getEquipmentManagers() {
@@ -108,6 +111,11 @@ public class EquipmentService {
         Equipment updated = equipmentRepository.save(equipment);
 
         if (!oldStatus.equals(statusEnum)) {
+            if (statusEnum == EquipmentStatus.BROKEN && !adminSettingService.isAlertBrokenEquipment()) {
+                // Broken alerts disabled in settings
+                return updated;
+            }
+
             String priority = "LOW";
 
             if (statusEnum == EquipmentStatus.BROKEN

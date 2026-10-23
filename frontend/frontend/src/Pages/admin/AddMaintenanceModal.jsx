@@ -1,9 +1,9 @@
 // src/pages/admin/AddMaintenanceModal.jsx
 import { useState } from "react";
 
-export default function AddMaintenanceModal({ onClose, onSaved, equipment }) {
+export default function AddMaintenanceModal({ onClose, onSaved, equipment, initialEquipmentId = "" }) {
   const [form, setForm] = useState({
-    equipmentId: "",
+    equipmentId: initialEquipmentId ? String(initialEquipmentId) : "",
     issueDescription: "",
     status: "PENDING",
     priority: "LOW",

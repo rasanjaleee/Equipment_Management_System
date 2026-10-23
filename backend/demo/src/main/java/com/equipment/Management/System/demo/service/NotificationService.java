@@ -20,19 +20,27 @@ public class NotificationService {
     private final NotificationRepository notificationRepository;
     private final SimpMessagingTemplate messagingTemplate;
     private final UserRepository userRepository;
+    private final AdminSettingService adminSettingService;
 
     public NotificationService(NotificationRepository notificationRepository,
                                SimpMessagingTemplate messagingTemplate,
-                               UserRepository userRepository) {
+                               UserRepository userRepository,
+                               AdminSettingService adminSettingService) {
         this.notificationRepository = notificationRepository;
         this.messagingTemplate = messagingTemplate;
         this.userRepository = userRepository;
+        this.adminSettingService = adminSettingService;
     }
 
     // Send notification to a specific target user
     public Notification createNotificationForUser(Long targetUserId, String title, String message,
                                                   String type, Long relatedId, String relatedType,
                                                   String priority) {
+        if (!adminSettingService.isNotificationsGloballyEnabled()) {
+            System.out.println("Global notifications are disabled. Suppressing: " + title);
+            return null;
+        }
+
         if (targetUserId == null) {
             throw new RuntimeException("Target userId cannot be null");
         }
@@ -241,6 +249,10 @@ public class NotificationService {
             String alertKey,
             String priority
     ) {
+        if (!adminSettingService.isNotificationsGloballyEnabled()) {
+            System.out.println("Global notifications are disabled. Suppressing: " + title);
+            return null;
+        }
 
         if (targetUserId == null) {
             throw new RuntimeException("Target userId cannot be null");

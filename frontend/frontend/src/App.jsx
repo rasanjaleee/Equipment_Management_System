@@ -2,6 +2,7 @@
 
 import './App.css';
 import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
+import { useSessionTimeout } from './hooks/useSessionTimeout';
 
 import Login from './Pages/Login';
 import Register from './Pages/Register';
@@ -33,6 +34,7 @@ import ActivityLog from './Pages/admin/ActivityLog';
 import ReportsPage from './Pages/admin/ReportsPage';
 import AdminSettings from './Pages/admin/AdminSettings';
 import NotificationPage from './Pages/admin/NotificationPage';
+import MaintenanceNotice from './components/MaintenanceNotice';
 
 import TechnicianDashboard from './Pages/technician/TechnicianDashboard';
 import TechnicianEquipment from './Pages/technician/TechnicianEquipment';
@@ -48,6 +50,9 @@ function AppWrapper() {
 
 function App() {
   const location = useLocation();
+
+  // Enforce client-side inactivity timeout for authenticated users
+  useSessionTimeout();
 
   const hideNavbarOn = ['/', '/login', '/register'];
 
@@ -66,6 +71,7 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
+      <MaintenanceNotice />
       {shouldShowNavbar && <Navbar />}
 
       <main className={`flex-grow ${shouldShowNavbar ? 'pt-16 sm:pt-20' : ''}`}>
