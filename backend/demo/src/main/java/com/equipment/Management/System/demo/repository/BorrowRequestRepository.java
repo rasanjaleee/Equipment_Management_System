@@ -16,6 +16,8 @@ public interface BorrowRequestRepository extends JpaRepository<BorrowRequest, Lo
     @Query("SELECT br FROM BorrowRequest br WHERE br.id = :id")
     java.util.Optional<BorrowRequest> findByIdForUpdate(@Param("id") Long id);
 
+    long countByStatusIgnoreCase(String status);
+
     @Query("""
             SELECT br
             FROM BorrowRequest br
