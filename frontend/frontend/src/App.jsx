@@ -93,6 +93,7 @@ function App() {
           <Route path="/issuance" element={<Navigate to="/admin/issuance" replace state={location.state} />} />
           <Route path="/about" element={<About />} />
           <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/laboratories" element={<LaboratoryPage />} />
 
           {/* Admin routes */}
           <Route

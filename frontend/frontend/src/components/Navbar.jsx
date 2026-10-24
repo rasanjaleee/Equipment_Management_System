@@ -23,6 +23,7 @@ import {
 const NAV_LINKS = [
   { to: '/home', label: 'HOME' },
   { to: '/equipment', label: 'EQUIPMENT' },
+  { to: '/laboratories', label: 'LABORATORIES' },
   { to: '/about', label: 'ABOUT' }
 ];
 

@@ -15,6 +15,22 @@ export default function LaboratoryPage() {
     refreshEquipment,
   } = useData();
 
+  const user = (() => {
+  try {
+    return JSON.parse(localStorage.getItem("user"));
+  } catch {
+    return null;
+  }
+})();
+
+const role = String(user?.role || "")
+  .replace(/^ROLE_/i, "")
+  .toUpperCase();
+
+const canManageLabs =
+  role === "ADMIN" ||
+  role === "SUPER_ADMIN";
+
   const [labs, setLabs] = useState(cachedLabs || []);
   const [equipmentList, setEquipmentList] = useState(cachedEquipment || []);
 
@@ -243,15 +259,17 @@ setTimeout(() => {
 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-3 sm:px-4 pt-4 sm:pt-5 pb-3">
   <h2 className="text-lg sm:text-xl font-bold text-gray-900 flex items-center gap-2">
     <span>⚗</span>
-    Laboratory Management
+    {canManageLabs ? "Laboratory Management" : "Laboratories"}
   </h2>
 
+  {canManageLabs && (
   <button
     onClick={() => setIsAddModalOpen(true)}
     className="w-full sm:w-auto bg-red-950 hover:bg-red-900 text-white font-semibold px-5 py-2.5 rounded-lg transition-colors shadow-sm"
   >
     + Add Lab
   </button>
+)}
 </div>
 
       {/* FILTERS */}
@@ -647,26 +665,30 @@ setTimeout(() => {
                       <Eye size={18} />
                     </button>
 
-                    {/* EDIT */}
-                    <button
-                      onClick={() => {
-                        setEditLab(lab);
-                        setIsEditModalOpen(true);
-                      }}
-                      className="btn-icon text-blue-600 hover:text-blue-800"
-                      title="Edit"
-                    >
-                      <Edit size={18} />
-                    </button>
+                    {canManageLabs && (
+  <>
+    {/* EDIT */}
+    <button
+      onClick={() => {
+        setEditLab(lab);
+        setIsEditModalOpen(true);
+      }}
+      className="btn-icon text-blue-600 hover:text-blue-800"
+      title="Edit"
+    >
+      <Edit size={18} />
+    </button>
 
-                    {/* DELETE */}
-                    <button
-                      onClick={() => handleDelete(lab.id)}
-                      className="btn-icon text-red-600 hover:text-red-800"
-                      title="Delete"
-                    >
-                      <Trash2 size={18} />
-                    </button>
+    {/* DELETE */}
+    <button
+      onClick={() => handleDelete(lab.id)}
+      className="btn-icon text-red-600 hover:text-red-800"
+      title="Delete"
+    >
+      <Trash2 size={18} />
+    </button>
+  </>
+)}
 
                   </div>
                 </td>
@@ -747,40 +769,51 @@ setTimeout(() => {
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-2 mt-4 pt-3 border-t border-gray-100">
-            <button
-              type="button"
-              onClick={() => {
-                setSelectedLab(lab);
-                loadLabInventory(lab.name);
-              }}
-              className="flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg bg-green-50 text-green-700 text-sm font-medium hover:bg-green-100"
-            >
-              <Eye size={16} />
-              View
-            </button>
+          <div
+  className={`grid ${
+    canManageLabs ? "grid-cols-3" : "grid-cols-1"
+  } gap-2 mt-4 pt-3 border-t border-gray-100`}
+>
+  {/* VIEW */}
+  <button
+    type="button"
+    onClick={() => {
+      setSelectedLab(lab);
+      loadLabInventory(lab.name);
+    }}
+    className="flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg bg-green-50 text-green-700 text-sm font-medium hover:bg-green-100"
+  >
+    <Eye size={16} />
+    View
+  </button>
 
-            <button
-              type="button"
-              onClick={() => {
-                setEditLab(lab);
-                setIsEditModalOpen(true);
-              }}
-              className="flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg bg-blue-50 text-blue-700 text-sm font-medium hover:bg-blue-100"
-            >
-              <Edit size={16} />
-              Edit
-            </button>
+  {canManageLabs && (
+    <>
+      {/* EDIT */}
+      <button
+        type="button"
+        onClick={() => {
+          setEditLab(lab);
+          setIsEditModalOpen(true);
+        }}
+        className="flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg bg-blue-50 text-blue-700 text-sm font-medium hover:bg-blue-100"
+      >
+        <Edit size={16} />
+        Edit
+      </button>
 
-            <button
-              type="button"
-              onClick={() => handleDelete(lab.id)}
-              className="flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg bg-red-50 text-red-700 text-sm font-medium hover:bg-red-100"
-            >
-              <Trash2 size={16} />
-              Delete
-            </button>
-          </div>
+      {/* DELETE */}
+      <button
+        type="button"
+        onClick={() => handleDelete(lab.id)}
+        className="flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg bg-red-50 text-red-700 text-sm font-medium hover:bg-red-100"
+      >
+        <Trash2 size={16} />
+        Delete
+      </button>
+    </>
+  )}
+</div>
         </div>
       );
     })
