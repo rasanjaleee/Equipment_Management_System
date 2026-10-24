@@ -511,9 +511,9 @@ const handleDeleteAccessory = async (accessory) => {
 
 
 
-      clearEquipmentCache();
-
-      await fetchEquipment(true);
+      if (refreshEquipment) {
+        await refreshEquipment(true);
+      }
 
       resetForm();
 
@@ -719,21 +719,23 @@ const handleDeleteAccessory = async (accessory) => {
 
 
 
-    clearEquipmentCache();
-
-    await fetchEquipment(true);
-
-
+    if (refreshEquipment) {
+      await refreshEquipment(true);
+    }
 
     setSuccess('Equipment deleted successfully!');
 
+    setTimeout(() => {
+      setSuccess('');
+    }, 3000);
 
-
-setTimeout(() => {
-
-  setSuccess('');
-
-}, 3000);
+    Swal.fire({
+      title: 'Deleted!',
+      text: 'Equipment deleted successfully.',
+      icon: 'success',
+      timer: 2000,
+      showConfirmButton: false
+    });
 
 
 

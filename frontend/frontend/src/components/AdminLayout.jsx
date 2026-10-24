@@ -20,6 +20,7 @@ import {
   PanelLeft,
   X,
   CalendarDays,
+  RefreshCw,
 } from "lucide-react";
 import {
   getNotifications,
@@ -43,15 +44,38 @@ export default function AdminLayout() {
   const {
     notifications: cachedNotifs,
     setNotifications: setCachedNotifs,
+    refreshEquipment,
+    refreshLaboratories,
+    refreshMaintenance,
   } = useData();
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [notifications, setNotifications] = useState(cachedNotifs || []);
 
   const dropdownRef = useRef(null);
   const notificationRef = useRef(null);
+
+  const handleGlobalRefresh = async () => {
+    try {
+      setIsRefreshing(true);
+      if (refreshEquipment) await refreshEquipment(true);
+      if (refreshLaboratories) await refreshLaboratories(true);
+      if (refreshMaintenance) await refreshMaintenance(true);
+      if (userId) {
+        const resp = await getNotifications(userId);
+        const list = Array.isArray(resp.data) ? resp.data : [];
+        setNotifications(list);
+        setCachedNotifs(list);
+      }
+    } catch (e) {
+      console.error("Failed to refresh system data:", e);
+    } finally {
+      setTimeout(() => setIsRefreshing(false), 500);
+    }
+  };
 
   useEffect(() => {
     if (cachedNotifs && cachedNotifs.length > 0) {
@@ -459,6 +483,19 @@ export default function AdminLayout() {
 </div>
 
           <div className="flex items-center gap-1 sm:gap-2 md:gap-4 flex-shrink-0">
+            <button
+              onClick={handleGlobalRefresh}
+              disabled={isRefreshing}
+              className="p-2 text-white rounded-lg transition-colors cursor-pointer hover:bg-white/20 disabled:opacity-50"
+              style={{
+                backgroundColor: "rgba(232, 155, 0, 0.7)",
+              }}
+              title="Refresh system data"
+              aria-label="Refresh data"
+            >
+              <RefreshCw size={22} className={isRefreshing ? "animate-spin" : ""} />
+            </button>
+
             <div
               className="relative"
               ref={notificationRef}

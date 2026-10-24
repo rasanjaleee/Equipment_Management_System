@@ -86,9 +86,32 @@ export default function BulkUploadEquipment() {
         }
       );
 
-      setResult(response.data);
-      setMessage('Bulk upload completed successfully.');
-      refreshEquipment(true);
+      const data = response.data;
+      setResult(data);
+
+      const successCount = data.successCount || 0;
+      const failedCount = data.failedCount || 0;
+      const errors = data.errors || [];
+
+      if (errors.length > 0 && successCount === 0 && (data.totalRows === 0 || !data.totalRows)) {
+        setError(errors[0] || 'Please upload a valid CSV file.');
+        setMessage('');
+      } else if (failedCount > 0 && successCount > 0) {
+        setMessage(`Bulk upload partially completed: ${successCount} equipment items added, ${failedCount} rows had errors.`);
+        setError('');
+      } else if (failedCount > 0 && successCount === 0) {
+        setError(`Bulk upload failed: none of the rows could be added. See error details below.`);
+        setMessage('');
+      } else if (successCount > 0 && failedCount === 0) {
+        setMessage(`Bulk upload completed successfully! All ${successCount} equipment items added.`);
+        setError('');
+      } else {
+        setMessage('');
+      }
+
+      if (successCount > 0 && refreshEquipment) {
+        refreshEquipment(true);
+      }
     } catch (err) {
       setError(
         err.response?.data?.message ||

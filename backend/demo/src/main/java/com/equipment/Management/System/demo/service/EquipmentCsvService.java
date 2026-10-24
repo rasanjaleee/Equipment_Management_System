@@ -69,6 +69,17 @@ public class EquipmentCsvService {
             validateRequiredHeaders(csvParser);
 
             for (CSVRecord record : csvParser) {
+                boolean isBlankRow = true;
+                for (String val : record) {
+                    if (val != null && !val.trim().isEmpty()) {
+                        isBlankRow = false;
+                        break;
+                    }
+                }
+                if (isBlankRow) {
+                    continue;
+                }
+
                 total++;
                 long actualRowNumber = record.getRecordNumber() + 1; // +1 because header is row 1
 

@@ -15,7 +15,9 @@ import {
   X,
   Bell,
   CalendarDays,
+  RefreshCw,
 } from "lucide-react";
+import { useData } from "../context/DataContext";
 import {
   getNotifications,
   markAsRead as markAsReadApi,
@@ -32,6 +34,9 @@ export default function TechnicianLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const { refreshEquipment, refreshLaboratories, refreshMaintenance } = useData() || {};
 
   const dropdownRef = useRef(null);
   const notificationRef = useRef(null);
@@ -40,6 +45,23 @@ export default function TechnicianLayout() {
   const username = loggedInUser?.username || "Technician";
   const userId = loggedInUser?.id;
   const avatarLetter = username ? username.charAt(0).toUpperCase() : "T";
+
+  const handleGlobalRefresh = async () => {
+    try {
+      setIsRefreshing(true);
+      if (refreshEquipment) await refreshEquipment(true);
+      if (refreshLaboratories) await refreshLaboratories(true);
+      if (refreshMaintenance) await refreshMaintenance(true);
+      if (userId) {
+        const resp = await getNotifications(userId);
+        setNotifications(resp.data || []);
+      }
+    } catch (e) {
+      console.error("Failed to refresh technician data:", e);
+    } finally {
+      setTimeout(() => setIsRefreshing(false), 500);
+    }
+  };
 
   // Initial Fetch of Notifications
   useEffect(() => {
@@ -360,6 +382,19 @@ export default function TechnicianLayout() {
           </div>
 
           <div className="flex items-center gap-4 flex-shrink-0">
+            {/* Global Refresh Button */}
+            <button
+              type="button"
+              onClick={handleGlobalRefresh}
+              disabled={isRefreshing}
+              className="p-2 text-white rounded-lg transition-colors hover:bg-orange-600/30 cursor-pointer disabled:opacity-50"
+              style={{ backgroundColor: "rgba(232, 155, 0, 0.7)" }}
+              title="Refresh system data"
+              aria-label="Refresh data"
+            >
+              <RefreshCw size={22} className={isRefreshing ? "animate-spin" : ""} />
+            </button>
+
             {/* Notification Bell Dropdown */}
             <div className="relative" ref={notificationRef}>
               <button
