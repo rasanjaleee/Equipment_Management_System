@@ -7,6 +7,8 @@ const DataContext = createContext(null);
 export const DataProvider = ({ children }) => {
   const [equipmentList, setEquipmentList] = useState([]);
   const [loadingEquipment, setLoadingEquipment] = useState(false);
+  const [homeStats, setHomeStats] = useState(null);
+  const [loadingHomeStats, setLoadingHomeStats] = useState(false);
 
   const [laboratories, setLaboratories] = useState([]);
   const [loadingLaboratories, setLoadingLaboratories] = useState(false);
@@ -43,6 +45,25 @@ export const DataProvider = ({ children }) => {
       return [];
     } finally {
       setLoadingEquipment(false);
+    }
+  }, []);
+
+  const refreshHomeStats = useCallback(async () => {
+    setLoadingHomeStats(true);
+    try {
+      const res = await axios.get(`${API_BASE_URL}/api/public/stats`);
+      const data = res.data || {};
+      setHomeStats({
+        borrowedItems: Number(data.borrowedItems) || 0,
+        pendingRequests: Number(data.pendingRequests) || 0,
+        totalEquipment: Number(data.totalEquipment) || 0,
+      });
+      return data;
+    } catch (err) {
+      console.error('Failed to load homepage stats:', err);
+      return null;
+    } finally {
+      setLoadingHomeStats(false);
     }
   }, []);
 
@@ -315,6 +336,9 @@ export const DataProvider = ({ children }) => {
     setEquipmentList,
     loadingEquipment,
     refreshEquipment,
+    homeStats,
+    loadingHomeStats,
+    refreshHomeStats,
 
     laboratories,
     setLaboratories,
@@ -385,6 +409,9 @@ export const useData = () => {
       equipmentList: [],
       loadingEquipment: false,
       refreshEquipment: async () => [],
+      homeStats: null,
+      loadingHomeStats: false,
+      refreshHomeStats: async () => null,
       laboratories: [],
       loadingLaboratories: false,
       refreshLaboratories: async () => [],

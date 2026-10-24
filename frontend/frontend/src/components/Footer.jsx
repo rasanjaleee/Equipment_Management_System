@@ -4,18 +4,18 @@ import logo from "/images/home_logo.png";
 
 const Footer = () => {
   return (
-    <footer className="bg-[#4b0000] text-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-5">
+    <footer className="bg-[#4b0000] text-white overflow-hidden">
+      <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6">
 
         {/* System Title */}
-        <div className="text-center mb-3">
+        <div className="mb-3 text-center">
           <h2 className="text-[13px] font-semibold tracking-wide">
             Faculty of Engineering Equipment Management System
           </h2>
         </div>
 
         {/* Content */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 items-start">
+        <div className="grid grid-cols-1 gap-6 text-left sm:grid-cols-2 md:grid-cols-4 md:items-start">
 
           {/* Logo + University */}
           <div className="flex items-start gap-3">
@@ -39,7 +39,7 @@ const Footer = () => {
                 Contact:{" "}
                 <a
                   href="mailto:thilina@eie.ruh.ac.lk"
-                  className="underline hover:text-gray-300 transition"
+                  className="break-all underline transition hover:text-gray-300"
                 >
                   thilina@eie.ruh.ac.lk
                 </a>

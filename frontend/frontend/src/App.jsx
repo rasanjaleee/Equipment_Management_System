@@ -35,6 +35,7 @@ import ReportsPage from './Pages/admin/ReportsPage';
 import AdminSettings from './Pages/admin/AdminSettings';
 import NotificationPage from './Pages/admin/NotificationPage';
 import MaintenanceNotice from './components/MaintenanceNotice';
+import Reports from './Pages/Reports';
 
 import TechnicianDashboard from './Pages/technician/TechnicianDashboard';
 import TechnicianEquipment from './Pages/technician/TechnicianEquipment';
@@ -75,11 +76,11 @@ function App() {
     !isTechnicianRoute;
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="app-shell min-h-screen bg-gray-50 flex flex-col overflow-x-hidden">
       <MaintenanceNotice />
       {shouldShowNavbar && <Navbar />}
 
-      <main className={`flex-grow ${shouldShowNavbar ? 'pt-16 sm:pt-20' : ''}`}>
+  <main className={`flex-grow w-full overflow-x-hidden ${shouldShowNavbar ? 'pt-16 sm:pt-20' : ''}`}>
         <Routes>
           {/* Public routes */}
           <Route path="/" element={<Landing />} />
@@ -114,6 +115,7 @@ function App() {
             <Route path="reports" element={<ReportsPage />} />
             <Route path="settings" element={<AdminSettings />} />
             <Route path="notifications" element={<NotificationPage />} />
+            <Route path="equipment-reports" element={<Reports />} />
             
             <Route
               path="users"
