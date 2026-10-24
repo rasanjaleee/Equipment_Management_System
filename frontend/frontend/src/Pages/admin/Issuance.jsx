@@ -598,12 +598,26 @@ export default function Issuance() {
     setFormMessage('Selected request loaded into the issuance form.');
   }
 
-  function handleApprove(request) {
+  async function handleApprove(request) {
     if (request.status !== 'PENDING') {
       setFormError('Only pending requests can be issued.');
       return;
     }
-    navigate('/issuance', { state: request.raw });
+    try {
+      setActionLoadingId(request.id);
+      setFormError('');
+      await updateBorrowRequestStatus(request, 'APPROVED');
+      const approvedRequest = { ...request, status: 'APPROVED' };
+      preloadFromRequest(approvedRequest);
+      await fetchBorrowRequests();
+      navigate('/issuance', {
+        state: { ...approvedRequest.raw, status: 'APPROVED' },
+      });
+    } catch (error) {
+      setFormError(error.response?.data?.message || error.response?.data || 'Failed to approve borrow request.');
+    } finally {
+      setActionLoadingId(null);
+    }
   }
 
   async function updateBorrowRequestStatus(request, status) {
@@ -649,6 +663,9 @@ export default function Issuance() {
 
   function validateIssuanceForm() {
     const nextErrors = {};
+    if (!selectedRequest || !selectedRequest.id || selectedRequest.status !== 'APPROVED') {
+      nextErrors.borrowRequestId = 'Select an approved borrow request before creating an issuance.';
+    }
     if (!form.issuanceId.trim()) {
       nextErrors.issuanceId = 'Issuance ID is required.';
     }
@@ -705,6 +722,7 @@ export default function Issuance() {
     }
 
     const payload = {
+      borrowRequestId: Number(selectedRequest.id),
       issuanceId: form.issuanceId.trim() || makeIssuanceId(selectedRequest?.id),
       issueDate: form.issueDate,
       returnDueDate: form.returnDueDate,
@@ -729,12 +747,8 @@ export default function Issuance() {
         headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
       });
 
-      if (selectedRequest) {
-        await updateBorrowRequestStatus(selectedRequest, 'APPROVED');
-        await fetchBorrowRequests();
-      }
-
-      setFormMessage('Issuance created successfully. Borrow request updated to Approved.');
+      await fetchBorrowRequests();
+      setFormMessage('Issuance created successfully.');
       setSelectedRequest(null);
       setDetailsRequest(null);
       setForm(defaultIssuanceForm);

@@ -6,6 +6,9 @@ import jakarta.validation.constraints.Positive;
 import java.time.LocalDate;
 
 public class IssuanceRequest {
+
+    @NotNull(message = "Borrow request ID is required")
+    private Long borrowRequestId;
     
     @NotBlank(message = "Issuance ID is required")
     private String issuanceId;
@@ -45,6 +48,14 @@ public class IssuanceRequest {
     // Getters and Setters
     public String getIssuanceId() {
         return issuanceId;
+    }
+
+    public Long getBorrowRequestId() {
+        return borrowRequestId;
+    }
+
+    public void setBorrowRequestId(Long borrowRequestId) {
+        this.borrowRequestId = borrowRequestId;
     }
 
     public void setIssuanceId(String issuanceId) {

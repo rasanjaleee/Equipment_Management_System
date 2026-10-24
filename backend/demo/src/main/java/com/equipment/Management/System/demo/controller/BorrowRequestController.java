@@ -7,6 +7,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.security.Principal;
 import java.util.List;
 import java.util.Map;
 
@@ -26,8 +27,9 @@ public class BorrowRequestController {
     }
 
     @PostMapping
-    public ResponseEntity<BorrowRequestResponse> createBorrowRequest(@RequestBody BorrowRequestCreateRequest request) {
-        BorrowRequestResponse created = borrowRequestService.createBorrowRequest(request);
+    public ResponseEntity<BorrowRequestResponse> createBorrowRequest(@RequestBody BorrowRequestCreateRequest request,
+                                                                    Principal principal) {
+        BorrowRequestResponse created = borrowRequestService.createBorrowRequest(request, principal.getName());
         return new ResponseEntity<>(created, HttpStatus.CREATED);
     }
 

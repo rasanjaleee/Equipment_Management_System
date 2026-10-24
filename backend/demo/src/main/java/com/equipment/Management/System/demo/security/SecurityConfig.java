@@ -69,6 +69,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/borrow-requests/**").authenticated()
                         .requestMatchers(HttpMethod.PATCH, "/api/borrow-requests/**").hasAnyAuthority("ROLE_ADMIN", "ADMIN")
 
+                        // Notifications are scoped to the authenticated recipient in the service.
+                        .requestMatchers(HttpMethod.GET, "/api/notifications/**").authenticated()
+                        .requestMatchers(HttpMethod.PATCH, "/api/notifications/**").authenticated()
+
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -81,7 +85,11 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(Arrays.asList("http://localhost:3000", "http://localhost:*"));
+        configuration.setAllowedOriginPatterns(Arrays.asList(
+                "http://localhost:*",
+                "http://127.0.0.1:*",
+                "http://192.168.43.*:*"
+        ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(true);

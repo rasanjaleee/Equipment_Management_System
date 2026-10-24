@@ -5,6 +5,7 @@ import java.time.LocalDate;
 public class IssuanceDTO {
     
     private Long id;
+    private Long borrowRequestId;
     private String issuanceId;
     private LocalDate issueDate;
     private LocalDate returnDueDate;
@@ -36,6 +37,14 @@ public class IssuanceDTO {
     // Getters and Setters
     public Long getId() {
         return id;
+    }
+
+    public Long getBorrowRequestId() {
+        return borrowRequestId;
+    }
+
+    public void setBorrowRequestId(Long borrowRequestId) {
+        this.borrowRequestId = borrowRequestId;
     }
 
     public void setId(Long id) {

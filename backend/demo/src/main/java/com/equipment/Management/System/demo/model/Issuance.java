@@ -14,6 +14,10 @@ public class Issuance {
     @Column(nullable = false, unique = true, length = 30)
     private String issuanceId;
 
+    @OneToOne(fetch = FetchType.LAZY, optional = true)
+    @JoinColumn(name = "borrow_request_id", unique = true)
+    private BorrowRequest borrowRequest;
+
     @Column(nullable = false)
     private LocalDate issueDate;
 
@@ -69,6 +73,14 @@ public class Issuance {
 
     public void setIssuanceId(String issuanceId) {
         this.issuanceId = issuanceId;
+    }
+
+    public BorrowRequest getBorrowRequest() {
+        return borrowRequest;
+    }
+
+    public void setBorrowRequest(BorrowRequest borrowRequest) {
+        this.borrowRequest = borrowRequest;
     }
 
     public LocalDate getIssueDate() {

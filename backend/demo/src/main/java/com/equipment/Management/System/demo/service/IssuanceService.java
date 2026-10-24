@@ -2,188 +2,279 @@ package com.equipment.Management.System.demo.service;
 
 import com.equipment.Management.System.demo.dto.IssuanceDTO;
 import com.equipment.Management.System.demo.dto.IssuanceRequest;
+import com.equipment.Management.System.demo.dto.ReturnRequest;
+import com.equipment.Management.System.demo.model.BorrowRequest;
 import com.equipment.Management.System.demo.model.Equipment;
 import com.equipment.Management.System.demo.model.Issuance;
 import com.equipment.Management.System.demo.model.User;
+import com.equipment.Management.System.demo.repository.BorrowRequestRepository;
 import com.equipment.Management.System.demo.repository.EquipmentRepository;
 import com.equipment.Management.System.demo.repository.IssuanceRepository;
-import com.equipment.Management.System.demo.repository.UserRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDate;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 public class IssuanceService {
 
-    @Autowired
-    private IssuanceRepository issuanceRepository;
+    private static final List<String> ACTIVE_STATUSES = List.of("ISSUED", "OVERDUE");
 
-    @Autowired
-    private EquipmentRepository equipmentRepository;
+    private final IssuanceRepository issuanceRepository;
+    private final EquipmentRepository equipmentRepository;
+    private final BorrowRequestRepository borrowRequestRepository;
 
-    @Autowired
-    private UserRepository userRepository;
+    public IssuanceService(IssuanceRepository issuanceRepository,
+                           EquipmentRepository equipmentRepository,
+                           BorrowRequestRepository borrowRequestRepository) {
+        this.issuanceRepository = issuanceRepository;
+        this.equipmentRepository = equipmentRepository;
+        this.borrowRequestRepository = borrowRequestRepository;
+    }
 
-    // ===================== CREATE =====================
     @Transactional
     public IssuanceDTO createIssuance(IssuanceRequest request) {
+        validateCreateRequest(request);
 
-        Equipment equipment = equipmentRepository.findById(request.getEquipmentId())
-                .orElseThrow(() -> new RuntimeException(
-                        "Equipment not found with ID: " + request.getEquipmentId()));
+        BorrowRequest requestedBorrow = borrowRequestRepository.findById(request.getBorrowRequestId())
+                .orElseThrow(() -> notFound("Borrow request not found."));
 
-        User user = userRepository.findById(request.getUserId())
-                .orElseThrow(() -> new RuntimeException(
-                        "User not found with ID: " + request.getUserId()));
+        Equipment equipment = equipmentRepository.findByIdForUpdate(requestedBorrow.getEquipment().getId())
+                .orElseThrow(() -> notFound("Equipment not found."));
 
-        if (issuanceRepository.findByIssuanceId(request.getIssuanceId()).isPresent()) {
-            throw new RuntimeException(
-                    "Issuance ID already exists: " + request.getIssuanceId());
+        BorrowRequest borrowRequest = borrowRequestRepository.findByIdForUpdate(request.getBorrowRequestId())
+                .orElseThrow(() -> notFound("Borrow request not found."));
+
+        if (!"APPROVED".equalsIgnoreCase(borrowRequest.getStatus())) {
+            throw conflict("Only an approved borrow request can be issued.");
+        }
+        if (borrowRequest.getRequester() == null) {
+            throw conflict("The approved borrow request is not linked to a user account.");
+        }
+        if (issuanceRepository.findByBorrowRequest_Id(borrowRequest.getId()).isPresent()) {
+            throw conflict("This borrow request already has an issuance.");
+        }
+
+        List<Issuance> conflicts = issuanceRepository.findOverlappingActiveIssuances(
+                equipment.getId(), request.getIssueDate(), request.getReturnDueDate(), ACTIVE_STATUSES);
+        if (!conflicts.isEmpty()) {
+            throw conflict("Equipment is already issued for the selected date range.");
         }
 
         Issuance issuance = new Issuance();
-        issuance.setIssuanceId(request.getIssuanceId());
+        issuance.setBorrowRequest(borrowRequest);
+        issuance.setIssuanceId(request.getIssuanceId().trim());
         issuance.setIssueDate(request.getIssueDate());
         issuance.setReturnDueDate(request.getReturnDueDate());
-        issuance.setStatus(request.getStatus());
+        issuance.setStatus("ISSUED");
         issuance.setEquipment(equipment);
         issuance.setQtyIssued(request.getQtyIssued());
-        issuance.setConditionAtIssue(request.getConditionAtIssue());
-        issuance.setUser(user);
+        issuance.setConditionAtIssue(request.getConditionAtIssue().trim());
+        issuance.setUser(borrowRequest.getRequester());
         issuance.setRoleDept(request.getRoleDept());
         issuance.setContact(request.getContact());
-        issuance.setReturnDate(request.getReturnDate());
-        issuance.setConditionOnReturn(request.getConditionOnReturn());
         issuance.setRemarks(request.getRemarks());
 
-        Issuance saved = issuanceRepository.save(issuance);
-        return convertToDTO(saved);
+        if (issuanceRepository.findByIssuanceId(issuance.getIssuanceId()).isPresent()) {
+            throw conflict("Issuance ID already exists: " + issuance.getIssuanceId());
+        }
+
+        return toDto(issuanceRepository.save(issuance));
     }
 
-    // ===================== READ =====================
+    @Transactional(readOnly = true)
     public List<IssuanceDTO> getAllIssuances() {
-        return issuanceRepository.findAll()
-                .stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
+        return issuanceRepository.findAll().stream().map(this::toDto).toList();
     }
 
+    @Transactional(readOnly = true)
     public IssuanceDTO getIssuanceById(Long id) {
-        Issuance issuance = issuanceRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException(
-                        "Issuance not found with ID: " + id));
-        return convertToDTO(issuance);
+        return toDto(findIssuance(id));
     }
 
+    @Transactional(readOnly = true)
     public IssuanceDTO getIssuanceByIssuanceId(String issuanceId) {
-        Issuance issuance = issuanceRepository.findByIssuanceId(issuanceId)
-                .orElseThrow(() -> new RuntimeException(
-                        "Issuance not found with Issuance ID: " + issuanceId));
-        return convertToDTO(issuance);
+        return toDto(issuanceRepository.findByIssuanceId(issuanceId)
+                .orElseThrow(() -> notFound("Issuance not found with Issuance ID: " + issuanceId)));
     }
 
+    @Transactional(readOnly = true)
     public List<IssuanceDTO> getIssuancesByStatus(String status) {
-        return issuanceRepository.findByStatus(status)
-                .stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
+        String requestedStatus = normalizeStatus(status);
+        return issuanceRepository.findAll().stream()
+                .filter(issuance -> requestedStatus.equals(effectiveStatus(issuance)))
+                .map(this::toDto)
+                .toList();
     }
 
+    @Transactional(readOnly = true)
     public List<IssuanceDTO> getIssuancesByUserId(Long userId) {
-        return issuanceRepository.findByUserId(userId)
-                .stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
+        return issuanceRepository.findByUserId(userId).stream().map(this::toDto).toList();
     }
 
+    @Transactional(readOnly = true)
     public List<IssuanceDTO> getIssuancesByEquipmentId(Long equipmentId) {
-       return issuanceRepository.findByEquipment_Id(equipmentId)
-        .stream()
-        .map(this::convertToDTO)
-        .collect(Collectors.toList());
+        return issuanceRepository.findByEquipment_Id(equipmentId).stream().map(this::toDto).toList();
     }
 
-    // ===================== UPDATE =====================
+    @Transactional
+    public IssuanceDTO returnIssuance(Long id, ReturnRequest request) {
+        if (request == null || request.getReturnDate() == null
+                || request.getConditionOnReturn() == null
+                || request.getConditionOnReturn().isBlank()) {
+            throw badRequest("Return date and condition are required.");
+        }
+
+        Issuance issuance = issuanceRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> notFound("Issuance not found with ID: " + id));
+        String status = effectiveStatus(issuance);
+        if ("RETURNED".equals(status)) {
+            throw conflict("This issuance has already been returned.");
+        }
+        if (!"ISSUED".equals(status) && !"OVERDUE".equals(status)) {
+            throw conflict("This issuance cannot be returned from its current status.");
+        }
+        if (request.getReturnDate().isBefore(issuance.getIssueDate())
+                || request.getReturnDate().isAfter(LocalDate.now())) {
+            throw badRequest("Return date must be between the issue date and today.");
+        }
+
+        issuance.setReturnDate(request.getReturnDate());
+        issuance.setConditionOnReturn(request.getConditionOnReturn().trim());
+        issuance.setRemarks(request.getRemarks());
+        issuance.setStatus("RETURNED");
+        return toDto(issuanceRepository.save(issuance));
+    }
+
     @Transactional
     public IssuanceDTO updateIssuance(Long id, IssuanceRequest request) {
-
-        Issuance issuance = issuanceRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException(
-                        "Issuance not found with ID: " + id));
-
-        // Update Equipment if changed
-        if (!issuance.getEquipment().getId().equals(request.getEquipmentId())) {
-            Equipment equipment = equipmentRepository.findById(request.getEquipmentId())
-                    .orElseThrow(() -> new RuntimeException(
-                            "Equipment not found with ID: " + request.getEquipmentId()));
-            issuance.setEquipment(equipment);
+        Issuance current = findIssuance(id);
+        Equipment equipment = equipmentRepository.findByIdForUpdate(current.getEquipment().getId())
+                .orElseThrow(() -> notFound("Equipment not found."));
+        Issuance issuance = issuanceRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> notFound("Issuance not found with ID: " + id));
+        if ("RETURNED".equals(effectiveStatus(issuance))) {
+            throw conflict("A returned issuance cannot be edited.");
         }
-
-        // Update User if changed
-        if (!issuance.getUser().getId().equals(request.getUserId())) {
-            User user = userRepository.findById(request.getUserId())
-                    .orElseThrow(() -> new RuntimeException(
-                            "User not found with ID: " + request.getUserId()));
-            issuance.setUser(user);
+        validateDates(request.getIssueDate(), request.getReturnDueDate());
+        if (request.getQtyIssued() == null || request.getQtyIssued() <= 0) {
+            throw badRequest("Quantity must be positive.");
         }
+        if (request.getIssuanceId() == null || request.getIssuanceId().isBlank()) {
+            throw badRequest("Issuance ID is required.");
+        }
+        if (!issuanceRepository.findOverlappingActiveIssuancesExcept(
+                id, equipment.getId(), request.getIssueDate(), request.getReturnDueDate(),
+                ACTIVE_STATUSES).isEmpty()) {
+            throw conflict("Equipment is already issued for the selected date range.");
+        }
+        issuanceRepository.findByIssuanceId(request.getIssuanceId()).ifPresent(existing -> {
+            if (!existing.getId().equals(id)) {
+                throw conflict("Issuance ID already exists: " + request.getIssuanceId());
+            }
+        });
 
-        issuance.setIssuanceId(request.getIssuanceId());
+        issuance.setIssuanceId(request.getIssuanceId().trim());
         issuance.setIssueDate(request.getIssueDate());
         issuance.setReturnDueDate(request.getReturnDueDate());
-        issuance.setStatus(request.getStatus());
         issuance.setQtyIssued(request.getQtyIssued());
         issuance.setConditionAtIssue(request.getConditionAtIssue());
         issuance.setRoleDept(request.getRoleDept());
         issuance.setContact(request.getContact());
-        issuance.setReturnDate(request.getReturnDate());
-        issuance.setConditionOnReturn(request.getConditionOnReturn());
         issuance.setRemarks(request.getRemarks());
-
-        Issuance updated = issuanceRepository.save(issuance);
-        return convertToDTO(updated);
+        return toDto(issuanceRepository.save(issuance));
     }
 
-    // ===================== DELETE =====================
     @Transactional
     public void deleteIssuance(Long id) {
-        if (!issuanceRepository.existsById(id)) {
-            throw new RuntimeException("Issuance not found with ID: " + id);
+        Issuance issuance = findIssuance(id);
+        if ("ISSUED".equals(effectiveStatus(issuance)) || "OVERDUE".equals(effectiveStatus(issuance))) {
+            throw conflict("An active issuance cannot be deleted; return it first.");
         }
-        issuanceRepository.deleteById(id);
+        issuanceRepository.delete(issuance);
     }
 
-    // ===================== DTO CONVERSION =====================
-    private IssuanceDTO convertToDTO(Issuance issuance) {
+    private Issuance findIssuance(Long id) {
+        return issuanceRepository.findById(id)
+                .orElseThrow(() -> notFound("Issuance not found with ID: " + id));
+    }
 
+    private void validateCreateRequest(IssuanceRequest request) {
+        if (request == null || request.getBorrowRequestId() == null) {
+            throw badRequest("Borrow request ID is required.");
+        }
+        if (request.getIssuanceId() == null || request.getIssuanceId().isBlank()) {
+            throw badRequest("Issuance ID is required.");
+        }
+        if (request.getConditionAtIssue() == null || request.getConditionAtIssue().isBlank()) {
+            throw badRequest("Condition at issue is required.");
+        }
+        if (request.getQtyIssued() == null || request.getQtyIssued() <= 0) {
+            throw badRequest("Quantity must be positive.");
+        }
+        validateDates(request.getIssueDate(), request.getReturnDueDate());
+    }
+
+    private void validateDates(LocalDate issueDate, LocalDate dueDate) {
+        if (issueDate == null || dueDate == null) {
+            throw badRequest("Issue date and return due date are required.");
+        }
+        if (dueDate.isBefore(issueDate)) {
+            throw badRequest("Return due date must not be before issue date.");
+        }
+    }
+
+    private String effectiveStatus(Issuance issuance) {
+        if ("RETURNED".equalsIgnoreCase(issuance.getStatus())) {
+            return "RETURNED";
+        }
+        if (issuance.getReturnDate() == null
+                && issuance.getReturnDueDate() != null
+                && issuance.getReturnDueDate().isBefore(LocalDate.now())) {
+            return "OVERDUE";
+        }
+        return normalizeStatus(issuance.getStatus());
+    }
+
+    private String normalizeStatus(String status) {
+        return status == null ? "" : status.trim().toUpperCase();
+    }
+
+    private IssuanceDTO toDto(Issuance issuance) {
         IssuanceDTO dto = new IssuanceDTO();
-
         dto.setId(issuance.getId());
+        dto.setBorrowRequestId(issuance.getBorrowRequest() == null ? null : issuance.getBorrowRequest().getId());
         dto.setIssuanceId(issuance.getIssuanceId());
         dto.setIssueDate(issuance.getIssueDate());
         dto.setReturnDueDate(issuance.getReturnDueDate());
-        dto.setStatus(issuance.getStatus());
-
-        // Equipment Details
+        dto.setStatus(effectiveStatus(issuance));
         dto.setEquipmentId(issuance.getEquipment().getId());
         dto.setEquipmentName(issuance.getEquipment().getEquipmentName());
         dto.setQtyIssued(issuance.getQtyIssued());
         dto.setConditionAtIssue(issuance.getConditionAtIssue());
-
-        // User Details
         dto.setUserId(issuance.getUser().getId());
         dto.setUserName(issuance.getUser().getUsername());
         dto.setUserEmail(issuance.getUser().getEmail());
         dto.setRoleDept(issuance.getRoleDept());
         dto.setContact(issuance.getContact());
-
-        // Return Details
         dto.setReturnDate(issuance.getReturnDate());
         dto.setConditionOnReturn(issuance.getConditionOnReturn());
         dto.setRemarks(issuance.getRemarks());
-
         return dto;
+    }
+
+    private ResponseStatusException badRequest(String message) {
+        return new ResponseStatusException(HttpStatus.BAD_REQUEST, message);
+    }
+
+    private ResponseStatusException notFound(String message) {
+        return new ResponseStatusException(HttpStatus.NOT_FOUND, message);
+    }
+
+    private ResponseStatusException conflict(String message) {
+        return new ResponseStatusException(HttpStatus.CONFLICT, message);
     }
 }

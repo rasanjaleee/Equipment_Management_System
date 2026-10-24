@@ -2,6 +2,7 @@ package com.equipment.Management.System.demo.controller;
 
 import com.equipment.Management.System.demo.dto.IssuanceDTO;
 import com.equipment.Management.System.demo.dto.IssuanceRequest;
+import com.equipment.Management.System.demo.dto.ReturnRequest;
 import com.equipment.Management.System.demo.service.IssuanceService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -90,6 +91,18 @@ public class IssuanceController {
         try {
             IssuanceDTO issuance = issuanceService.updateIssuance(id, request);
             return new ResponseEntity<>(issuance, HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @PostMapping("/{id}/return")
+    public ResponseEntity<IssuanceDTO> returnIssuance(@PathVariable Long id,
+                                                       @RequestBody ReturnRequest request) {
+        try {
+            return ResponseEntity.ok(issuanceService.returnIssuance(id, request));
+        } catch (org.springframework.web.server.ResponseStatusException e) {
+            return new ResponseEntity<>(null, e.getStatusCode());
         } catch (Exception e) {
             return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
         }
