@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 
-import {Plus,Save,X,Package,Edit,Trash2,ArrowLeft,Eye,QrCode} from 'lucide-react';
+import {Plus,Save,X,Package,Edit,Trash2,ArrowLeft,Eye,QrCode,RefreshCw} from 'lucide-react';
 
 import axios from 'axios';
 
@@ -940,6 +940,44 @@ const formatStatus = (status) =>
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');
 
+  const [isRegeneratingSingleQr, setIsRegeneratingSingleQr] = useState(false);
+
+  const handleRegenerateSingleQr = async (id) => {
+    if (!id) return;
+    try {
+      setIsRegeneratingSingleQr(true);
+      const token = localStorage.getItem('token');
+      const response = await axios.post(`${API_BASE_URL}/api/equipment/${id}/regenerate-qr`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      const updatedEquipment = response.data?.equipment;
+      if (updatedEquipment && viewingItem && viewingItem.id === id) {
+        setViewingItem(updatedEquipment);
+      }
+
+      if (refreshEquipment) {
+        await refreshEquipment(true);
+      }
+
+      Swal.fire({
+        title: 'Success!',
+        text: response.data?.message || 'QR code regenerated successfully.',
+        icon: 'success',
+        timer: 2000,
+        showConfirmButton: false
+      });
+    } catch (err) {
+      Swal.fire({
+        title: 'Error',
+        text: err.response?.data?.message || err.message || 'Failed to regenerate QR code',
+        icon: 'error'
+      });
+    } finally {
+      setIsRegeneratingSingleQr(false);
+    }
+  };
+
   const [isRegeneratingQr, setIsRegeneratingQr] = useState(false);
 
   const handleRegenerateAllQr = async () => {
@@ -962,7 +1000,9 @@ const formatStatus = (status) =>
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      await fetchEquipment(true);
+      if (refreshEquipment) {
+        await refreshEquipment(true);
+      }
 
       Swal.fire({
         title: 'Success!',
@@ -2172,12 +2212,31 @@ const formatStatus = (status) =>
                             >
                               Download
                             </button>
+                            <button
+                              type="button"
+                              disabled={isRegeneratingSingleQr}
+                              onClick={() => handleRegenerateSingleQr(viewingItem.id)}
+                              className="text-xs bg-amber-600 hover:bg-amber-700 text-white font-medium px-3 py-1 rounded transition shadow-sm inline-flex items-center gap-1 disabled:opacity-50 cursor-pointer"
+                              title="Regenerate this equipment's QR code"
+                            >
+                              <RefreshCw size={12} className={isRegeneratingSingleQr ? 'animate-spin' : ''} />
+                              {isRegeneratingSingleQr ? 'Syncing...' : 'Regenerate'}
+                            </button>
                           </div>
                         </>
                       ) : (
                         <div className="text-center text-gray-400">
                           <QrCode size={36} className="mx-auto mb-1 text-gray-300" />
-                          <p className="text-xs">No QR Code available</p>
+                          <p className="text-xs mb-2">No QR Code available</p>
+                          <button
+                            type="button"
+                            disabled={isRegeneratingSingleQr}
+                            onClick={() => handleRegenerateSingleQr(viewingItem.id)}
+                            className="text-xs bg-amber-600 hover:bg-amber-700 text-white font-medium px-3 py-1 rounded transition shadow-sm inline-flex items-center gap-1 disabled:opacity-50 cursor-pointer"
+                          >
+                            <RefreshCw size={12} className={isRegeneratingSingleQr ? 'animate-spin' : ''} />
+                            {isRegeneratingSingleQr ? 'Generating...' : 'Generate QR'}
+                          </button>
                         </div>
                       )}
                     </div>

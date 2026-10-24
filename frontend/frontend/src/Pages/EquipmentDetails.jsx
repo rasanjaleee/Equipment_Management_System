@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
+import Swal from 'sweetalert2';
 import { API_BASE_URL, getImageUrl } from '../services/api';
-import { ArrowLeft, Loader, Edit, Trash2, Calendar } from 'lucide-react';
+import { ArrowLeft, Loader, Edit, Trash2, Calendar, QrCode, RefreshCw } from 'lucide-react';
 import BorrowRequestForm from '../components/BorrowRequestForm';
 import { useData } from '../context/DataContext';
 
@@ -90,6 +91,47 @@ const currentUserRole = String(loggedInUser?.role || '')
 
 const canManageAccessories =
   currentUserRole === 'ADMIN' || currentUserRole === 'SUPER_ADMIN';
+
+const canManageEquipment =
+  currentUserRole === 'ADMIN' || currentUserRole === 'SUPER_ADMIN' || currentUserRole === 'TECHNICIAN';
+
+const [isRegeneratingSingleQr, setIsRegeneratingSingleQr] = useState(false);
+
+const handleRegenerateSingleQr = async (equipmentId) => {
+  if (!equipmentId) return;
+  try {
+    setIsRegeneratingSingleQr(true);
+    const token = localStorage.getItem('token');
+    const response = await axios.post(`${API_BASE_URL}/api/equipment/${equipmentId}/regenerate-qr`, {}, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+
+    const updated = response.data?.equipment;
+    if (updated) {
+      setEquipment(updated);
+    } else {
+      await fetchSingleEquipment();
+    }
+    if (refreshEquipment) {
+      refreshEquipment();
+    }
+    Swal.fire({
+      title: 'Success!',
+      text: response.data?.message || 'QR code regenerated successfully.',
+      icon: 'success',
+      timer: 2000,
+      showConfirmButton: false
+    });
+  } catch (err) {
+    Swal.fire({
+      title: 'Error',
+      text: err.response?.data?.message || err.message || 'Failed to regenerate QR code',
+      icon: 'error'
+    });
+  } finally {
+    setIsRegeneratingSingleQr(false);
+  }
+};
 
   useEffect(() => {
     if (id) {
@@ -474,7 +516,20 @@ const handleDeleteAccessory = async (accessory) => {
             </div>
 
             <div className="pt-3 sm:pt-4">
-              <p className="font-semibold mb-2">QR Code</p>
+              <div className="flex items-center justify-between mb-2 max-w-xs">
+                <p className="font-semibold text-gray-900">QR Code</p>
+                {canManageEquipment && equipment?.id && (
+                  <button
+                    onClick={() => handleRegenerateSingleQr(equipment.id)}
+                    disabled={isRegeneratingSingleQr}
+                    className="text-xs bg-amber-500 hover:bg-amber-600 text-white font-medium px-2.5 py-1 rounded inline-flex items-center gap-1 shadow-sm transition-colors cursor-pointer disabled:opacity-50"
+                    title="Regenerate this equipment's QR code"
+                  >
+                    <RefreshCw size={12} className={isRegeneratingSingleQr ? 'animate-spin' : ''} />
+                    <span>{isRegeneratingSingleQr ? 'Regenerating...' : 'Regenerate QR'}</span>
+                  </button>
+                )}
+              </div>
 
               {equipment.qrCode ? (
                 <img
@@ -483,7 +538,19 @@ const handleDeleteAccessory = async (accessory) => {
                   className="w-32 h-32 sm:w-48 sm:h-48 object-contain border rounded p-2 bg-white"
                 />
               ) : (
-                <p className="text-gray-500">QR not available</p>
+                <div className="border rounded p-3 text-center bg-gray-50 max-w-xs">
+                  <p className="text-gray-500 text-sm mb-2">QR not available</p>
+                  {canManageEquipment && equipment?.id && (
+                    <button
+                      onClick={() => handleRegenerateSingleQr(equipment.id)}
+                      disabled={isRegeneratingSingleQr}
+                      className="text-xs bg-amber-500 hover:bg-amber-600 text-white font-medium px-3 py-1 rounded inline-flex items-center gap-1 shadow-sm cursor-pointer disabled:opacity-50"
+                    >
+                      <RefreshCw size={12} className={isRegeneratingSingleQr ? 'animate-spin' : ''} />
+                      <span>{isRegeneratingSingleQr ? 'Generating...' : 'Generate QR'}</span>
+                    </button>
+                  )}
+                </div>
               )}
             </div>
 
