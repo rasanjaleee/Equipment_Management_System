@@ -10,6 +10,7 @@ import com.equipment.Management.System.demo.model.User;
 import com.equipment.Management.System.demo.repository.BorrowRequestRepository;
 import com.equipment.Management.System.demo.repository.EquipmentRepository;
 import com.equipment.Management.System.demo.repository.IssuanceRepository;
+import com.equipment.Management.System.demo.repository.UserRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,13 +27,26 @@ public class IssuanceService {
     private final IssuanceRepository issuanceRepository;
     private final EquipmentRepository equipmentRepository;
     private final BorrowRequestRepository borrowRequestRepository;
+    private final UserRepository userRepository;
+
+    public IssuanceService(IssuanceRepository issuanceRepository,
+                           EquipmentRepository equipmentRepository,
+                           BorrowRequestRepository borrowRequestRepository,
+                           UserRepository userRepository) {
+        this.issuanceRepository = issuanceRepository;
+        this.equipmentRepository = equipmentRepository;
+        this.borrowRequestRepository = borrowRequestRepository;
+        this.userRepository = userRepository;
+    }
 
     public IssuanceService(IssuanceRepository issuanceRepository,
                            EquipmentRepository equipmentRepository,
                            BorrowRequestRepository borrowRequestRepository) {
-        this.issuanceRepository = issuanceRepository;
-        this.equipmentRepository = equipmentRepository;
-        this.borrowRequestRepository = borrowRequestRepository;
+        this(issuanceRepository, equipmentRepository, borrowRequestRepository, null);
+    }
+
+    public IssuanceDTO createIssuance(IssuanceRequest request, String ignoredUsername) {
+        return createIssuance(request);
     }
 
     @Transactional
@@ -118,6 +132,19 @@ public class IssuanceService {
     @Transactional(readOnly = true)
     public List<IssuanceDTO> getIssuancesByEquipmentId(Long equipmentId) {
         return issuanceRepository.findByEquipment_Id(equipmentId).stream().map(this::toDto).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<IssuanceDTO> getMyIssuances(String username) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> notFound("User not found."));
+        return issuanceRepository.findByUser_Id(user.getId()).stream().map(this::toDto).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public IssuanceDTO getCurrentIssuanceByEquipmentId(Long equipmentId) {
+        return toDto(issuanceRepository.findFirstByEquipment_IdAndStatusIgnoreCase(equipmentId, "ISSUED")
+                .orElseThrow(() -> notFound("No current issuance found for equipment ID: " + equipmentId)));
     }
 
     @Transactional

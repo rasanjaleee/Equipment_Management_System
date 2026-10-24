@@ -1,6 +1,5 @@
 package com.equipment.Management.System.demo.security;
 
-
 import com.equipment.Management.System.demo.filter.JwtFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -20,7 +19,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import java.util.Arrays;
+import java.util.List;
 
 @EnableMethodSecurity
 @Configuration
@@ -29,54 +28,124 @@ public class SecurityConfig {
     @Autowired
     private JwtFilter jwtFilter;
 
+    @Autowired
+    private com.equipment.Management.System.demo.filter.MaintenanceModeFilter maintenanceModeFilter;
+
     @Bean
-    public PasswordEncoder passwordencoder(){
+    public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
     @Bean
-    public AuthenticationManager autheniticationmanager(AuthenticationConfiguration config) throws Exception{
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
     }
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+
         http
                 .cors(Customizer.withDefaults())
                 .csrf(csrf -> csrf.disable())
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                )
                 .authorizeHttpRequests(auth -> auth
 
-                        // ✅ allow BOTH styles (so login won't break)
+                        // PUBLIC
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
-
-                        // ✅ allow preflight
+                        .requestMatchers("/api/admin/settings/maintenance-status").permitAll()
+                        .requestMatchers("/error").permitAll()
+                        .requestMatchers("/uploads/**").permitAll()
+                        .requestMatchers("/ws/**").permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                        // ✅ Equipment APIs
-                        .requestMatchers(HttpMethod.GET, "/api/equipment/**").authenticated()
-                        .requestMatchers(HttpMethod.POST, "/api/equipment/**").hasAnyAuthority("ROLE_ADMIN", "ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/api/equipment/**").hasAnyAuthority("ROLE_ADMIN", "ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/api/equipment/**").hasAnyAuthority("ROLE_ADMIN", "ADMIN")
+                        // LAB APIs
+                        .requestMatchers("/api/lab/**").permitAll()
 
-                        // ✅ Issuance APIs
-                        .requestMatchers(HttpMethod.GET, "/api/issuances/**").authenticated()
-                        .requestMatchers(HttpMethod.POST, "/api/issuances/**").hasAnyAuthority("ROLE_ADMIN", "ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/api/issuances/**").hasAnyAuthority("ROLE_ADMIN", "ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/api/issuances/**").hasAnyAuthority("ROLE_ADMIN", "ADMIN")
+                        // ADMIN
+                        .requestMatchers("/api/admin/**").hasAnyRole("SUPER_ADMIN", "ADMIN")
 
-                        // ✅ Borrow request APIs
-                        .requestMatchers(HttpMethod.GET, "/api/borrow-requests/**").hasAnyAuthority("ROLE_ADMIN", "ADMIN")
-                        .requestMatchers(HttpMethod.POST, "/api/borrow-requests/**").authenticated()
-                        .requestMatchers(HttpMethod.PATCH, "/api/borrow-requests/**").hasAnyAuthority("ROLE_ADMIN", "ADMIN")
+                        // EQUIPMENT (Public read for QR scans/catalog, restricted write)
+                        .requestMatchers(HttpMethod.GET, "/api/equipment/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/equipment/**").hasAnyRole("SUPER_ADMIN", "ADMIN", "TECHNICIAN")
+                        .requestMatchers(HttpMethod.PUT, "/api/equipment/**").hasAnyRole("SUPER_ADMIN", "ADMIN", "TECHNICIAN")
+                        .requestMatchers(HttpMethod.PATCH, "/api/equipment/**").hasAnyRole("SUPER_ADMIN", "ADMIN", "TECHNICIAN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/equipment/**").hasAnyRole("SUPER_ADMIN", "ADMIN", "TECHNICIAN")
 
-                        // Notifications are scoped to the authenticated recipient in the service.
+                                // EQUIPMENT ACCESSORIES
+                                .requestMatchers(HttpMethod.GET, "/api/equipment-accessories/**")
+                                .permitAll()
+                                .requestMatchers(HttpMethod.POST, "/api/equipment-accessories/**")
+                                .hasAnyRole("SUPER_ADMIN", "ADMIN")
+                                .requestMatchers(HttpMethod.PUT, "/api/equipment-accessories/**")
+                                .hasAnyRole("SUPER_ADMIN", "ADMIN")
+                                .requestMatchers(HttpMethod.DELETE, "/api/equipment-accessories/**")
+                                .hasAnyRole("SUPER_ADMIN", "ADMIN")
+
+                        // MAINTENANCE
+                        .requestMatchers(HttpMethod.GET, "/api/maintenance/**").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/maintenance/**").hasAnyRole("SUPER_ADMIN", "ADMIN", "TECHNICIAN")
+                        .requestMatchers(HttpMethod.PUT, "/api/maintenance/**").hasAnyRole("SUPER_ADMIN", "ADMIN", "TECHNICIAN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/maintenance/**").hasAnyRole("SUPER_ADMIN", "ADMIN", "TECHNICIAN")
+
+                        // ACTIVITY LOGS
+                        .requestMatchers(HttpMethod.GET, "/api/activity-logs/**").hasAnyRole("SUPER_ADMIN", "ADMIN", "TECHNICIAN")
+
+                                // ISSUANCES
+
+// Logged-in user can view only their own issuances
+                                .requestMatchers(HttpMethod.GET, "/api/issuances/my")
+                                .authenticated()
+
+// Admins can view all other issuance endpoints
+                                .requestMatchers(HttpMethod.GET, "/api/issuances/**")
+                                .hasAnyRole("SUPER_ADMIN", "ADMIN")
+
+                                .requestMatchers(HttpMethod.POST, "/api/issuances/**")
+                                .hasAnyRole("SUPER_ADMIN", "ADMIN")
+
+                                .requestMatchers(HttpMethod.PUT, "/api/issuances/**")
+                                .hasAnyRole("SUPER_ADMIN", "ADMIN")
+
+                                .requestMatchers(HttpMethod.DELETE, "/api/issuances/**")
+                                .hasAnyRole("SUPER_ADMIN", "ADMIN")
+
+                                // BORROW REQUESTS
+
+// Logged-in users can view their own borrow requests
+                                .requestMatchers(HttpMethod.GET, "/api/borrow-requests/my")
+                                .authenticated()
+
+// Admins and technicians can view the equipment calendar
+                                .requestMatchers(HttpMethod.GET, "/api/borrow-requests/calendar")
+                                .hasAnyRole("SUPER_ADMIN", "ADMIN", "TECHNICIAN")
+
+// Only admins can view all other borrow requests
+                                .requestMatchers(HttpMethod.GET, "/api/borrow-requests/**")
+                                .hasAnyRole("SUPER_ADMIN", "ADMIN")
+
+// Logged-in users can create borrow requests
+                                .requestMatchers(HttpMethod.POST, "/api/borrow-requests/**")
+                                .authenticated()
+
+// Only admins can approve/reject requests
+                                .requestMatchers(HttpMethod.PATCH, "/api/borrow-requests/**")
+                                .hasAnyRole("SUPER_ADMIN", "ADMIN")
+
+                        // REPORTS
+                        .requestMatchers(HttpMethod.GET, "/api/reports/**").hasAnyRole("SUPER_ADMIN", "ADMIN")
+
+                        // NOTIFICATIONS
                         .requestMatchers(HttpMethod.GET, "/api/notifications/**").authenticated()
-                        .requestMatchers(HttpMethod.PATCH, "/api/notifications/**").authenticated()
+                        .requestMatchers(HttpMethod.PUT, "/api/notifications/**").authenticated()
 
                         .anyRequest().authenticated()
                 )
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(maintenanceModeFilter, JwtFilter.class)
                 .formLogin(form -> form.disable());
 
         return http.build();
@@ -84,27 +153,31 @@ public class SecurityConfig {
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
+
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(Arrays.asList(
+
+        configuration.setAllowedOriginPatterns(List.of(
                 "http://localhost:*",
                 "http://127.0.0.1:*",
-                "http://192.168.43.*:*"
+                "http://192.168.43.*:*",
+                "https://*.choreoapps.dev",
+                "https://*.choreo.org",
+                "https://*.vercel.app",
+                "https://*.onrender.com"
         ));
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(Arrays.asList("*"));
+
+        configuration.setAllowedMethods(List.of(
+                "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"
+        ));
+
+        configuration.setAllowedHeaders(List.of("*"));
+        configuration.setExposedHeaders(List.of("Authorization"));
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
+
         return source;
     }
-
-
 }
-
-
-
-// add a password encoder
-// allow public endpoints /auth/register and /auth/login
-// secure rest of the api routes

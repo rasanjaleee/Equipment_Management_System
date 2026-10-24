@@ -18,7 +18,7 @@ public class UserService {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
-    // ✅ Registration with normalized username and email
+    // ? Registration with normalized username and email
     public User registerUser(UserRegistrationRequest request) {
 
         String normalizedUsername = request.getUsername().trim().toLowerCase();
@@ -33,31 +33,48 @@ public class UserService {
         }
 
         User user = new User();
-        user.setUsername(normalizedUsername); // store lowercase username
+        user.setUsername(normalizedUsername);
         user.setEmail(normalizedEmail);
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setRole("STUDENT");
+        user.setMustChangePassword(false);
 
         return userRepository.save(user);
     }
 
-    // ✅ Login verification with normalized username
+
+    // ? Backwards compatible verifyUser
     public boolean verifyUser(String username, String password) {
-
-        String normalizedUsername = username.trim().toLowerCase();
-
-        Optional<User> userOptional = userRepository.findByUsername(normalizedUsername);
-        if (userOptional.isPresent()) {
-            User user = userOptional.get();
-            return passwordEncoder.matches(password, user.getPassword());
-        }
-        return false;
+        return authenticateUser(username, password).isPresent();
     }
 
-    // ✅ Fetch user by normalized username
     public Optional<User> getUserByUsername(String username) {
         return userRepository.findByUsername(username.trim().toLowerCase());
     }
 
-    
+    public String encodePassword(String rawPassword) {
+        return passwordEncoder.encode(rawPassword);
+    }
+
+    public User saveUser(User user) {
+        return userRepository.save(user);
+    }
+
+    // Authenticate user and return the user if credentials are valid
+    public Optional<User> authenticateUser(String username, String password) {
+        String normalizedUsername = username.trim().toLowerCase();
+
+        Optional<User> userOptional =
+                userRepository.findByUsername(normalizedUsername);
+
+        if (userOptional.isPresent()) {
+            User user = userOptional.get();
+
+            if (passwordEncoder.matches(password, user.getPassword())) {
+                return Optional.of(user);
+            }
+        }
+
+        return Optional.empty();
+    }
 }

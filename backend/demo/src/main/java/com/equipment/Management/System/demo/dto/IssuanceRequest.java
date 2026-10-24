@@ -4,13 +4,13 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import java.time.LocalDate;
+import java.util.List;
 
 public class IssuanceRequest {
 
     @NotNull(message = "Borrow request ID is required")
     private Long borrowRequestId;
     
-    @NotBlank(message = "Issuance ID is required")
     private String issuanceId;
     
     @NotNull(message = "Issue date is required")
@@ -34,8 +34,11 @@ public class IssuanceRequest {
     private String conditionAtIssue;
     
     // User Information
-    @NotNull(message = "User ID is required")
     private Long userId;
+
+    private String registrationOrStaffId;
+    private String email;
+    private String userName;
     
     private String roleDept;
     private String contact;
@@ -44,6 +47,8 @@ public class IssuanceRequest {
     private LocalDate returnDate;
     private String conditionOnReturn;
     private String remarks;
+    // Accessories selected for this issuance
+    private List<AccessoryIssueRequest> accessories;
 
     // Getters and Setters
     public String getIssuanceId() {
@@ -118,6 +123,30 @@ public class IssuanceRequest {
         this.userId = userId;
     }
 
+    public String getRegistrationOrStaffId() {
+        return registrationOrStaffId;
+    }
+
+    public void setRegistrationOrStaffId(String registrationOrStaffId) {
+        this.registrationOrStaffId = registrationOrStaffId;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public String getUserName() {
+        return userName;
+    }
+
+    public void setUserName(String userName) {
+        this.userName = userName;
+    }
+
     public String getRoleDept() {
         return roleDept;
     }
@@ -157,4 +186,8 @@ public class IssuanceRequest {
     public void setRemarks(String remarks) {
         this.remarks = remarks;
     }
+
+    public List<AccessoryIssueRequest> getAccessories() {return accessories;}
+
+    public void setAccessories(List<AccessoryIssueRequest> accessories) {this.accessories = accessories; }
 }

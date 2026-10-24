@@ -5,6 +5,7 @@ import com.equipment.Management.System.demo.dto.BorrowRequestResponse;
 import com.equipment.Management.System.demo.model.BorrowRequest;
 import com.equipment.Management.System.demo.model.BorrowRequestNotification;
 import com.equipment.Management.System.demo.model.Equipment;
+import com.equipment.Management.System.demo.model.User;
 import com.equipment.Management.System.demo.repository.BorrowRequestRepository;
 import com.equipment.Management.System.demo.repository.BorrowRequestNotificationRepository;
 import com.equipment.Management.System.demo.repository.EquipmentRepository;
@@ -16,7 +17,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class BorrowRequestService {
@@ -43,6 +46,54 @@ public class BorrowRequestService {
 
     public List<BorrowRequestResponse> getAllBorrowRequests() {
         return borrowRequestRepository.findAll().stream().map(this::toResponse).toList();
+    }
+
+    public List<BorrowRequestResponse> getMyBorrowRequests(String username) {
+        if (username == null || username.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authenticated user is required.");
+        }
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found."));
+        if (user.getEmail() == null || user.getEmail().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User email is not available.");
+        }
+        return borrowRequestRepository.findByEmailIgnoreCaseOrderByCreatedAtDesc(user.getEmail())
+                .stream().map(this::toResponse).toList();
+    }
+
+    public List<Map<String, Object>> getEquipmentCalendar(
+            Long equipmentId, LocalDate startDate, LocalDate endDate) {
+        if (equipmentId == null || startDate == null || endDate == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Equipment ID, start date and end date are required.");
+        }
+        if (endDate.isBefore(startDate)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Calendar end date must not be before start date.");
+        }
+        if (!equipmentRepository.existsById(equipmentId)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Equipment not found.");
+        }
+        return borrowRequestRepository.findBlockingRequestsForCalendar(
+                        equipmentId, startDate, endDate, BLOCKING_STATUSES)
+                .stream()
+                .map(request -> {
+                    Map<String, Object> period = new HashMap<>();
+                    period.put("startDate", request.getBorrowStartDate());
+                    period.put("endDate", request.getBorrowEndDate());
+                    return period;
+                })
+                .toList();
+    }
+
+    public List<BorrowRequestResponse> getCalendarBorrowRequests(
+            LocalDate startDate, LocalDate endDate) {
+        if (startDate == null || endDate == null || endDate.isBefore(startDate)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Valid calendar start and end dates are required.");
+        }
+        return borrowRequestRepository.findCalendarRequests(startDate, endDate)
+                .stream().map(this::toResponse).toList();
     }
 
     @Transactional

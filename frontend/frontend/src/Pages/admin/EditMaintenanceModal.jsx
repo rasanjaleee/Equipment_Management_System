@@ -9,7 +9,7 @@ export default function EditMaintenanceModal({ item, onClose, onSaved, equipment
     equipmentId: initialEquipmentId,
     issueDescription: item?.issueDescription || "",
     dueDate: item?.dueDate || "",
-    status: item?.status || "PENDING",
+    status: item?.status || "BROKEN",
     priority: item?.priority || "LOW",
     repairNote: item?.repairNote || "",
     cost: item?.cost ?? "",
@@ -30,7 +30,7 @@ export default function EditMaintenanceModal({ item, onClose, onSaved, equipment
     }
 
     const payload = {
-      equipment: { id: Number(form.equipmentId) }, // ✅ ManyToOne format
+      equipment: { id: Number(form.equipmentId) }, // ? ManyToOne format
       issueDescription: form.issueDescription,
       dueDate: form.dueDate,
       status: form.status,
@@ -51,14 +51,14 @@ export default function EditMaintenanceModal({ item, onClose, onSaved, equipment
   };
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4">
-      <div className="bg-gray-200 rounded-lg w-full max-w-3xl p-6">
+    <div className="fixed inset-0 bg-black/40 flex items-start sm:items-center justify-center p-3 sm:p-4 overflow-y-auto z-50">
+      <div className="bg-gray-200 rounded-lg w-full max-w-3xl p-4 sm:p-6 my-4 sm:my-auto">
         <h2 className="text-center font-semibold text-lg mb-4">
           Update Maintenance Record
         </h2>
 
         <form onSubmit={submit} className="grid gap-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Equipment">
               <select
                 name="equipmentId"
@@ -86,7 +86,7 @@ export default function EditMaintenanceModal({ item, onClose, onSaved, equipment
             </Field>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <Field label="Due Date">
               <input
                 type="date"
@@ -117,14 +117,14 @@ export default function EditMaintenanceModal({ item, onClose, onSaved, equipment
                 onChange={handleChange}
                 className="w-full px-3 py-2 rounded border"
               >
-                <option value="PENDING">PENDING</option>
-                <option value="IN_PROGRESS">IN_PROGRESS</option>
-                <option value="COMPLETED">COMPLETED</option>
+                <option value="BROKEN">Maintenance Required</option>
+                <option value="UNDER_REPAIR">Currently Under Repair</option>
+                <option value="WORKING">Fixed / Working</option>
               </select>
             </Field>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Repair Note (optional)">
               <input
                 name="repairNote"
@@ -135,7 +135,7 @@ export default function EditMaintenanceModal({ item, onClose, onSaved, equipment
               />
             </Field>
 
-            <Field label="Cost (optional)">
+            <Field label="Cost (Rs.) (optional)">
               <input
                 type="number"
                 step="0.01"
@@ -148,9 +148,9 @@ export default function EditMaintenanceModal({ item, onClose, onSaved, equipment
             </Field>
           </div>
 
-          <div className="flex justify-center gap-4 mt-2">
+          <div className="flex flex-col-reverse sm:flex-row justify-center gap-3 sm:gap-4 mt-2">
             <button
-              className="bg-yellow-500 px-8 py-2 rounded font-semibold hover:bg-yellow-600 disabled:opacity-50"
+              className="w-full sm:w-auto bg-yellow-500 px-8 py-2 rounded font-semibold hover:bg-yellow-600 disabled:opacity-50"
               disabled={loading}
             >
               {loading ? "Saving..." : "Save"}
@@ -160,7 +160,7 @@ export default function EditMaintenanceModal({ item, onClose, onSaved, equipment
               type="button"
               onClick={onClose}
               disabled={loading}
-              className="bg-yellow-500/80 px-8 py-2 rounded font-semibold hover:bg-yellow-600/80 disabled:opacity-50"
+              className="w-full sm:w-auto bg-yellow-500/80 px-8 py-2 rounded font-semibold hover:bg-yellow-600/80 disabled:opacity-50"
             >
               Cancel
             </button>
