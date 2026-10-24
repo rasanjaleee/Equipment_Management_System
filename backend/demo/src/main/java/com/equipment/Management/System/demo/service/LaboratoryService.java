@@ -29,7 +29,25 @@ public class LaboratoryService {
         lab.setDepartment(labDetails.getDepartment());
         lab.setCategoryDepartment(labDetails.getCategoryDepartment());
         lab.setLocation(labDetails.getLocation());
+
         lab.setInCharge(labDetails.getInCharge());
+        lab.setInChargeDesignation(labDetails.getInChargeDesignation());
+        lab.setInChargeEmail(labDetails.getInChargeEmail());
+        lab.setInChargeContactNumber(labDetails.getInChargeContactNumber());
+
+        lab.setTechnicalOfficerInCharge(
+                labDetails.getTechnicalOfficerInCharge()
+        );
+        lab.setTechnicalOfficerEmail(
+                labDetails.getTechnicalOfficerEmail()
+        );
+        lab.setTechnicalOfficerContactNumber(
+                labDetails.getTechnicalOfficerContactNumber()
+        );
+
+        lab.setOperatingHours(labDetails.getOperatingHours());
+        lab.setAccessInformation(labDetails.getAccessInformation());
+
         lab.setTotalEquipment(labDetails.getTotalEquipment());
         lab.setWorkingEquipment(labDetails.getWorkingEquipment());
 

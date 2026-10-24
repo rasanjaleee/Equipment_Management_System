@@ -15,8 +15,18 @@ public class Laboratory {
     private String department;
     private String categoryDepartment;
     private String location;
+
     private String inCharge;
+    private String inChargeDesignation;
+    private String inChargeEmail;
+    private String inChargeContactNumber;
+
     private String technicalOfficerInCharge;
+    private String technicalOfficerEmail;
+    private String technicalOfficerContactNumber;
+
+    private String operatingHours;
+    private String accessInformation;
 
     private int totalEquipment;
     private int workingEquipment;
@@ -70,6 +80,62 @@ public class Laboratory {
 
     public void setTechnicalOfficerInCharge(String technicalOfficerInCharge) {
         this.technicalOfficerInCharge = technicalOfficerInCharge;
+    }
+
+    public String getInChargeDesignation() {
+        return inChargeDesignation;
+    }
+
+    public void setInChargeDesignation(String inChargeDesignation) {
+        this.inChargeDesignation = inChargeDesignation;
+    }
+
+    public String getInChargeEmail() {
+        return inChargeEmail;
+    }
+
+    public void setInChargeEmail(String inChargeEmail) {
+        this.inChargeEmail = inChargeEmail;
+    }
+
+    public String getInChargeContactNumber() {
+        return inChargeContactNumber;
+    }
+
+    public void setInChargeContactNumber(String inChargeContactNumber) {
+        this.inChargeContactNumber = inChargeContactNumber;
+    }
+
+    public String getTechnicalOfficerEmail() {
+        return technicalOfficerEmail;
+    }
+
+    public void setTechnicalOfficerEmail(String technicalOfficerEmail) {
+        this.technicalOfficerEmail = technicalOfficerEmail;
+    }
+
+    public String getTechnicalOfficerContactNumber() {
+        return technicalOfficerContactNumber;
+    }
+
+    public void setTechnicalOfficerContactNumber(String technicalOfficerContactNumber) {
+        this.technicalOfficerContactNumber = technicalOfficerContactNumber;
+    }
+
+    public String getOperatingHours() {
+        return operatingHours;
+    }
+
+    public void setOperatingHours(String operatingHours) {
+        this.operatingHours = operatingHours;
+    }
+
+    public String getAccessInformation() {
+        return accessInformation;
+    }
+
+    public void setAccessInformation(String accessInformation) {
+        this.accessInformation = accessInformation;
     }
 
     public int getTotalEquipment() {

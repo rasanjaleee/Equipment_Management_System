@@ -62,7 +62,22 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
                         // LAB APIs
-                        .requestMatchers("/api/lab/**").permitAll()
+                                // LAB APIs
+// Anyone can view laboratory information
+                                .requestMatchers(HttpMethod.GET, "/api/lab/**").permitAll()
+
+// Only Admin and Super Admin can manage laboratories
+                                .requestMatchers(HttpMethod.POST, "/api/lab/**")
+                                .hasAnyRole("SUPER_ADMIN", "ADMIN")
+
+                                .requestMatchers(HttpMethod.PUT, "/api/lab/**")
+                                .hasAnyRole("SUPER_ADMIN", "ADMIN")
+
+                                .requestMatchers(HttpMethod.PATCH, "/api/lab/**")
+                                .hasAnyRole("SUPER_ADMIN", "ADMIN")
+
+                                .requestMatchers(HttpMethod.DELETE, "/api/lab/**")
+                                .hasAnyRole("SUPER_ADMIN", "ADMIN")
 
                         // ADMIN
                         .requestMatchers("/api/admin/**").hasAnyRole("SUPER_ADMIN", "ADMIN")

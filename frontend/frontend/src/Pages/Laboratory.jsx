@@ -48,16 +48,27 @@ const canManageLabs =
   const [editLab, setEditLab] = useState(null);
 
   const [newLab, setNewLab] = useState({
-    name: "",
-    department: "",
-    categoryDepartment: "",
-    location: "",
-    inCharge: "",
-    technicalOfficerInCharge: "",
-    totalEquipment: "",
-    workingEquipment: "",
-    underRepairEquipment: "",
-  });
+  name: "",
+  department: "",
+  categoryDepartment: "",
+  location: "",
+
+  inCharge: "",
+  inChargeDesignation: "",
+  inChargeEmail: "",
+  inChargeContactNumber: "",
+
+  technicalOfficerInCharge: "",
+  technicalOfficerEmail: "",
+  technicalOfficerContactNumber: "",
+
+  operatingHours: "",
+  accessInformation: "",
+
+  totalEquipment: "",
+  workingEquipment: "",
+  underRepairEquipment: "",
+});
 
   // Sync with context if already present or updated
   useEffect(() => {
@@ -148,23 +159,44 @@ const loadLabInventory = async (labName) => {
       underRepairEquipment: Number(newLab.underRepairEquipment || 0),
     };
 
-    const res = await axios.post(`${API_BASE_URL}/api/lab`, payload);
+    const token = localStorage.getItem("token");
+
+const res = await axios.post(
+  `${API_BASE_URL}/api/lab`,
+  payload,
+  {
+    headers: token
+      ? { Authorization: `Bearer ${token}` }
+      : {},
+  }
+);
 
     setLabs((prev) => [...prev, res.data]);
     setCachedLabs((prev) => [...prev, res.data]);
     setIsAddModalOpen(false);
 
     setNewLab({
-      name: "",
-      department: "",
-      categoryDepartment: "",
-      location: "",
-      inCharge: "",
-      technicalOfficerInCharge: "",
-      totalEquipment: "",
-      workingEquipment: "",
-      underRepairEquipment: "",
-    });
+  name: "",
+  department: "",
+  categoryDepartment: "",
+  location: "",
+
+  inCharge: "",
+  inChargeDesignation: "",
+  inChargeEmail: "",
+  inChargeContactNumber: "",
+
+  technicalOfficerInCharge: "",
+  technicalOfficerEmail: "",
+  technicalOfficerContactNumber: "",
+
+  operatingHours: "",
+  accessInformation: "",
+
+  totalEquipment: "",
+  workingEquipment: "",
+  underRepairEquipment: "",
+});
   };
 
  const handleDelete = async (id) => {
@@ -234,10 +266,17 @@ setTimeout(() => {
       underRepairEquipment: Number(editLab.underRepairEquipment || 0),
     };
 
-    const res = await axios.put(
-      `${API_BASE_URL}/api/lab/${editLab.id}`,
-      payload
-    );
+    const token = localStorage.getItem("token");
+
+const res = await axios.put(
+  `${API_BASE_URL}/api/lab/${editLab.id}`,
+  payload,
+  {
+    headers: token
+      ? { Authorization: `Bearer ${token}` }
+      : {},
+  }
+);
 
     setLabs(labs.map((lab) => (lab.id === editLab.id ? res.data : lab)));
     setCachedLabs((prev) => prev.map((lab) => (lab.id === editLab.id ? res.data : lab)));
@@ -359,30 +398,143 @@ setTimeout(() => {
       <div className="p-6">
 
         {/* LAB DETAILS */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6">
-          <div>
-            <p className="text-sm text-gray-500">Location</p>
-            <p className="font-semibold">
-              {selectedLab.location || "-"}
-            </p>
-          </div>
+<div className="space-y-6 mb-7">
 
-          <div>
-            <p className="text-sm text-gray-500">In Charge</p>
-            <p className="font-semibold">
-              {selectedLab.inCharge || "-"}
-            </p>
-          </div>
+  {/* LABORATORY INFORMATION */}
+  <div>
+    <h3 className="text-base font-bold text-gray-900 mb-3 pb-2 border-b">
+      Laboratory Information
+    </h3>
 
-          <div>
-            <p className="text-sm text-gray-500">
-              Technical Officer In Charge
-            </p>
-            <p className="font-semibold">
-              {selectedLab.technicalOfficerInCharge || "-"}
-            </p>
-          </div>
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+      <div>
+        <p className="text-sm text-gray-500">Department</p>
+        <p className="font-semibold text-gray-900">
+          {selectedLab.department ||
+            selectedLab.categoryDepartment ||
+            "-"}
+        </p>
+      </div>
+
+      <div>
+        <p className="text-sm text-gray-500">Location</p>
+        <p className="font-semibold text-gray-900">
+          {selectedLab.location || "-"}
+        </p>
+      </div>
+
+      <div>
+        <p className="text-sm text-gray-500">Operating Hours</p>
+        <p className="font-semibold text-gray-900">
+          {selectedLab.operatingHours || "-"}
+        </p>
+      </div>
+    </div>
+  </div>
+
+  {/* CONTACT DETAILS */}
+  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+    {/* ACADEMIC IN-CHARGE */}
+    <div className="border border-gray-200 rounded-xl p-4">
+      <h3 className="font-bold text-gray-900 mb-4">
+        Academic In-Charge
+      </h3>
+
+      <div className="space-y-3">
+        <div>
+          <p className="text-sm text-gray-500">Name</p>
+          <p className="font-semibold text-gray-900">
+            {selectedLab.inCharge || "-"}
+          </p>
         </div>
+
+        <div>
+          <p className="text-sm text-gray-500">Designation</p>
+          <p className="font-medium text-gray-900">
+            {selectedLab.inChargeDesignation || "-"}
+          </p>
+        </div>
+
+        <div>
+          <p className="text-sm text-gray-500">Official Email</p>
+
+          {selectedLab.inChargeEmail ? (
+            <a
+              href={`mailto:${selectedLab.inChargeEmail}`}
+              className="font-medium text-blue-600 hover:underline break-all"
+            >
+              {selectedLab.inChargeEmail}
+            </a>
+          ) : (
+            <p className="font-medium text-gray-900">-</p>
+          )}
+        </div>
+
+        <div>
+          <p className="text-sm text-gray-500">Contact Number</p>
+          <p className="font-medium text-gray-900">
+            {selectedLab.inChargeContactNumber || "-"}
+          </p>
+        </div>
+      </div>
+    </div>
+
+    {/* TECHNICAL CONTACT */}
+    <div className="border border-gray-200 rounded-xl p-4">
+      <h3 className="font-bold text-gray-900 mb-4">
+        Technical Contact
+      </h3>
+
+      <div className="space-y-3">
+        <div>
+          <p className="text-sm text-gray-500">
+            Technical Officer In Charge
+          </p>
+          <p className="font-semibold text-gray-900">
+            {selectedLab.technicalOfficerInCharge || "-"}
+          </p>
+        </div>
+
+        <div>
+          <p className="text-sm text-gray-500">Official Email</p>
+
+          {selectedLab.technicalOfficerEmail ? (
+            <a
+              href={`mailto:${selectedLab.technicalOfficerEmail}`}
+              className="font-medium text-blue-600 hover:underline break-all"
+            >
+              {selectedLab.technicalOfficerEmail}
+            </a>
+          ) : (
+            <p className="font-medium text-gray-900">-</p>
+          )}
+        </div>
+
+        <div>
+          <p className="text-sm text-gray-500">
+            Contact Number / Extension
+          </p>
+          <p className="font-medium text-gray-900">
+            {selectedLab.technicalOfficerContactNumber || "-"}
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {/* STUDENT ACCESS */}
+  <div className="border border-amber-200 bg-amber-50 rounded-xl p-4">
+    <h3 className="font-bold text-gray-900 mb-2">
+      Student Access Information
+    </h3>
+
+    <p className="text-sm text-gray-700">
+      {selectedLab.accessInformation || "Not specified"}
+    </p>
+  </div>
+
+</div>
 
         {/* EQUIPMENT STATISTICS */}
         {(() => {
@@ -583,396 +735,985 @@ setTimeout(() => {
   </div>
 )}
 
-      {/* TABLE */}
-<div className="hidden md:block p-4">
-  <div className="bg-white rounded-lg shadow overflow-hidden">
-    <div className="overflow-x-auto">
-      <table className="w-full min-w-[1200px] text-sm">
+      {/* ================= LABORATORY LIST ================= */}
 
-        <thead className="bg-gray-200 text-left">
-          <tr>
-            <th className="p-3">Name</th>
-            <th className="p-3">Dept</th>
-            <th className="p-3">Location</th>
-            <th className="p-3">Lab In Charge</th>
-            <th className="p-3">
-              Technical Officer In Charge
-            </th>
-            <th className="p-3 text-center">Total</th>
-            <th className="p-3 text-center">Working</th>
-            <th className="p-3 text-center">Actions</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          {filteredLabs.length === 0 ? (
-            <tr>
-              <td
-                colSpan={8}
-                className="p-4 text-gray-500"
-              >
-                No laboratories found.
-              </td>
-            </tr>
-          ) : (
-            filteredLabs.map((lab) => {
-              const stats = getLabStats(lab.name);
-
-              return (
-                <tr
-                  key={lab.id}
-                  className="border-t hover:bg-gray-50"
-                >
-                  <td className="p-3">
-                    {lab.name}
-                  </td>
-
-                  <td className="p-3">
-                    {lab.department}
-                  </td>
-
-                  <td className="p-3">
-                    {lab.location}
-                  </td>
-
-                  <td className="p-3">
-                    {lab.inCharge || "-"}
-                  </td>
-
-                  <td className="p-3">
-                    {lab.technicalOfficerInCharge || "-"}
-                  </td>
-
-                  <td className="p-3 text-center">
-                    {stats.total}
-                  </td>
-
-                  <td className="p-3 text-center text-green-600">
-                    {stats.working}
-                  </td>
-
-                  <td className="p-3">
-                  <div className="flex justify-center gap-3">
-
-                    {/* VIEW */}
-                    <button
-                      onClick={() => {
-                      setSelectedLab(lab);
-                      loadLabInventory(lab.name);}}
-                      className="btn-icon text-green-600 hover:text-green-800"
-                      title="View Details"
-                    >
-                      <Eye size={18} />
-                    </button>
-
-                    {canManageLabs && (
+{canManageLabs ? (
   <>
-    {/* EDIT */}
-    <button
-      onClick={() => {
-        setEditLab(lab);
-        setIsEditModalOpen(true);
-      }}
-      className="btn-icon text-blue-600 hover:text-blue-800"
-      title="Edit"
-    >
-      <Edit size={18} />
-    </button>
+    {/* ================= ADMIN DESKTOP TABLE ================= */}
+    <div className="hidden md:block p-4">
+      <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[1200px] text-sm">
+            <thead className="bg-gray-200 text-left">
+              <tr>
+                <th className="p-3">Name</th>
+                <th className="p-3">Department</th>
+                <th className="p-3">Location</th>
+                <th className="p-3">Academic In-Charge</th>
+                <th className="p-3">Technical Officer</th>
+                <th className="p-3 text-center">Total</th>
+                <th className="p-3 text-center">Working</th>
+                <th className="p-3 text-center">Actions</th>
+              </tr>
+            </thead>
 
-    {/* DELETE */}
-    <button
-      onClick={() => handleDelete(lab.id)}
-      className="btn-icon text-red-600 hover:text-red-800"
-      title="Delete"
-    >
-      <Trash2 size={18} />
-    </button>
+            <tbody>
+              {filteredLabs.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="p-4 text-gray-500">
+                    No laboratories found.
+                  </td>
+                </tr>
+              ) : (
+                filteredLabs.map((lab) => {
+                  const stats = getLabStats(lab.name);
+
+                  return (
+                    <tr
+                      key={lab.id}
+                      className="border-t hover:bg-gray-50"
+                    >
+                      <td className="p-3">{lab.name}</td>
+                      <td className="p-3">{lab.department}</td>
+                      <td className="p-3">{lab.location}</td>
+
+                      <td className="p-3">
+                        {lab.inCharge || "-"}
+                      </td>
+
+                      <td className="p-3">
+                        {lab.technicalOfficerInCharge || "-"}
+                      </td>
+
+                      <td className="p-3 text-center">
+                        {stats.total}
+                      </td>
+
+                      <td className="p-3 text-center text-green-600">
+                        {stats.working}
+                      </td>
+
+                      <td className="p-3">
+                        <div className="flex justify-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedLab(lab);
+                              loadLabInventory(lab.name);
+                            }}
+                            className="btn-icon text-green-600 hover:text-green-800"
+                            title="View Details"
+                          >
+                            <Eye size={18} />
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditLab(lab);
+                              setIsEditModalOpen(true);
+                            }}
+                            className="btn-icon text-blue-600 hover:text-blue-800"
+                            title="Edit"
+                          >
+                            <Edit size={18} />
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(lab.id)}
+                            className="btn-icon text-red-600 hover:text-red-800"
+                            title="Delete"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    {/* ================= ADMIN MOBILE CARDS ================= */}
+    <div className="md:hidden px-3 pb-4 space-y-3">
+      {filteredLabs.length === 0 ? (
+        <div className="bg-white border border-gray-200 rounded-xl p-6 text-center text-gray-500">
+          No laboratories found.
+        </div>
+      ) : (
+        filteredLabs.map((lab) => {
+          const stats = getLabStats(lab.name);
+
+          return (
+            <div
+              key={lab.id}
+              className="bg-white border border-gray-200 rounded-xl shadow-sm p-4"
+            >
+              <div className="mb-3">
+                <h3 className="text-base font-bold text-gray-900 break-words">
+                  {lab.name}
+                </h3>
+
+                <p className="text-sm text-gray-500 mt-1">
+                  {lab.department || "-"}
+                </p>
+              </div>
+
+              <div className="space-y-2 text-sm border-t border-gray-100 pt-3">
+                <div>
+                  <p className="text-xs text-gray-500">Location</p>
+                  <p className="font-medium text-gray-800">
+                    {lab.location || "-"}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-xs text-gray-500">
+                    Lab In Charge
+                  </p>
+                  <p className="font-medium text-gray-800">
+                    {lab.inCharge || "-"}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-xs text-gray-500">
+                    Technical Officer In Charge
+                  </p>
+                  <p className="font-medium text-gray-800">
+                    {lab.technicalOfficerInCharge || "-"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 mt-4">
+                <div className="bg-gray-100 rounded-lg p-3 text-center">
+                  <p className="text-xs text-gray-500">
+                    Total Equipment
+                  </p>
+                  <p className="text-lg font-bold text-gray-900">
+                    {stats.total}
+                  </p>
+                </div>
+
+                <div className="bg-green-50 rounded-lg p-3 text-center">
+                  <p className="text-xs text-gray-500">
+                    Working
+                  </p>
+                  <p className="text-lg font-bold text-green-600">
+                    {stats.working}
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2 mt-4 pt-3 border-t border-gray-100">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedLab(lab);
+                    loadLabInventory(lab.name);
+                  }}
+                  className="flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg bg-green-50 text-green-700 text-sm font-medium hover:bg-green-100"
+                >
+                  <Eye size={16} />
+                  View
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditLab(lab);
+                    setIsEditModalOpen(true);
+                  }}
+                  className="flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg bg-blue-50 text-blue-700 text-sm font-medium hover:bg-blue-100"
+                >
+                  <Edit size={16} />
+                  Edit
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleDelete(lab.id)}
+                  className="flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg bg-red-50 text-red-700 text-sm font-medium hover:bg-red-100"
+                >
+                  <Trash2 size={16} />
+                  Delete
+                </button>
+              </div>
+            </div>
+          );
+        })
+      )}
+    </div>
   </>
+) : (
+  /* ================= STUDENT LABORATORY DIRECTORY ================= */
+  <div className="px-3 sm:px-4 pb-8">
+    {filteredLabs.length === 0 ? (
+      <div className="bg-white border border-gray-200 rounded-2xl p-10 text-center">
+        <FlaskConical
+          size={40}
+          className="mx-auto text-gray-400 mb-3"
+        />
+
+        <h3 className="font-semibold text-gray-900">
+          No laboratories found
+        </h3>
+
+        <p className="text-sm text-gray-500 mt-1">
+          Try changing your search or department filter.
+        </p>
+      </div>
+    ) : (
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        {filteredLabs.map((lab) => {
+          const stats = getLabStats(lab.name);
+
+          return (
+            <div
+              key={lab.id}
+              className="bg-white border border-gray-200 rounded-2xl shadow-sm hover:shadow-md transition-shadow overflow-hidden"
+            >
+              {/* HEADER */}
+              <div className="px-5 py-5 border-b border-gray-100">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 shrink-0 rounded-xl bg-red-950 text-white flex items-center justify-center">
+                    <FlaskConical size={24} />
+                  </div>
+
+                  <div className="min-w-0">
+                    <h3 className="text-lg font-bold text-gray-900 leading-snug">
+                      {lab.name}
+                    </h3>
+
+                    <p className="text-sm text-gray-500 mt-1">
+                      {lab.department ||
+                        lab.categoryDepartment ||
+                        "Department not specified"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* LAB DETAILS */}
+              <div className="px-5 py-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5">
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                      Location
+                    </p>
+                    <p className="text-sm font-semibold text-gray-900 mt-1">
+                      {lab.location || "Not specified"}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                      Operating Hours
+                    </p>
+                    <p className="text-sm font-semibold text-gray-900 mt-1">
+                      {lab.operatingHours || "Not specified"}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                      Academic In-Charge
+                    </p>
+
+                    <p className="text-sm font-semibold text-gray-900 mt-1">
+                      {lab.inCharge || "Not specified"}
+                    </p>
+
+                    {lab.inChargeDesignation && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        {lab.inChargeDesignation}
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                      Technical Officer
+                    </p>
+
+                    <p className="text-sm font-semibold text-gray-900 mt-1">
+                      {lab.technicalOfficerInCharge ||
+                        "Not specified"}
+                    </p>
+                  </div>
+                </div>
+
+                {/* EQUIPMENT SUMMARY */}
+                <div className="grid grid-cols-2 gap-3 mt-6">
+                  <div className="rounded-xl bg-gray-50 border border-gray-100 p-3 text-center">
+                    <p className="text-xs text-gray-500">
+                      Total Equipment
+                    </p>
+                    <p className="text-xl font-bold text-gray-900 mt-1">
+                      {stats.total}
+                    </p>
+                  </div>
+
+                  <div className="rounded-xl bg-green-50 border border-green-100 p-3 text-center">
+                    <p className="text-xs text-green-700">
+                      Working Equipment
+                    </p>
+                    <p className="text-xl font-bold text-green-600 mt-1">
+                      {stats.working}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* VIEW BUTTON */}
+              <div className="px-5 py-4 bg-gray-50 border-t border-gray-100">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedLab(lab);
+                    loadLabInventory(lab.name);
+                  }}
+                  className="w-full flex items-center justify-center gap-2 rounded-lg bg-red-950 hover:bg-red-900 text-white font-semibold px-4 py-2.5 transition-colors"
+                >
+                  <Eye size={17} />
+                  View Laboratory Details
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    )}
+  </div>
 )}
 
-                  </div>
-                </td>
-                </tr>
-              );
-            })
-          )}
-        </tbody>
-
-      </table>
-    </div>
-  </div>
-</div>
-
-{/* Mobile Laboratory Cards */}
-<div className="md:hidden px-3 pb-4 space-y-3">
-  {filteredLabs.length === 0 ? (
-    <div className="bg-white border border-gray-200 rounded-xl p-6 text-center text-gray-500">
-      No laboratories found.
-    </div>
-  ) : (
-    filteredLabs.map((lab) => {
-      const stats = getLabStats(lab.name);
-
-      return (
-        <div
-          key={lab.id}
-          className="bg-white border border-gray-200 rounded-xl shadow-sm p-4"
-        >
-          <div className="mb-3">
-            <h3 className="text-base font-bold text-gray-900 break-words">
-              {lab.name}
-            </h3>
-
-            <p className="text-sm text-gray-500 mt-1 break-words">
-              {lab.department || "-"}
-            </p>
-          </div>
-
-          <div className="space-y-2 text-sm border-t border-gray-100 pt-3">
-            <div>
-              <p className="text-xs text-gray-500">Location</p>
-              <p className="font-medium text-gray-800 break-words">
-                {lab.location || "-"}
-              </p>
-            </div>
-
-            <div>
-              <p className="text-xs text-gray-500">Lab In Charge</p>
-              <p className="font-medium text-gray-800 break-words">
-                {lab.inCharge || "-"}
-              </p>
-            </div>
-
-            <div>
-              <p className="text-xs text-gray-500">
-                Technical Officer In Charge
-              </p>
-              <p className="font-medium text-gray-800 break-words">
-                {lab.technicalOfficerInCharge || "-"}
-              </p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2 mt-4">
-            <div className="bg-gray-100 rounded-lg p-3 text-center">
-              <p className="text-xs text-gray-500">Total Equipment</p>
-              <p className="text-lg font-bold text-gray-900">
-                {stats.total}
-              </p>
-            </div>
-
-            <div className="bg-green-50 rounded-lg p-3 text-center">
-              <p className="text-xs text-gray-500">Working</p>
-              <p className="text-lg font-bold text-green-600">
-                {stats.working}
-              </p>
-            </div>
-          </div>
-
-          <div
-  className={`grid ${
-    canManageLabs ? "grid-cols-3" : "grid-cols-1"
-  } gap-2 mt-4 pt-3 border-t border-gray-100`}
->
-  {/* VIEW */}
-  <button
-    type="button"
-    onClick={() => {
-      setSelectedLab(lab);
-      loadLabInventory(lab.name);
-    }}
-    className="flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg bg-green-50 text-green-700 text-sm font-medium hover:bg-green-100"
-  >
-    <Eye size={16} />
-    View
-  </button>
-
-  {canManageLabs && (
-    <>
-      {/* EDIT */}
-      <button
-        type="button"
-        onClick={() => {
-          setEditLab(lab);
-          setIsEditModalOpen(true);
-        }}
-        className="flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg bg-blue-50 text-blue-700 text-sm font-medium hover:bg-blue-100"
-      >
-        <Edit size={16} />
-        Edit
-      </button>
-
-      {/* DELETE */}
-      <button
-        type="button"
-        onClick={() => handleDelete(lab.id)}
-        className="flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg bg-red-50 text-red-700 text-sm font-medium hover:bg-red-100"
-      >
-        <Trash2 size={16} />
-        Delete
-      </button>
-    </>
-  )}
-</div>
-        </div>
-      );
-    })
-  )}
-</div>
-
       {/* ================= ADD MODAL ================= */}
-      {isAddModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
-          <div className="bg-white p-6 rounded-lg w-[400px]">
-            <h2 className="text-xl font-bold mb-4">Add Lab</h2>
+{isAddModalOpen && (
+  <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-50 p-4">
+    <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
 
-            <form onSubmit={handleAddLab} className="space-y-3">
+      {/* HEADER */}
+      <div className="flex items-center justify-between px-6 py-4 border-b sticky top-0 bg-white z-10">
+        <div>
+          <h2 className="text-xl font-bold text-gray-900">
+            Add Laboratory
+          </h2>
+          <p className="text-sm text-gray-500 mt-1">
+            Enter laboratory information and contact details
+          </p>
+        </div>
 
-              <input className="w-full border p-2" placeholder="Name"
+        <button
+          type="button"
+          onClick={() => setIsAddModalOpen(false)}
+          className="text-gray-500 hover:text-gray-800 text-2xl"
+        >
+          ×
+        </button>
+      </div>
+
+      <form onSubmit={handleAddLab} className="p-6 space-y-7">
+
+        {/* LABORATORY INFORMATION */}
+        <div>
+          <h3 className="text-base font-bold text-gray-900 mb-4 pb-2 border-b">
+            Laboratory Information
+          </h3>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Laboratory Name
+              </label>
+              <input
+                type="text"
+                required
+                className="w-full border border-gray-300 rounded-lg px-3 py-2.5"
+                placeholder="Enter laboratory name"
                 value={newLab.name}
-                onChange={(e) => setNewLab({ ...newLab, name: e.target.value })}
+                onChange={(e) =>
+                  setNewLab({ ...newLab, name: e.target.value })
+                }
               />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Department
+              </label>
 
               <select
-  className="w-full border p-2"
-  value={newLab.categoryDepartment}
-  onChange={(e) =>
-    setNewLab({
-      ...newLab,
-      categoryDepartment: e.target.value,
-    })
-  }
-  required
->
-  <option value="">Select Department</option>
+                required
+                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 bg-white"
+                value={newLab.categoryDepartment}
+                onChange={(e) =>
+                  setNewLab({
+                    ...newLab,
+                    categoryDepartment: e.target.value,
+                    department: e.target.value,
+                  })
+                }
+              >
+                <option value="">Select Department</option>
 
-  <option value="Electrical and Information">
-    Electrical and Information
-  </option>
+                <option value="Electrical and Information">
+                  Electrical and Information
+                </option>
 
-  <option value="Civil and Environmental">
-    Civil and Environmental
-  </option>
+                <option value="Civil and Environmental">
+                  Civil and Environmental
+                </option>
 
-  <option value="Mechanical and Manufacturing">
-    Mechanical and Manufacturing
-  </option>
+                <option value="Mechanical and Manufacturing">
+                  Mechanical and Manufacturing
+                </option>
 
-  <option value="Marine Engineering and Naval Architecture">
-    Marine Engineering and Naval Architecture
-  </option>
-</select>
+                <option value="Marine Engineering and Naval Architecture">
+                  Marine Engineering and Naval Architecture
+                </option>
+              </select>
+            </div>
 
-              <input className="w-full border p-2" placeholder="Location"
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Location
+              </label>
+              <input
+                type="text"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2.5"
+                placeholder="e.g. Block B"
                 value={newLab.location}
-                onChange={(e) => setNewLab({ ...newLab, location: e.target.value })}
+                onChange={(e) =>
+                  setNewLab({ ...newLab, location: e.target.value })
+                }
               />
+            </div>
+          </div>
+        </div>
 
-              <input className="w-full border p-2" placeholder="Lab In Charge"
+        {/* ACADEMIC IN-CHARGE */}
+        <div>
+          <h3 className="text-base font-bold text-gray-900 mb-4 pb-2 border-b">
+            Academic In-Charge
+          </h3>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Name
+              </label>
+              <input
+                type="text"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2.5"
+                placeholder="e.g. Dr. A. B. Fernando"
                 value={newLab.inCharge}
                 onChange={(e) =>
                   setNewLab({ ...newLab, inCharge: e.target.value })
                 }
               />
+            </div>
 
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Designation
+              </label>
               <input
-  className="w-full border p-2"
-  placeholder="Technical Officer In Charge"
-  value={newLab.technicalOfficerInCharge}
-  onChange={(e) =>
-    setNewLab({
-      ...newLab,
-      technicalOfficerInCharge: e.target.value,
-    })
-  }
-/>
+                type="text"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2.5"
+                placeholder="e.g. Senior Lecturer"
+                value={newLab.inChargeDesignation}
+                onChange={(e) =>
+                  setNewLab({
+                    ...newLab,
+                    inChargeDesignation: e.target.value,
+                  })
+                }
+              />
+            </div>
 
-              <div className="flex justify-between pt-3">
-                <button type="button"
-                  onClick={() => setIsAddModalOpen(false)}
-                  className="bg-gray-400 text-white px-3 py-1 rounded"
-                >
-                  Cancel
-                </button>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Official Email
+              </label>
+              <input
+                type="email"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2.5"
+                placeholder="e.g. lecturer@eng.ruh.ac.lk"
+                value={newLab.inChargeEmail}
+                onChange={(e) =>
+                  setNewLab({
+                    ...newLab,
+                    inChargeEmail: e.target.value,
+                  })
+                }
+              />
+            </div>
 
-                <button type="submit"
-                  className="bg-amber-500 text-white px-3 py-1 rounded"
-                >
-                  Save
-                </button>
-              </div>
-
-            </form>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Contact Number
+              </label>
+              <input
+                type="tel"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2.5"
+                placeholder="e.g. +94 41 222 2681"
+                value={newLab.inChargeContactNumber}
+                onChange={(e) =>
+                  setNewLab({
+                    ...newLab,
+                    inChargeContactNumber: e.target.value,
+                  })
+                }
+              />
+            </div>
           </div>
         </div>
-      )}
 
+        {/* TECHNICAL CONTACT */}
+        <div>
+          <h3 className="text-base font-bold text-gray-900 mb-4 pb-2 border-b">
+            Technical Contact
+          </h3>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Technical Officer In Charge
+              </label>
+              <input
+                type="text"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2.5"
+                placeholder="Enter technical officer name"
+                value={newLab.technicalOfficerInCharge}
+                onChange={(e) =>
+                  setNewLab({
+                    ...newLab,
+                    technicalOfficerInCharge: e.target.value,
+                  })
+                }
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Official Email
+              </label>
+              <input
+                type="email"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2.5"
+                placeholder="e.g. technical@eng.ruh.ac.lk"
+                value={newLab.technicalOfficerEmail}
+                onChange={(e) =>
+                  setNewLab({
+                    ...newLab,
+                    technicalOfficerEmail: e.target.value,
+                  })
+                }
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Contact Number / Extension
+              </label>
+              <input
+                type="tel"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2.5"
+                placeholder="e.g. Ext. 214"
+                value={newLab.technicalOfficerContactNumber}
+                onChange={(e) =>
+                  setNewLab({
+                    ...newLab,
+                    technicalOfficerContactNumber: e.target.value,
+                  })
+                }
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* STUDENT ACCESS */}
+        <div>
+          <h3 className="text-base font-bold text-gray-900 mb-4 pb-2 border-b">
+            Student Access Information
+          </h3>
+
+          <div className="space-y-4">
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Operating Hours
+              </label>
+              <input
+                type="text"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2.5"
+                placeholder="e.g. Monday - Friday, 8:00 AM - 4:30 PM"
+                value={newLab.operatingHours}
+                onChange={(e) =>
+                  setNewLab({
+                    ...newLab,
+                    operatingHours: e.target.value,
+                  })
+                }
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Access Information
+              </label>
+              <textarea
+                rows="3"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 resize-none"
+                placeholder="e.g. Prior approval is required for laboratory access."
+                value={newLab.accessInformation}
+                onChange={(e) =>
+                  setNewLab({
+                    ...newLab,
+                    accessInformation: e.target.value,
+                  })
+                }
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* ACTIONS */}
+        <div className="flex justify-end gap-3 pt-4 border-t">
+          <button
+            type="button"
+            onClick={() => setIsAddModalOpen(false)}
+            className="px-5 py-2.5 rounded-lg border border-gray-300 bg-white text-gray-700 font-medium hover:bg-gray-50"
+          >
+            Cancel
+          </button>
+
+          <button
+            type="submit"
+            className="px-5 py-2.5 rounded-lg bg-red-950 text-white font-semibold hover:bg-red-900"
+          >
+            Save Laboratory
+          </button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+)}
       {/* ================= EDIT MODAL ================= */}
-      {isEditModalOpen && editLab && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
-          <div className="bg-white p-6 rounded-lg w-[400px]">
-            <h2 className="text-xl font-bold mb-4">Edit Lab</h2>
+{isEditModalOpen && editLab && (
+  <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-50 p-4">
+    <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
 
-            <form onSubmit={handleEditSave} className="space-y-3">
+      {/* HEADER */}
+      <div className="flex items-center justify-between px-6 py-4 border-b sticky top-0 bg-white z-10">
+        <div>
+          <h2 className="text-xl font-bold text-gray-900">
+            Edit Laboratory
+          </h2>
+          <p className="text-sm text-gray-500 mt-1">
+            Update laboratory information and contact details
+          </p>
+        </div>
 
-              <input className="w-full border p-2"
-                value={editLab.name || ""}
-                onChange={(e) => setEditLab({ ...editLab, name: e.target.value })}
-              />
+        <button
+          type="button"
+          onClick={() => {
+            setIsEditModalOpen(false);
+            setEditLab(null);
+          }}
+          className="text-gray-500 hover:text-gray-800 text-2xl"
+        >
+          ×
+        </button>
+      </div>
 
-              <input className="w-full border p-2"
-                value={editLab.department || ""}
-                onChange={(e) => setEditLab({ ...editLab, department: e.target.value })}
-              />
+      <form onSubmit={handleEditSave} className="p-6 space-y-7">
 
-              <input className="w-full border p-2"
-                value={editLab.categoryDepartment || ""}
-                onChange={(e) => setEditLab({ ...editLab, categoryDepartment: e.target.value })}
-              />
+        {/* LABORATORY INFORMATION */}
+        <div>
+          <h3 className="text-base font-bold text-gray-900 mb-4 pb-2 border-b">
+            Laboratory Information
+          </h3>
 
-              <input className="w-full border p-2"
-                value={editLab.location || ""}
-                onChange={(e) => setEditLab({ ...editLab, location: e.target.value })}
-              />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-              <input className="w-full border p-2"
-                value={editLab.inCharge || ""}
-                onChange={(e) => setEditLab({ ...editLab, inCharge: e.target.value })}
-              />
-
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Laboratory Name
+              </label>
               <input
-  className="w-full border p-2"
-  placeholder="Technical Officer In Charge"
-  value={editLab.technicalOfficerInCharge || ""}
-  onChange={(e) =>
-    setEditLab({
-      ...editLab,
-      technicalOfficerInCharge: e.target.value,
-    })
-  }
-/>
+                type="text"
+                required
+                className="w-full border border-gray-300 rounded-lg px-3 py-2.5"
+                value={editLab.name || ""}
+                onChange={(e) =>
+                  setEditLab({ ...editLab, name: e.target.value })
+                }
+              />
+            </div>
 
-              <div className="flex justify-between pt-3">
-                <button
-                  type="button"
-                  onClick={() => setIsEditModalOpen(false)}
-                  className="bg-gray-400 text-white px-3 py-1 rounded"
-                >
-                  Cancel
-                </button>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Department
+              </label>
 
-                <button
-                  type="submit"
-                  className="bg-green-500 text-white px-3 py-1 rounded"
-                >
-                  Update
-                </button>
-              </div>
+              <select
+                required
+                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 bg-white"
+                value={editLab.categoryDepartment || ""}
+                onChange={(e) =>
+                  setEditLab({
+                    ...editLab,
+                    categoryDepartment: e.target.value,
+                    department: e.target.value,
+                  })
+                }
+              >
+                <option value="">Select Department</option>
+                <option value="Electrical and Information">
+                  Electrical and Information
+                </option>
+                <option value="Civil and Environmental">
+                  Civil and Environmental
+                </option>
+                <option value="Mechanical and Manufacturing">
+                  Mechanical and Manufacturing
+                </option>
+                <option value="Marine Engineering and Naval Architecture">
+                  Marine Engineering and Naval Architecture
+                </option>
+              </select>
+            </div>
 
-            </form>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Location
+              </label>
+              <input
+                type="text"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2.5"
+                value={editLab.location || ""}
+                onChange={(e) =>
+                  setEditLab({ ...editLab, location: e.target.value })
+                }
+              />
+            </div>
           </div>
         </div>
-      )}
+
+        {/* ACADEMIC IN-CHARGE */}
+        <div>
+          <h3 className="text-base font-bold text-gray-900 mb-4 pb-2 border-b">
+            Academic In-Charge
+          </h3>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Name
+              </label>
+              <input
+                type="text"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2.5"
+                value={editLab.inCharge || ""}
+                onChange={(e) =>
+                  setEditLab({ ...editLab, inCharge: e.target.value })
+                }
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Designation
+              </label>
+              <input
+                type="text"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2.5"
+                value={editLab.inChargeDesignation || ""}
+                onChange={(e) =>
+                  setEditLab({
+                    ...editLab,
+                    inChargeDesignation: e.target.value,
+                  })
+                }
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Official Email
+              </label>
+              <input
+                type="email"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2.5"
+                value={editLab.inChargeEmail || ""}
+                onChange={(e) =>
+                  setEditLab({
+                    ...editLab,
+                    inChargeEmail: e.target.value,
+                  })
+                }
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Contact Number
+              </label>
+              <input
+                type="tel"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2.5"
+                value={editLab.inChargeContactNumber || ""}
+                onChange={(e) =>
+                  setEditLab({
+                    ...editLab,
+                    inChargeContactNumber: e.target.value,
+                  })
+                }
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* TECHNICAL CONTACT */}
+        <div>
+          <h3 className="text-base font-bold text-gray-900 mb-4 pb-2 border-b">
+            Technical Contact
+          </h3>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Technical Officer In Charge
+              </label>
+              <input
+                type="text"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2.5"
+                value={editLab.technicalOfficerInCharge || ""}
+                onChange={(e) =>
+                  setEditLab({
+                    ...editLab,
+                    technicalOfficerInCharge: e.target.value,
+                  })
+                }
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Official Email
+              </label>
+              <input
+                type="email"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2.5"
+                value={editLab.technicalOfficerEmail || ""}
+                onChange={(e) =>
+                  setEditLab({
+                    ...editLab,
+                    technicalOfficerEmail: e.target.value,
+                  })
+                }
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Contact Number / Extension
+              </label>
+              <input
+                type="tel"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2.5"
+                value={editLab.technicalOfficerContactNumber || ""}
+                onChange={(e) =>
+                  setEditLab({
+                    ...editLab,
+                    technicalOfficerContactNumber: e.target.value,
+                  })
+                }
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* STUDENT ACCESS */}
+        <div>
+          <h3 className="text-base font-bold text-gray-900 mb-4 pb-2 border-b">
+            Student Access Information
+          </h3>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Operating Hours
+              </label>
+              <input
+                type="text"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2.5"
+                value={editLab.operatingHours || ""}
+                onChange={(e) =>
+                  setEditLab({
+                    ...editLab,
+                    operatingHours: e.target.value,
+                  })
+                }
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Access Information
+              </label>
+              <textarea
+                rows="3"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 resize-none"
+                value={editLab.accessInformation || ""}
+                onChange={(e) =>
+                  setEditLab({
+                    ...editLab,
+                    accessInformation: e.target.value,
+                  })
+                }
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* ACTIONS */}
+        <div className="flex justify-end gap-3 pt-4 border-t">
+          <button
+            type="button"
+            onClick={() => {
+              setIsEditModalOpen(false);
+              setEditLab(null);
+            }}
+            className="px-5 py-2.5 rounded-lg border border-gray-300 bg-white text-gray-700 font-medium hover:bg-gray-50"
+          >
+            Cancel
+          </button>
+
+          <button
+            type="submit"
+            className="px-5 py-2.5 rounded-lg bg-red-950 text-white font-semibold hover:bg-red-900"
+          >
+            Update Laboratory
+          </button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+)}
 
     </div>
   );
