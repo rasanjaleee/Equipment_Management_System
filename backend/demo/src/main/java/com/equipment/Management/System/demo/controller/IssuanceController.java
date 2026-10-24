@@ -2,30 +2,43 @@ package com.equipment.Management.System.demo.controller;
 
 import com.equipment.Management.System.demo.dto.IssuanceDTO;
 import com.equipment.Management.System.demo.dto.IssuanceRequest;
+import com.equipment.Management.System.demo.dto.ReturnRequest;
 import com.equipment.Management.System.demo.service.IssuanceService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.Authentication;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/issuances")
-@CrossOrigin(origins = "*", allowedHeaders = "*")
+
 public class IssuanceController {
 
     @Autowired
     private IssuanceService issuanceService;
 
-    // Create a new issuance
+    // Creat  e a new issuance
     @PostMapping
-    public ResponseEntity<IssuanceDTO> createIssuance(@RequestBody IssuanceRequest request) {
+    public ResponseEntity<?> createIssuance(
+            @RequestBody IssuanceRequest request,
+            Authentication authentication) {
+
         try {
-            IssuanceDTO issuance = issuanceService.createIssuance(request);
+            IssuanceDTO issuance = issuanceService.createIssuance(
+                    request,
+                    authentication.getName()
+            );
+
             return new ResponseEntity<>(issuance, HttpStatus.CREATED);
+
         } catch (Exception e) {
-            return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+            return ResponseEntity.badRequest().body(Map.of(
+                    "message", e.getMessage() == null ? "Failed to create issuance." : e.getMessage()
+            ));
         }
     }
 
@@ -73,6 +86,25 @@ public class IssuanceController {
         }
     }
 
+    // Get logged-in user's issuances
+    @GetMapping("/my")
+    public ResponseEntity<List<IssuanceDTO>> getMyIssuances(
+            Authentication authentication) {
+
+        try {
+            List<IssuanceDTO> issuances =
+                    issuanceService.getMyIssuances(authentication.getName());
+
+            return new ResponseEntity<>(issuances, HttpStatus.OK);
+
+        } catch (Exception e) {
+            return new ResponseEntity<>(
+                    null,
+                    HttpStatus.INTERNAL_SERVER_ERROR
+            );
+        }
+    }
+
     // Get issuances by user ID
     @GetMapping("/user/{userId}")
     public ResponseEntity<List<IssuanceDTO>> getIssuancesByUserId(@PathVariable Long userId) {
@@ -95,6 +127,18 @@ public class IssuanceController {
         }
     }
 
+    @PostMapping("/{id}/return")
+    public ResponseEntity<IssuanceDTO> returnIssuance(@PathVariable Long id,
+                                                       @RequestBody ReturnRequest request) {
+        try {
+            return ResponseEntity.ok(issuanceService.returnIssuance(id, request));
+        } catch (org.springframework.web.server.ResponseStatusException e) {
+            return new ResponseEntity<>(null, e.getStatusCode());
+        } catch (Exception e) {
+            return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+        }
+    }
+
     // Delete an issuance
     @DeleteMapping("/{id}")
     public ResponseEntity<String> deleteIssuance(@PathVariable Long id) {
@@ -104,5 +148,19 @@ public class IssuanceController {
         } catch (Exception e) {
             return new ResponseEntity<>("Error deleting issuance", HttpStatus.INTERNAL_SERVER_ERROR);
         }
+    }
+
+    @GetMapping("/equipment/{equipmentId}/current")
+    public ResponseEntity<IssuanceDTO> getCurrentIssuanceByEquipment(
+            @PathVariable Long equipmentId) {
+
+        IssuanceDTO issuance =
+                issuanceService.getCurrentIssuanceByEquipmentId(equipmentId);
+
+        if (issuance == null) {
+            return ResponseEntity.noContent().build();
+        }
+
+        return ResponseEntity.ok(issuance);
     }
 }

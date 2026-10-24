@@ -5,53 +5,98 @@ import com.equipment.Management.System.demo.model.Maintenance;
 import com.equipment.Management.System.demo.model.MaintenanceCreateDto;
 import com.equipment.Management.System.demo.model.MaintenanceResponseDto;
 import com.equipment.Management.System.demo.model.MaintenanceUpdateDto;
+import com.equipment.Management.System.demo.model.User;
 import com.equipment.Management.System.demo.repository.EquipmentRepository;
 import com.equipment.Management.System.demo.repository.MaintenanceRepository;
+import com.equipment.Management.System.demo.repository.UserRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class MaintenanceService {
 
     private final MaintenanceRepository repo;
     private final EquipmentRepository equipmentRepo;
+    private final NotificationService notificationService;
+    private final UserRepository userRepository;
 
-    public MaintenanceService(MaintenanceRepository repo, EquipmentRepository equipmentRepo) {
+    public MaintenanceService(MaintenanceRepository repo,
+                              EquipmentRepository equipmentRepo,
+                              NotificationService notificationService,
+                              UserRepository userRepository) {
         this.repo = repo;
         this.equipmentRepo = equipmentRepo;
+        this.notificationService = notificationService;
+        this.userRepository = userRepository;
     }
 
-    // ✅ CREATE (using DTO)
+    private List<User> getMaintenanceManagers() {
+        return userRepository.findAll().stream()
+                .filter(user -> user.getRole() != null &&
+                        (user.getRole().equalsIgnoreCase("ADMIN")
+                                || user.getRole().equalsIgnoreCase("TECHNICIAN")
+                                || user.getRole().equalsIgnoreCase("SUPER_ADMIN")))
+                .collect(Collectors.toList());
+    }
+
+    private void notifyMaintenanceManagers(String title, String message,
+                                           String type, Long relatedId,
+                                           String relatedType, String priority) {
+        List<User> managers = getMaintenanceManagers();
+
+        for (User manager : managers) {
+            notificationService.createNotificationForUser(
+                    manager.getId(),
+                    title,
+                    message,
+                    type,
+                    relatedId,
+                    relatedType,
+                    priority
+            );
+        }
+    }
+
+    // ================= CREATE MAINTENANCE =================
     public Maintenance create(MaintenanceCreateDto dto) {
 
-        // Validate equipmentId
         if (dto == null || dto.equipmentId() == null) {
             throw new RuntimeException("equipmentId is required");
         }
 
-        // Find equipment from DB
         Equipment eq = equipmentRepo.findById(dto.equipmentId())
                 .orElseThrow(() -> new RuntimeException(
                         "Equipment not found with id: " + dto.equipmentId()
                 ));
 
-        // Build Maintenance entity
         Maintenance m = Maintenance.builder()
                 .equipment(eq)
                 .issueDescription(dto.issueDescription())
                 .priority(dto.priority())
                 .dueDate(dto.dueDate())
+                .status(normalizeStatus(dto.status()))
                 .build();
 
-        // status & reportedDate are automatically set by @PrePersist
-        // (PENDING + current date)
+        syncEquipmentStatus(eq, m.getStatus());
 
-        return repo.save(m);
+        Maintenance saved = repo.save(m);
+
+        notifyMaintenanceManagers(
+                "New Maintenance Created",
+                "Maintenance added for equipment: " + eq.getEquipmentName(),
+                "MAINTENANCE",
+                saved.getId(),
+                "MAINTENANCE",
+                "HIGH"
+        );
+
+        return saved;
     }
 
-    // ✅ GET ALL (returns DTO list)
+    // ================= GET ALL =================
     public List<MaintenanceResponseDto> getAll() {
         return repo.findAllWithEquipment().stream()
                 .map(m -> new MaintenanceResponseDto(
@@ -62,7 +107,7 @@ public class MaintenanceService {
                         m.getEquipment().getModel(),
                         m.getEquipment().getSerialNumber(),
                         m.getIssueDescription(),
-                        m.getStatus(),
+                        normalizeStatus(m.getStatus()),
                         m.getPriority(),
                         m.getReportedDate(),
                         m.getDueDate(),
@@ -74,13 +119,14 @@ public class MaintenanceService {
                 .toList();
     }
 
-    // ✅ UPDATE (using DTO to handle nested equipment object)
+    // ================= UPDATE MAINTENANCE =================
     public Maintenance update(Long id, MaintenanceUpdateDto dto) {
 
         Maintenance m = repo.findById(id)
                 .orElseThrow(() -> new RuntimeException("Maintenance not found with id: " + id));
 
-        // Update equipment if provided
+        String oldStatus = normalizeStatus(m.getStatus());
+
         if (dto.equipment() != null && dto.equipment().id() != null) {
             Equipment eq = equipmentRepo.findById(dto.equipment().id())
                     .orElseThrow(() -> new RuntimeException(
@@ -89,7 +135,6 @@ public class MaintenanceService {
             m.setEquipment(eq);
         }
 
-        // Update other fields
         if (dto.issueDescription() != null) {
             m.setIssueDescription(dto.issueDescription());
         }
@@ -100,7 +145,7 @@ public class MaintenanceService {
             m.setDueDate(dto.dueDate());
         }
         if (dto.status() != null) {
-            m.setStatus(dto.status());
+            m.setStatus(normalizeStatus(dto.status()));
         }
         if (dto.repairNote() != null) {
             m.setRepairNote(dto.repairNote());
@@ -109,16 +154,74 @@ public class MaintenanceService {
             m.setCost(dto.cost());
         }
 
-        // If completed → set completed date
-        if ("COMPLETED".equalsIgnoreCase(dto.status())) {
-            m.setCompletedDate(LocalDate.now());
+        if (dto.status() != null) {
+            String newStatus = normalizeStatus(dto.status());
+            m.setStatus(newStatus);
+            if ("WORKING".equals(newStatus)) {
+                m.setCompletedDate(LocalDate.now());
+            }
+            syncEquipmentStatus(m.getEquipment(), newStatus);
         }
 
-        return repo.save(m);
+        Maintenance updated = repo.save(m);
+
+        if (dto.status() != null && !normalizeStatus(dto.status()).equalsIgnoreCase(oldStatus)) {
+
+            String priority = "LOW";
+
+            if ("WORKING".equalsIgnoreCase(normalizeStatus(dto.status()))) {
+                priority = "MEDIUM";
+            }
+
+            if ("BROKEN".equalsIgnoreCase(normalizeStatus(dto.status()))) {
+                priority = "HIGH";
+            }
+
+            notifyMaintenanceManagers(
+                    "Maintenance Status Updated",
+                    "Status changed from " + oldStatus + " to " + normalizeStatus(dto.status()) +
+                            " for equipment: " + m.getEquipment().getEquipmentName(),
+                    "MAINTENANCE",
+                    updated.getId(),
+                    "MAINTENANCE",
+                    priority
+            );
+        }
+
+        return updated;
     }
 
-    // ✅ DELETE
+    private String normalizeStatus(String status) {
+        if (status == null || status.isBlank()) return "BROKEN";
+        return switch (status.trim().toUpperCase()) {
+            case "PENDING", "BROKEN" -> "BROKEN";
+            case "IN_PROGRESS", "UNDER_REPAIR" -> "UNDER_REPAIR";
+            case "COMPLETED", "WORKING", "FIXED" -> "WORKING";
+            default -> throw new IllegalArgumentException("Invalid maintenance status: " + status);
+        };
+    }
+
+    private void syncEquipmentStatus(Equipment equipment, String maintenanceStatus) {
+        if (equipment == null) return;
+        equipment.setStatus(com.equipment.Management.System.demo.model.EquipmentStatus.valueOf(normalizeStatus(maintenanceStatus)));
+        equipmentRepo.save(equipment);
+    }
+
+    // ================= DELETE =================
     public void delete(Long id) {
+
+        Maintenance m = repo.findById(id)
+                .orElseThrow(() -> new RuntimeException("Maintenance not found"));
+
         repo.deleteById(id);
+
+        notifyMaintenanceManagers(
+                "Maintenance Deleted",
+                "Maintenance removed for equipment: " + m.getEquipment().getEquipmentName(),
+                "MAINTENANCE",
+                id,
+                "MAINTENANCE",
+                "HIGH"
+        );
     }
 }

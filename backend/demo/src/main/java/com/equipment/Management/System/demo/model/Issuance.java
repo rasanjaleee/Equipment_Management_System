@@ -11,8 +11,12 @@ public class Issuance {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true, length = 30)
+    @Column(unique = true, length = 30)
     private String issuanceId;
+
+    @OneToOne(fetch = FetchType.LAZY, optional = true)
+    @JoinColumn(name = "borrow_request_id", unique = true)
+    private BorrowRequest borrowRequest;
 
     @Column(nullable = false)
     private LocalDate issueDate;
@@ -38,6 +42,10 @@ public class Issuance {
     @ManyToOne(optional = false)
     @JoinColumn(name = "user_id")
     private User user;
+
+    @ManyToOne
+    @JoinColumn(name = "issued_by_user_id")
+    private User issuedBy;
 
     @Column(length = 50)
     private String roleDept; // Student, Lab Assistant, Lecturer, Technician
@@ -69,6 +77,14 @@ public class Issuance {
 
     public void setIssuanceId(String issuanceId) {
         this.issuanceId = issuanceId;
+    }
+
+    public BorrowRequest getBorrowRequest() {
+        return borrowRequest;
+    }
+
+    public void setBorrowRequest(BorrowRequest borrowRequest) {
+        this.borrowRequest = borrowRequest;
     }
 
     public LocalDate getIssueDate() {
@@ -165,5 +181,13 @@ public class Issuance {
 
     public void setRemarks(String remarks) {
         this.remarks = remarks;
+    }
+
+    public User getIssuedBy() {
+        return issuedBy;
+    }
+
+    public void setIssuedBy(User issuedBy) {
+        this.issuedBy = issuedBy;
     }
 }

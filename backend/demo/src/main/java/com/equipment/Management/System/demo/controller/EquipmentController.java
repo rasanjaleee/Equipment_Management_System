@@ -1,10 +1,17 @@
 package com.equipment.Management.System.demo.controller;
 
+import com.equipment.Management.System.demo.dto.BulkUploadResponse;
 import com.equipment.Management.System.demo.model.Equipment;
 import com.equipment.Management.System.demo.model.EquipmentStatus;
+import com.equipment.Management.System.demo.service.ActivityLogService;
+import com.equipment.Management.System.demo.service.AdminSettingService;
 import com.equipment.Management.System.demo.service.BorrowRequestService;
+import com.equipment.Management.System.demo.service.CloudinaryService;
+import com.equipment.Management.System.demo.service.EquipmentCsvService;
 import com.equipment.Management.System.demo.service.EquipmentService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -17,39 +24,69 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/equipment")
-@CrossOrigin
+@CrossOrigin(originPatterns = {"http://localhost:*", "https://*.choreoapps.dev", "https://*.choreo.org"})
 public class EquipmentController {
 
     private final EquipmentService equipmentService;
+    private final EquipmentCsvService equipmentCsvService;
+    private final ActivityLogService activityLogService;
     private final BorrowRequestService borrowRequestService;
-    private static final String UPLOAD_DIR = "uploads/";
+    private final CloudinaryService cloudinaryService;
+    private final AdminSettingService adminSettingService;
 
-    public EquipmentController(EquipmentService equipmentService, BorrowRequestService borrowRequestService) {
+    public EquipmentController(EquipmentService equipmentService,
+                               EquipmentCsvService equipmentCsvService,
+                               ActivityLogService activityLogService,
+                               BorrowRequestService borrowRequestService,
+                               CloudinaryService cloudinaryService,
+                               AdminSettingService adminSettingService) {
         this.equipmentService = equipmentService;
+        this.equipmentCsvService = equipmentCsvService;
+        this.activityLogService = activityLogService;
         this.borrowRequestService = borrowRequestService;
+        this.cloudinaryService = cloudinaryService;
+        this.adminSettingService = adminSettingService;
+    }
+
+    @GetMapping("/lab/{labName}")
+    public List<Equipment> getEquipmentByLab(@PathVariable String labName) {
+        return equipmentService.getAllEquipment().stream()
+                .filter(e -> e.getLaboratory() != null &&
+                        e.getLaboratory().equalsIgnoreCase(labName))
+                .toList();
     }
 
     @PostMapping("/add")
     public ResponseEntity<?> addEquipment(
             @RequestParam String equipmentName,
             @RequestParam String laboratory,
-            @RequestParam String model,
-            @RequestParam String serialNumber,
-            @RequestParam Double cost,
-            @RequestParam String purchaseDate,
-            @RequestParam String supplier,
-            @RequestParam EquipmentStatus status,
-            @RequestParam String qrCode,
-            @RequestParam String grnNumber,
-            @RequestParam MultipartFile photo
+            @RequestParam(required = false) String model,
+            @RequestParam(required = false) String serialNumber,
+            @RequestParam(required = false) Double cost,
+            @RequestParam(required = false) String purchaseDate,
+            @RequestParam(required = false) String supplier,
+            @RequestParam(required = false) EquipmentStatus status,
+            @RequestParam(required = false) String grnNumber,
+            @RequestParam(required = false) MultipartFile photo
     ) {
         try {
-            // Create upload directory if not exists
-            Files.createDirectories(Paths.get(UPLOAD_DIR));
+            if (serialNumber != null && !serialNumber.isBlank() && !adminSettingService.isAllowManualSerialEntry()) {
+                return ResponseEntity.badRequest().body("Manual serial number entry is disabled in system settings.");
+            }
 
-            String fileName = System.currentTimeMillis() + "_" + photo.getOriginalFilename();
-            Path filePath = Paths.get(UPLOAD_DIR + fileName);
-            Files.write(filePath, photo.getBytes());
+            EquipmentStatus effectiveStatus = status;
+            if (effectiveStatus == null) {
+                String defStatusStr = adminSettingService.getDefaultEquipmentStatus();
+                try {
+                    effectiveStatus = EquipmentStatus.valueOf(defStatusStr.toUpperCase());
+                } catch (Exception e) {
+                    effectiveStatus = EquipmentStatus.WORKING;
+                }
+            }
+
+            String uploadedPhotoUrl = (photo != null && !photo.isEmpty())
+                    ? cloudinaryService.uploadImage(photo, "equipment")
+                    : null;
 
             Equipment equipment = new Equipment();
             equipment.setEquipmentName(equipmentName);
@@ -57,19 +94,43 @@ public class EquipmentController {
             equipment.setModel(model);
             equipment.setSerialNumber(serialNumber);
             equipment.setCost(cost);
-            equipment.setPurchaseDate(LocalDate.parse(purchaseDate));
             equipment.setSupplier(supplier);
-            equipment.setStatus(status);
-            equipment.setQrCode(qrCode);
+            equipment.setStatus(effectiveStatus);
             equipment.setGrnNumber(grnNumber);
-            equipment.setPhotoPath(filePath.toString());
+            equipment.setPhotoPath(uploadedPhotoUrl);
 
-            equipmentService.saveEquipment(equipment);
+            if (purchaseDate != null && !purchaseDate.isBlank()) {
+                equipment.setPurchaseDate(LocalDate.parse(purchaseDate));
+            }
+
+            Equipment savedEquipment = equipmentService.createEquipmentWithQr(equipment);
+
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String username = authentication.getName();
+            String role = authentication.getAuthorities().stream()
+                    .findFirst()
+                    .map(auth -> auth.getAuthority())
+                    .orElse("ROLE_UNKNOWN");
+
+            activityLogService.logActivity(
+                    username,
+                    role,
+                    "CREATED_EQUIPMENT",
+                    savedEquipment.getId(),
+                    "Created equipment: " + savedEquipment.getEquipmentName()
+            );
+
             return ResponseEntity.ok("Equipment added successfully");
 
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Error: " + e.getMessage());
         }
+    }
+
+    @PostMapping("/bulk-upload")
+    public ResponseEntity<BulkUploadResponse> bulkUpload(@RequestParam("file") MultipartFile file) {
+        BulkUploadResponse response = equipmentCsvService.uploadCsv(file);
+        return ResponseEntity.ok(response);
     }
 
     @PutMapping("/update/{id}")
@@ -83,21 +144,31 @@ public class EquipmentController {
             @RequestParam(required = false) String purchaseDate,
             @RequestParam(required = false) String supplier,
             @RequestParam EquipmentStatus status,
-            @RequestParam(required = false) String qrCode,
             @RequestParam(required = false) String grnNumber,
             @RequestParam(required = false) MultipartFile photo
     ) {
         try {
             Equipment equipment = equipmentService.getById(id);
 
+            if (serialNumber != null && !serialNumber.isBlank()
+                    && !serialNumber.equals(equipment.getSerialNumber())
+                    && !adminSettingService.isAllowManualSerialEntry()) {
+                return ResponseEntity.badRequest().body("Manual serial number entry is disabled in system settings.");
+            }
+
+            String oldStatus = equipment.getStatus() != null
+                    ? equipment.getStatus().name()
+                    : "UNKNOWN";
+
             equipment.setEquipmentName(equipmentName);
             equipment.setLaboratory(laboratory);
             equipment.setModel(model);
             equipment.setSerialNumber(serialNumber);
             equipment.setCost(cost);
+
+
             equipment.setSupplier(supplier);
             equipment.setStatus(status);
-            equipment.setQrCode(qrCode);
             equipment.setGrnNumber(grnNumber);
 
             if (purchaseDate != null && !purchaseDate.isBlank()) {
@@ -105,15 +176,29 @@ public class EquipmentController {
             }
 
             if (photo != null && !photo.isEmpty()) {
-                Files.createDirectories(Paths.get(UPLOAD_DIR));
-                String fileName = System.currentTimeMillis() + "_" + photo.getOriginalFilename();
-                Path filePath = Paths.get(UPLOAD_DIR + fileName);
-                Files.write(filePath, photo.getBytes());
-                equipment.setPhotoPath(filePath.toString());
+                String uploadedPhotoUrl = cloudinaryService.uploadImage(photo, "equipment");
+                equipment.setPhotoPath(uploadedPhotoUrl);
             }
 
             equipmentService.saveEquipment(equipment);
+
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String username = authentication.getName();
+            String role = authentication.getAuthorities().stream()
+                    .findFirst()
+                    .map(auth -> auth.getAuthority())
+                    .orElse("ROLE_UNKNOWN");
+
+            activityLogService.logActivity(
+                    username,
+                    role,
+                    "UPDATED_EQUIPMENT_STATUS",
+                    equipment.getId(),
+                    "Status changed from " + oldStatus + " to " + equipment.getStatus().name()
+            );
+
             return ResponseEntity.ok("Equipment updated successfully");
+
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Error: " + e.getMessage());
         }
@@ -122,24 +207,89 @@ public class EquipmentController {
     @DeleteMapping("/delete/{id}")
     public ResponseEntity<?> deleteEquipment(@PathVariable Long id) {
         try {
+            Equipment equipment = equipmentService.getById(id);
+
             equipmentService.deleteEquipment(id);
+
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String username = authentication.getName();
+            String role = authentication.getAuthorities().stream()
+                    .findFirst()
+                    .map(auth -> auth.getAuthority())
+                    .orElse("ROLE_UNKNOWN");
+
+            activityLogService.logActivity(
+                    username,
+                    role,
+                    "DELETED_EQUIPMENT",
+                    id,
+                    "Deleted equipment: " + equipment.getEquipmentName()
+            );
+
             return ResponseEntity.ok("Equipment deleted successfully");
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Error: " + e.getMessage());
         }
     }
 
-    // Get all equipment
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<?> updateEquipmentStatusPatch(
+            @PathVariable Long id,
+            @RequestParam(required = false) String status,
+            @RequestBody(required = false) Map<String, String> body) {
+        return handleStatusUpdate(id, status, body);
+    }
+
+    @PutMapping("/{id}/status")
+    public ResponseEntity<?> updateEquipmentStatusPut(
+            @PathVariable Long id,
+            @RequestParam(required = false) String status,
+            @RequestBody(required = false) Map<String, String> body) {
+        return handleStatusUpdate(id, status, body);
+    }
+
+    private ResponseEntity<?> handleStatusUpdate(Long id, String statusParam, Map<String, String> body) {
+        try {
+            String newStatus = statusParam;
+            if ((newStatus == null || newStatus.isBlank()) && body != null && body.containsKey("status")) {
+                newStatus = body.get("status");
+            }
+            if (newStatus == null || newStatus.isBlank()) {
+                return ResponseEntity.badRequest().body("Status parameter is required");
+            }
+
+            Equipment updated = equipmentService.updateStatus(id, newStatus);
+
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String username = authentication != null ? authentication.getName() : "SYSTEM";
+            String role = (authentication != null && !authentication.getAuthorities().isEmpty())
+                    ? authentication.getAuthorities().iterator().next().getAuthority()
+                    : "ROLE_UNKNOWN";
+
+            activityLogService.logActivity(
+                    username,
+                    role,
+                    "UPDATED_EQUIPMENT_STATUS",
+                    updated.getId(),
+                    "Status changed to " + updated.getStatus().name() + " for " + updated.getEquipmentName()
+            );
+
+            return ResponseEntity.ok(updated);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error: " + e.getMessage());
+        }
+    }
+
     @GetMapping
     public List<Equipment> getAllEquipment() {
         return equipmentService.getAllEquipment();
     }
 
-    // Keep the old endpoint for backwards compatibility
     @GetMapping("/all")
     public List<Equipment> getAllEquipmentAlt() {
         return equipmentService.getAllEquipment();
     }
+
     @GetMapping("/{id}")
     public ResponseEntity<?> getEquipmentById(@PathVariable Long id) {
         try {
@@ -155,6 +305,7 @@ public class EquipmentController {
                                                @RequestParam LocalDate startDate,
                                                @RequestParam LocalDate endDate) {
         boolean available = borrowRequestService.isEquipmentAvailable(equipmentId, startDate, endDate);
+
         if (available) {
             return ResponseEntity.ok(Map.of(
                     "available", true,
@@ -166,5 +317,75 @@ public class EquipmentController {
                 "available", false,
                 "message", "Equipment is not available for the selected date range."
         ));
+    }
+
+    @GetMapping("/{equipmentId}/availability-calendar")
+    public ResponseEntity<?> getAvailabilityCalendar(
+            @PathVariable Long equipmentId,
+            @RequestParam LocalDate startDate,
+            @RequestParam LocalDate endDate) {
+
+        return ResponseEntity.ok(
+                borrowRequestService.getEquipmentCalendar(
+                        equipmentId,
+                        startDate,
+                        endDate
+                )
+        );
+    }
+
+    @GetMapping("/bulk-template")
+    public ResponseEntity<String> downloadBulkTemplate() {
+        String csvTemplate = "equipmentName,laboratory,model,serialNumber,cost,purchaseDate,supplier,status,grnNumber\n";
+        return ResponseEntity.ok()
+                .header("Content-Disposition", "attachment; filename=equipment_template.csv")
+                .header("Content-Type", "text/csv")
+                .body(csvTemplate);
+    }
+
+    @PostMapping("/regenerate-all-qr")
+    public ResponseEntity<?> regenerateAllQr() {
+        try {
+            Map<String, Object> result = equipmentService.regenerateAllQrCodes();
+
+            try {
+                Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+                String username = (authentication != null) ? authentication.getName() : "SYSTEM";
+                String role = (authentication != null) ? authentication.getAuthorities().stream()
+                        .findFirst()
+                        .map(auth -> auth.getAuthority())
+                        .orElse("ROLE_UNKNOWN") : "ROLE_UNKNOWN";
+
+                activityLogService.logActivity(
+                        username,
+                        role,
+                        "REGENERATED_QR_CODES",
+                        null,
+                        "Regenerated QR codes for all equipment: " + result
+                );
+            } catch (Exception logEx) {
+                // Ignore logging failure to avoid breaking main operation
+            }
+
+            return ResponseEntity.ok(Map.of(
+                    "message", "QR codes regenerated successfully",
+                    "details", result
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error regenerating QR codes: " + e.getMessage());
+        }
+    }
+
+    @PostMapping("/{id}/regenerate-qr")
+    public ResponseEntity<?> regenerateQrById(@PathVariable Long id) {
+        try {
+            Equipment updated = equipmentService.regenerateQrCode(id);
+            return ResponseEntity.ok(Map.of(
+                    "message", "QR code regenerated successfully for equipment ID: " + id,
+                    "equipment", updated
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error regenerating QR code: " + e.getMessage());
+        }
     }
 }

@@ -7,8 +7,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.security.Principal;
 import java.util.List;
 import java.util.Map;
+import java.time.LocalDate;
 
 @RestController
 @RequestMapping("/api/borrow-requests")
@@ -25,9 +27,29 @@ public class BorrowRequestController {
         return ResponseEntity.ok(borrowRequestService.getAllBorrowRequests());
     }
 
+    @GetMapping("/calendar")
+    public ResponseEntity<List<BorrowRequestResponse>> getCalendarRequests(
+            @RequestParam LocalDate startDate,
+            @RequestParam LocalDate endDate) {
+
+        return ResponseEntity.ok(
+                borrowRequestService.getCalendarBorrowRequests(startDate, endDate)
+        );
+    }
+
+    @GetMapping("/my")
+    public ResponseEntity<List<BorrowRequestResponse>> getMyRequests(
+            org.springframework.security.core.Authentication authentication) {
+
+        return ResponseEntity.ok(
+                borrowRequestService.getMyBorrowRequests(authentication.getName())
+        );
+    }
+
     @PostMapping
-    public ResponseEntity<BorrowRequestResponse> createBorrowRequest(@RequestBody BorrowRequestCreateRequest request) {
-        BorrowRequestResponse created = borrowRequestService.createBorrowRequest(request);
+    public ResponseEntity<BorrowRequestResponse> createBorrowRequest(@RequestBody BorrowRequestCreateRequest request,
+                                                                    Principal principal) {
+        BorrowRequestResponse created = borrowRequestService.createBorrowRequest(request, principal.getName());
         return new ResponseEntity<>(created, HttpStatus.CREATED);
     }
 

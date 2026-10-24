@@ -17,6 +17,10 @@ public class BorrowRequest {
     @JoinColumn(name = "equipment_id", nullable = false)
     private Equipment equipment;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "requester_id")
+    private User requester;
+
     @Column(nullable = false, length = 120)
     private String applicantName;
 
@@ -71,6 +75,14 @@ public class BorrowRequest {
 
     public void setEquipment(Equipment equipment) {
         this.equipment = equipment;
+    }
+
+    public User getRequester() {
+        return requester;
+    }
+
+    public void setRequester(User requester) {
+        this.requester = requester;
     }
 
     public String getApplicantName() {

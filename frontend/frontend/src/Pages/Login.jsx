@@ -1,28 +1,48 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+import { API_BASE_URL } from "../services/api";
 import logo from '/images/logo.jpg';
 import loginpage01 from "/images/loginpage01.png";
 
 
 export default function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [form, setForm] = useState({ 
     username: "", 
     password: "" 
   });
   const [error, setError] = useState("");
+  const [sessionExpiredMsg, setSessionExpiredMsg] = useState("");
   const [loading, setLoading] = useState(false);
+  const [maintenanceMsg, setMaintenanceMsg] = useState("");
+
+  // Show session-expired banner when redirected from auto-logout
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get("reason") === "timeout") {
+      setSessionExpiredMsg("Your session has expired due to inactivity. Please log in again.");
+      window.history.replaceState({}, "", "/login");
+    } else if (params.get("reason") === "maintenance") {
+      setMaintenanceMsg("The system is currently undergoing scheduled maintenance. Please check back later.");
+      window.history.replaceState({}, "", "/login");
+    }
+  }, [location.search]);
+
+  const normalizeRole = (value) => String(value || "").replace(/^ROLE_/i, "").toUpperCase();
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
     setError("");
+    setMaintenanceMsg("");
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError("");
+    setMaintenanceMsg("");
 
     // Sanitize inputs
     const sanitized = {
@@ -37,29 +57,50 @@ export default function Login() {
     }
 
     try {
-      const res = await axios.post("http://localhost:8080/auth/login", sanitized);
+      const res = await axios.post(`${API_BASE_URL}/auth/login`, sanitized);
       
       // Store JWT token and user info
-      const { token, id, username, email, role } = res.data;
-      localStorage.setItem("token", token);
-      localStorage.setItem("user", JSON.stringify({ id, username, email, role }));
-      axios.defaults.headers.common.Authorization = `Bearer ${token}`;
 
-      const normalizedRole = String(role || "").replace(/^ROLE_/i, "").toUpperCase();
+// Store JWT token and user info
+const { token, id, username, email, role, mustChangePassword, sessionTimeoutMinutes } = res.data;
+const normalizedRole = normalizeRole(role);
 
-      // Redirect to dashboard
-      if (normalizedRole === "ADMIN") {
-        console.log("Redirecting to admin dashboard");
-        navigate("/admin/dashboard");
-      } else {
-        console.log("Redirecting to user home");
-        navigate("/home");
-      }
+localStorage.setItem("token", token);
+localStorage.setItem(
+  "user",
+  JSON.stringify({ id, username, email, role: normalizedRole, mustChangePassword })
+);
+// Store session timeout so client-side inactivity timer can respect admin-configured value
+if (sessionTimeoutMinutes && sessionTimeoutMinutes > 0) {
+  localStorage.setItem("sessionTimeoutMinutes", String(sessionTimeoutMinutes));
+} else {
+  localStorage.setItem("sessionTimeoutMinutes", "30");
+}
+
+// ✅ Keep axios auth header (important)
+axios.defaults.headers.common.Authorization = `Bearer ${token}`;
+
+if (mustChangePassword) {
+  navigate("/change-password");
+} else if (location.state?.from) {
+  navigate(location.state.from);
+} else if (normalizedRole === "SUPER_ADMIN" || normalizedRole === "ADMIN") {
+  navigate("/admin/dashboard");
+} else if (normalizedRole === "TECHNICIAN") {
+  navigate("/technician/dashboard");
+} else {
+  navigate("/home");
+}
+
    } catch (err) {
   const status = err.response?.status;
   const msg = err.response?.data?.message;
+  const isMaintenance = err.response?.data?.maintenance === true;
 
-  if (status === 429) {
+  if (status === 503 && isMaintenance) {
+    setMaintenanceMsg(msg || "The system is currently undergoing scheduled maintenance. Please check back later.");
+    setError("");
+  } else if (status === 429) {
     setError(msg || "Too many attempts. Please try again later.");
   } else {
     setError(msg || "Invalid username or password");
@@ -73,7 +114,7 @@ export default function Login() {
   return (
     <div className="min-h-screen flex">
       {/* Left side - Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center bg-white p-8">
+      <div className="w-full lg:w-1/2 flex items-center justify-center bg-white p-4 sm:p-8">
         <div className="max-w-md w-full">
           {/* Logo and Title */}
           <div className="mb-8">
@@ -96,6 +137,42 @@ export default function Login() {
           </div>
 
           {/* Form */}
+          {/* Maintenance Mode Banner */}
+          {maintenanceMsg && (
+            <div className="mb-5 flex items-start gap-3 bg-orange-50 border border-orange-400 text-orange-800 rounded-xl px-4 py-3 shadow-sm">
+              <svg className="w-6 h-6 flex-shrink-0 mt-0.5 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+              </svg>
+              <div className="flex-1">
+                <p className="text-sm font-semibold">System Under Maintenance</p>
+                <p className="text-xs mt-0.5">{maintenanceMsg}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Session Expired Banner */}
+          {sessionExpiredMsg && (
+            <div className="mb-5 flex items-start gap-3 bg-amber-50 border border-amber-300 text-amber-800 rounded-xl px-4 py-3 shadow-sm">
+              <svg className="w-5 h-5 flex-shrink-0 mt-0.5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <div>
+                <p className="text-sm font-semibold">Session Expired</p>
+                <p className="text-xs mt-0.5">{sessionExpiredMsg}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSessionExpiredMsg("")}
+                className="ml-auto text-amber-500 hover:text-amber-700 flex-shrink-0"
+                aria-label="Dismiss"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Username Input */}
             <div>
