@@ -39,9 +39,9 @@ public class AdminSettingService {
 
         AdminSettingsDTO dto = new AdminSettingsDTO();
 
-        dto.setSystemName(map.getOrDefault("systemName", "Equipment Management System"));
-        dto.setInstitutionName(map.getOrDefault("institutionName", "Institution"));
-        dto.setContactEmail(map.getOrDefault("contactEmail", "admin@example.com"));
+        dto.setSystemName(map.getOrDefault("systemName", "Faculty of Engineering Equipment Management System"));
+        dto.setInstitutionName(map.getOrDefault("institutionName", "Faculty of Engineering"));
+        dto.setContactEmail(map.getOrDefault("contactEmail", "admin@eng.university.lk"));
         dto.setTimeZone(map.getOrDefault("timeZone", "Asia/Colombo"));
 
         dto.setSessionTimeoutMinutes(parseOrDefaultInt(map.get("sessionTimeoutMinutes"), 30));

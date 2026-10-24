@@ -143,7 +143,7 @@ public class SettingsWorkflowIntegrationTest {
     }
 
     @Test
-    void testMaxIssuanceDays_Enforcement() {
+    void testIssuanceRequiresApprovedBorrowRequest() {
         AdminSettingsDTO dto = adminSettingService.getSettingsDTO();
         dto.setMaxIssuanceDays(7);
         adminSettingService.saveSettingsDTO(dto);
@@ -171,8 +171,9 @@ public class SettingsWorkflowIntegrationTest {
         issuer.setRole("ADMIN");
         issuer = userRepository.save(issuer);
 
-        // Request loan for 10 days (exceeds 7 days)
+        // Issuance creation must be linked to an approved borrow request.
         IssuanceRequest req = new IssuanceRequest();
+        req.setBorrowRequestId(null);
         req.setEquipmentId(eq.getId());
         req.setUserId(u.getId());
         req.setIssueDate(LocalDate.now());
@@ -188,7 +189,7 @@ public class SettingsWorkflowIntegrationTest {
             issuanceService.createIssuance(finalReq, issuerUsername);
         });
 
-        assertTrue(ex.getMessage().contains("exceeds the maximum allowed duration"));
+        assertTrue(ex.getMessage().contains("Borrow request ID is required"));
     }
 
     @Test

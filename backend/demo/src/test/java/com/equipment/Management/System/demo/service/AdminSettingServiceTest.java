@@ -45,6 +45,7 @@ class AdminSettingServiceTest {
             memoryStore.put(s.getSettingKey(), s);
             return s;
         });
+        lenient().when(repository.findAll()).thenAnswer(invocation -> new java.util.ArrayList<>(memoryStore.values()));
     }
 
     @Test

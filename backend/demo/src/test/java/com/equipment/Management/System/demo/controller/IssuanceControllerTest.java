@@ -13,6 +13,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.security.core.Authentication;
 
 import java.util.List;
 
@@ -29,6 +30,7 @@ class IssuanceControllerTest {
     private MockMvc mockMvc;
 
     @Mock private IssuanceService issuanceService;
+    @Mock private Authentication authentication;
     @InjectMocks private IssuanceController issuanceController;
 
     @BeforeEach
@@ -39,21 +41,25 @@ class IssuanceControllerTest {
     @Test
     @DisplayName("TC_BORROW_17: Create issuance")
     void createIssuance_shouldReturn201() throws Exception {
-        when(issuanceService.createIssuance(any())).thenReturn(new IssuanceDTO());
+        when(authentication.getName()).thenReturn("admin");
+        when(issuanceService.createIssuance(any(), any())).thenReturn(new IssuanceDTO());
 
         mockMvc.perform(post("/api/issuances")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{}"))
+                .principal(authentication)
+                .content("{\"borrowRequestId\":1,\"issueDate\":\"2026-10-24\",\"returnDueDate\":\"2026-10-25\",\"status\":\"ISSUED\",\"equipmentId\":1,\"qtyIssued\":1,\"conditionAtIssue\":\"Working\"}"))
                .andExpect(status().isCreated());
     }
 
     @Test
     @DisplayName("TC_BORROW_18: Create with invalid data")
     void createIssuance_serviceFails_shouldReturn400() throws Exception {
-        when(issuanceService.createIssuance(any())).thenThrow(new RuntimeException("Invalid"));
+        when(authentication.getName()).thenReturn("admin");
+        when(issuanceService.createIssuance(any(), any())).thenThrow(new RuntimeException("Invalid"));
 
         mockMvc.perform(post("/api/issuances")
                 .contentType(MediaType.APPLICATION_JSON)
+                .principal(authentication)
                 .content("{}"))
                .andExpect(status().isBadRequest());
     }
