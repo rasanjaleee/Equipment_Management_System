@@ -11,6 +11,7 @@ import com.equipment.Management.System.demo.repository.BorrowRequestNotification
 import com.equipment.Management.System.demo.repository.EquipmentRepository;
 import com.equipment.Management.System.demo.repository.IssuanceRepository;
 import com.equipment.Management.System.demo.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,17 +32,29 @@ public class BorrowRequestService {
     private final BorrowRequestNotificationRepository notificationRepository;
     private final UserRepository userRepository;
     private final IssuanceRepository issuanceRepository;
+    private final NotificationService notificationService;
 
     public BorrowRequestService(BorrowRequestRepository borrowRequestRepository,
                                 EquipmentRepository equipmentRepository,
                                 BorrowRequestNotificationRepository notificationRepository,
                                 UserRepository userRepository,
                                 IssuanceRepository issuanceRepository) {
+        this(borrowRequestRepository, equipmentRepository, notificationRepository, userRepository, issuanceRepository, null);
+    }
+
+    @Autowired
+    public BorrowRequestService(BorrowRequestRepository borrowRequestRepository,
+                                EquipmentRepository equipmentRepository,
+                                BorrowRequestNotificationRepository notificationRepository,
+                                UserRepository userRepository,
+                                IssuanceRepository issuanceRepository,
+                                @Autowired(required = false) NotificationService notificationService) {
         this.borrowRequestRepository = borrowRequestRepository;
         this.equipmentRepository = equipmentRepository;
         this.notificationRepository = notificationRepository;
         this.userRepository = userRepository;
         this.issuanceRepository = issuanceRepository;
+        this.notificationService = notificationService;
     }
 
     public List<BorrowRequestResponse> getAllBorrowRequests() {
@@ -108,10 +121,11 @@ public class BorrowRequestService {
         Equipment equipment = equipmentRepository.findById(request.getEquipmentId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Equipment not found."));
 
+        User requester = resolveRequester(request, username);
+
         BorrowRequest entity = new BorrowRequest();
         entity.setEquipment(equipment);
-        entity.setRequester(userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authenticated user not found.")));
+        entity.setRequester(requester);
         entity.setApplicantName(request.getApplicantName().trim());
         entity.setRegistrationOrStaffId(request.getRegistrationOrStaffId().trim());
         entity.setDepartment(request.getDepartment().trim());
@@ -123,72 +137,103 @@ public class BorrowRequestService {
         entity.setStatus("PENDING");
 
         BorrowRequest saved = borrowRequestRepository.save(entity);
+
+        if (notificationService != null) {
+            notifyAdminsOfNewRequest(saved);
+        }
+
         return toResponse(saved);
     }
+
+    public BorrowRequestResponse createBorrowRequest(BorrowRequestCreateRequest request) {
+        return createBorrowRequest(request, null);
+    }
+
+    private User resolveRequester(BorrowRequestCreateRequest request, String username) {
+        if (username != null && !username.isBlank()) {
+            return userRepository.findByUsername(username).orElse(null);
+        }
+        if (request.getEmail() != null && !request.getEmail().isBlank()) {
+            return userRepository.findByEmailIgnoreCase(request.getEmail().trim()).orElse(null);
+        }
+        return null;
+    }
+
 
     @Transactional
     public BorrowRequestResponse updateStatus(Long id, String status) {
-        String normalizedStatus = normalizeStatus(status);
-        BorrowRequest current = borrowRequestRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Borrow request not found."));
 
-        if ("APPROVED".equals(normalizedStatus) && "PENDING".equals(normalizeStatus(current.getStatus()))) {
-            equipmentRepository.findByIdForUpdate(current.getEquipment().getId())
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Equipment not found."));
-        }
-
+        // Lock the request while processing the decision.
         BorrowRequest entity = borrowRequestRepository.findByIdForUpdate(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Borrow request not found."));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Borrow request not found."
+                ));
+
+        String normalizedStatus = normalizeStatus(status);
         String currentStatus = normalizeStatus(entity.getStatus());
+
+        // Handle repeated approval/rejection requests.
         if (currentStatus.equals(normalizedStatus)) {
             if (isDecision(normalizedStatus)) {
                 ensureDecisionNotification(entity, normalizedStatus);
+                notifyApplicantOfDecision(entity, normalizedStatus);
             }
             return toResponse(entity);
         }
-        if (!"PENDING".equals(currentStatus) || "PENDING".equals(normalizedStatus)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "A decided borrow request cannot be changed.");
+
+        // Only PENDING requests can be approved or rejected.
+        if (!"PENDING".equals(currentStatus)
+                || "PENDING".equals(normalizedStatus)) {
+
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "A decided borrow request cannot be changed."
+            );
         }
 
-        if ("APPROVED".equals(normalizedStatus) && !isAvailableForApproval(entity)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Equipment is not available for the selected date range.");
+        // Check availability before approving.
+        if ("APPROVED".equals(normalizedStatus)) {
+
+            boolean available = isAvailableForApproval(
+                    entity.getEquipment().getId(),
+                    entity.getBorrowStartDate(),
+                    entity.getBorrowEndDate(),
+                    entity.getId()
+            );
+
+            if (!available) {
+                throw new ResponseStatusException(
+                        HttpStatus.CONFLICT,
+                        "Equipment is no longer available for the selected dates."
+                );
+            }
         }
 
+        // Update request status.
         entity.setStatus(normalizedStatus);
+
         BorrowRequest saved = borrowRequestRepository.save(entity);
+
+        // Generate decision notification.
         ensureDecisionNotification(saved, normalizedStatus);
+
+        // Notify the applicant.
+        notifyApplicantOfDecision(saved, normalizedStatus);
+
         return toResponse(saved);
     }
 
-    @Transactional
-    public boolean isEquipmentAvailable(Long equipmentId, LocalDate startDate, LocalDate endDate) {
-        validateAvailabilityInputs(equipmentId, startDate, endDate);
 
-        equipmentRepository.findByIdForUpdate(equipmentId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Equipment not found."));
-
-        return isAvailable(equipmentId, startDate, endDate);
+    public BorrowRequestResponse updateStatus(Long id, Map<String, String> statusUpdate, String currentUsername) {
+        String status = (statusUpdate != null) ? statusUpdate.get("status") : null;
+        return updateStatus(id, status);
     }
 
-    private boolean isAvailableForApproval(BorrowRequest request) {
-        List<BorrowRequest> conflicts = borrowRequestRepository.findOverlappingBlockingRequestsExcept(
-                request.getId(),
-                request.getEquipment().getId(),
-                request.getBorrowStartDate(),
-                request.getBorrowEndDate(),
-                BLOCKING_STATUSES
-        );
-        if (!conflicts.isEmpty()) {
-            return false;
-        }
-
-        return issuanceRepository.findOverlappingActiveIssuances(
-                request.getEquipment().getId(),
-                request.getBorrowStartDate(),
-                request.getBorrowEndDate(),
-                List.of("ISSUED", "OVERDUE")
-        ).isEmpty();
+    @Transactional(readOnly = true)
+    public boolean isEquipmentAvailable(Long equipmentId, LocalDate startDate, LocalDate endDate) {
+        validateAvailabilityInputs(equipmentId, startDate, endDate);
+        return isAvailable(equipmentId, startDate, endDate);
     }
 
     private boolean isAvailable(Long equipmentId, LocalDate startDate, LocalDate endDate) {
@@ -256,23 +301,104 @@ public class BorrowRequestService {
 
         if (request.getRequester() == null) {
             request.setRequester(userRepository.findByEmailIgnoreCase(request.getEmail())
-                    .orElseThrow(() -> new ResponseStatusException(
-                            HttpStatus.CONFLICT,
-                            "Cannot notify the requester because this request is not linked to a user account."
-                    )));
-            borrowRequestRepository.save(request);
+                    .orElse(null));
+            if (request.getRequester() != null) {
+                borrowRequestRepository.save(request);
+            }
         }
 
-        String message = "Your request #" + request.getId() + " for "
-                + request.getEquipment().getEquipmentName() + " has been "
-                + decision.toLowerCase() + ".";
-        BorrowRequestNotification notification = new BorrowRequestNotification();
-        notification.setRecipient(request.getRequester());
-        notification.setBorrowRequest(request);
-        notification.setDecision(decision);
-        notification.setMessage(message);
-        notification.setRead(false);
-        notificationRepository.save(notification);
+        if (request.getRequester() != null) {
+            String message = "Your request #" + request.getId() + " for "
+                    + request.getEquipment().getEquipmentName() + " has been "
+                    + decision.toLowerCase() + ".";
+            BorrowRequestNotification notification = new BorrowRequestNotification();
+            notification.setRecipient(request.getRequester());
+            notification.setBorrowRequest(request);
+            notification.setDecision(decision);
+            notification.setMessage(message);
+            notification.setRead(false);
+            notificationRepository.save(notification);
+        }
+    }
+
+    private void notifyApplicantOfDecision(BorrowRequest request, String decision) {
+        if (notificationService == null) return;
+        Long recipientId = request.getRequester() != null ? request.getRequester().getId() : null;
+        if (recipientId == null && request.getEmail() != null) {
+            recipientId = userRepository.findByEmailIgnoreCase(request.getEmail().trim())
+                    .map(User::getId).orElse(null);
+        }
+        if (recipientId == null) return;
+
+        boolean approved = "APPROVED".equals(decision);
+        String title = approved ? "Borrow Request Approved" : "Borrow Request Rejected";
+        String message = "Your request to borrow "
+                + request.getEquipment().getEquipmentName()
+                + " (Request #" + request.getId() + ") has been "
+                + (approved ? "approved." : "rejected.");
+
+        notificationService.createNotificationForUser(
+                recipientId,
+                title,
+                message,
+                "BORROW_REQUEST",
+                request.getId(),
+                "BorrowRequest",
+                approved ? "HIGH" : "NORMAL"
+        );
+    }
+
+    private void notifyAdminsOfNewRequest(BorrowRequest request) {
+        if (notificationService == null) return;
+        List<User> admins = userRepository.findAll().stream()
+                .filter(u -> u.getRole() != null &&
+                        (u.getRole().equalsIgnoreCase("ADMIN")
+                                || u.getRole().equalsIgnoreCase("SUPER_ADMIN")
+                                || u.getRole().equalsIgnoreCase("TECHNICIAN")))
+                .toList();
+
+        for (User admin : admins) {
+            notificationService.createNotificationForUser(
+                    admin.getId(),
+                    "New Borrow Request",
+                    "New borrow request #" + request.getId() + " for " + request.getEquipment().getEquipmentName() + " from " + request.getApplicantName(),
+                    "BORROW_REQUEST",
+                    request.getId(),
+                    "BorrowRequest",
+                    "NORMAL"
+            );
+        }
+    }
+
+
+    private boolean isAvailableForApproval(
+            Long equipmentId,
+            LocalDate startDate,
+            LocalDate endDate,
+            Long currentRequestId) {
+
+        // Exclude the current request from the overlap check.
+        List<BorrowRequest> conflicts =
+                borrowRequestRepository.findOverlappingBlockingRequestsExcept(
+                        currentRequestId,
+                        equipmentId,
+                        startDate,
+                        endDate,
+                        BLOCKING_STATUSES
+                );
+
+        // Another pending or approved request overlaps.
+        if (!conflicts.isEmpty()) {
+            return false;
+        }
+
+        // Check whether equipment is already issued.
+        return issuanceRepository.findOverlappingActiveIssuances(
+                equipmentId,
+                startDate,
+                endDate,
+                List.of("ISSUED", "OVERDUE")
+        ).isEmpty();
     }
 
     private boolean isBlank(String value) {
@@ -287,6 +413,7 @@ public class BorrowRequestService {
         response.setLaboratoryName(entity.getEquipment().getLaboratory());
         response.setModel(entity.getEquipment().getModel());
         response.setSerialNumber(entity.getEquipment().getSerialNumber());
+        response.setUserId(entity.getRequester() != null ? entity.getRequester().getId() : null);
         response.setApplicantName(entity.getApplicantName());
         response.setRegistrationOrStaffId(entity.getRegistrationOrStaffId());
         response.setDepartment(entity.getDepartment());

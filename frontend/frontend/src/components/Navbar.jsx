@@ -499,7 +499,8 @@ const NotificationMenu = memo(
     notifications,
     unreadCount,
     onRead,
-    onReadAll
+    onReadAll,
+    onViewAll
   }) => {
     const containerRef =
       useRef(null);
@@ -624,6 +625,7 @@ const NotificationMenu = memo(
               <div className="px-4 py-2 border-t border-gray-100 bg-gray-50 text-center">
                 <button
                   type="button"
+                  onClick={onViewAll}
                   className="text-xs text-yellow-600 hover:text-yellow-700 font-medium transition-colors"
                 >
                   View all notifications
@@ -862,6 +864,12 @@ const Navbar = () => {
       setProfileOpen(false);
     }, []);
 
+  const handleViewAllNotifications =
+    useCallback(() => {
+      setNotifOpen(false);
+      navigate('/profile#notifications');
+    }, [navigate]);
+
   const handleLogout =
     useCallback(() => {
       try {
@@ -956,6 +964,7 @@ const Navbar = () => {
               onReadAll={
                 markAllAsRead
               }
+              onViewAll={handleViewAllNotifications}
             />
 
             {/* Profile */}

@@ -10,6 +10,8 @@ import com.equipment.Management.System.demo.repository.EquipmentRepository;
 import com.equipment.Management.System.demo.repository.MaintenanceRepository;
 import com.equipment.Management.System.demo.repository.UserRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -66,6 +68,7 @@ public class MaintenanceService {
         if (dto == null || dto.equipmentId() == null) {
             throw new RuntimeException("equipmentId is required");
         }
+        validateCost(dto.cost());
 
         Equipment eq = equipmentRepo.findById(dto.equipmentId())
                 .orElseThrow(() -> new RuntimeException(
@@ -78,6 +81,8 @@ public class MaintenanceService {
                 .priority(dto.priority())
                 .dueDate(dto.dueDate())
                 .status(normalizeStatus(dto.status()))
+                .cost(dto.cost())
+                .repairNote(dto.repairNote())
                 .build();
 
         syncEquipmentStatus(eq, m.getStatus());
@@ -123,7 +128,13 @@ public class MaintenanceService {
     public Maintenance update(Long id, MaintenanceUpdateDto dto) {
 
         Maintenance m = repo.findById(id)
-                .orElseThrow(() -> new RuntimeException("Maintenance not found with id: " + id));
+                .orElseThrow(() ->
+                        new ResponseStatusException(
+                                HttpStatus.NOT_FOUND,
+                                "Maintenance not found with id: " + id
+                        )
+                );
+        validateCost(dto.cost());
 
         String oldStatus = normalizeStatus(m.getStatus());
 
@@ -191,6 +202,15 @@ public class MaintenanceService {
         return updated;
     }
 
+    private void validateCost(Double cost) {
+        if (cost != null && (!Double.isFinite(cost) || cost < 0)) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Maintenance cost cannot be negative"
+            );
+        }
+    }
+
     private String normalizeStatus(String status) {
         if (status == null || status.isBlank()) return "BROKEN";
         return switch (status.trim().toUpperCase()) {
@@ -211,8 +231,12 @@ public class MaintenanceService {
     public void delete(Long id) {
 
         Maintenance m = repo.findById(id)
-                .orElseThrow(() -> new RuntimeException("Maintenance not found"));
-
+                .orElseThrow(() ->
+                        new ResponseStatusException(
+                                HttpStatus.NOT_FOUND,
+                                "Maintenance not found with id: " + id
+                        )
+                );
         repo.deleteById(id);
 
         notifyMaintenanceManagers(

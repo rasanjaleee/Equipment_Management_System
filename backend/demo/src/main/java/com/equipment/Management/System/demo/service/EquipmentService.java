@@ -2,22 +2,28 @@ package com.equipment.Management.System.demo.service;
 
 import com.equipment.Management.System.demo.model.Equipment;
 import com.equipment.Management.System.demo.model.EquipmentStatus;
+import com.equipment.Management.System.demo.model.Maintenance;
 import com.equipment.Management.System.demo.model.User;
 import com.equipment.Management.System.demo.repository.EquipmentRepository;
+import com.equipment.Management.System.demo.repository.MaintenanceRepository;
 import com.equipment.Management.System.demo.repository.UserRepository;
 import com.google.zxing.WriterException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.time.LocalDate;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
 public class EquipmentService {
 
     private final EquipmentRepository equipmentRepository;
+    private final MaintenanceRepository maintenanceRepository;
     private final NotificationService notificationService;
     private final QrCodeService qrCodeService;
     private final UserRepository userRepository;
@@ -27,11 +33,13 @@ public class EquipmentService {
     private String frontendBaseUrl;
 
     public EquipmentService(EquipmentRepository equipmentRepository,
+                            MaintenanceRepository maintenanceRepository,
                             NotificationService notificationService,
                             QrCodeService qrCodeService,
                             UserRepository userRepository,
                             AdminSettingService adminSettingService) {
         this.equipmentRepository = equipmentRepository;
+        this.maintenanceRepository = maintenanceRepository;
         this.notificationService = notificationService;
         this.qrCodeService = qrCodeService;
         this.userRepository = userRepository;
@@ -68,8 +76,12 @@ public class EquipmentService {
 
     public Equipment saveEquipment(Equipment equipment) {
         boolean isNew = (equipment.getId() == null);
+        EquipmentStatus oldStatus = isNew ? null : equipmentRepository.findById(equipment.getId())
+                .map(Equipment::getStatus)
+                .orElse(null);
 
         Equipment saved = equipmentRepository.save(equipment);
+        syncMaintenanceForStatusChange(saved, oldStatus, saved.getStatus());
 
         if (isNew) {
             notifyEquipmentManagers(
@@ -110,8 +122,9 @@ public class EquipmentService {
         equipment.setStatus(statusEnum);
 
         Equipment updated = equipmentRepository.save(equipment);
+        syncMaintenanceForStatusChange(updated, oldStatus, statusEnum);
 
-        if (!oldStatus.equals(statusEnum)) {
+        if (!Objects.equals(oldStatus, statusEnum)) {
             if (statusEnum == EquipmentStatus.BROKEN && !adminSettingService.isAlertBrokenEquipment()) {
                 // Broken alerts disabled in settings
                 return updated;
@@ -136,6 +149,44 @@ public class EquipmentService {
         }
 
         return updated;
+    }
+
+    private void syncMaintenanceForStatusChange(
+            Equipment equipment,
+            EquipmentStatus oldStatus,
+            EquipmentStatus newStatus
+    ) {
+        if (equipment == null || newStatus == null || newStatus == oldStatus) {
+            return;
+        }
+
+        List<String> activeStatuses = Arrays.asList(
+                "PENDING", "IN_PROGRESS", "BROKEN", "UNDER_REPAIR"
+        );
+        Maintenance activeMaintenance = maintenanceRepository
+                .findLatestActiveByEquipmentId(equipment.getId(), activeStatuses)
+                .orElse(null);
+
+        if (newStatus == EquipmentStatus.WORKING) {
+            if (activeMaintenance != null) {
+                activeMaintenance.setStatus("COMPLETED");
+                activeMaintenance.setCompletedDate(LocalDate.now());
+                maintenanceRepository.save(activeMaintenance);
+            }
+            return;
+        }
+
+        if (newStatus != EquipmentStatus.BROKEN && newStatus != EquipmentStatus.UNDER_REPAIR) {
+            return;
+        }
+
+        if (activeMaintenance != null) {
+            String expectedStatus = newStatus == EquipmentStatus.BROKEN ? "PENDING" : "IN_PROGRESS";
+            if (!expectedStatus.equals(activeMaintenance.getStatus())) {
+                activeMaintenance.setStatus(expectedStatus);
+                maintenanceRepository.save(activeMaintenance);
+            }
+        }
     }
 
     public Equipment createEquipmentWithQr(Equipment equipment) throws IOException, WriterException {

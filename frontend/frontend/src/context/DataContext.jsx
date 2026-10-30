@@ -28,7 +28,11 @@ export const DataProvider = ({ children }) => {
   const [loadingNotifications, setLoadingNotifications] = useState(false);
 
   const [settings, setSettings] = useState(null);
-
+  // Report cache state (managed by ReportsPage, stored here for cross-page caching)
+  const [inventorySummary, setInventorySummary] = useState(null);
+  const [inventoryList, setInventoryList] = useState([]);
+  const [allSuppliers, setAllSuppliers] = useState([]);
+  const [allLaboratories, setAllLaboratories] = useState([]);
 
   // 1. Fetch Equipment
   const refreshEquipment = useCallback(async (showLoading = false) => {
@@ -373,6 +377,15 @@ export const DataProvider = ({ children }) => {
     setMyIssuances,
     loadingMyEquipment,
     refreshMyEquipment,
+
+    inventorySummary,
+    setInventorySummary,
+    inventoryList,
+    setInventoryList,
+    allSuppliers,
+    setAllSuppliers,
+    allLaboratories,
+    setAllLaboratories,
   };
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
@@ -423,6 +436,14 @@ export const useData = () => {
       setMyIssuances: () => {},
       loadingMyEquipment: false,
       refreshMyEquipment: async () => ({ requests: [], issuances: [] }),
+      inventorySummary: null,
+      setInventorySummary: () => {},
+      inventoryList: [],
+      setInventoryList: () => {},
+      allSuppliers: [],
+      setAllSuppliers: () => {},
+      allLaboratories: [],
+      setAllLaboratories: () => {},
     };
   }
   return context;
