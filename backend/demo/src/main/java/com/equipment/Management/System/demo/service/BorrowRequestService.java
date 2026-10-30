@@ -159,9 +159,25 @@ public class BorrowRequestService {
         return null;
     }
 
-
     @Transactional
     public BorrowRequestResponse updateStatus(Long id, String status) {
+        String normalizedStatus = normalizeStatus(status);
+
+        // RESTORED: read the request first, then lock the equipment row before approving
+        // so two concurrent approvals cannot both pass the overlap check.
+        BorrowRequest current = borrowRequestRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Borrow request not found."
+                ));
+
+        if ("APPROVED".equals(normalizedStatus) && "PENDING".equals(normalizeStatus(current.getStatus()))) {
+            equipmentRepository.findByIdForUpdate(current.getEquipment().getId())
+                    .orElseThrow(() -> new ResponseStatusException(
+                            HttpStatus.NOT_FOUND,
+                            "Equipment not found."
+                    ));
+        }
 
         // Lock the request while processing the decision.
         BorrowRequest entity = borrowRequestRepository.findByIdForUpdate(id)
@@ -170,7 +186,6 @@ public class BorrowRequestService {
                         "Borrow request not found."
                 ));
 
-        String normalizedStatus = normalizeStatus(status);
         String currentStatus = normalizeStatus(entity.getStatus());
 
         // Handle repeated approval/rejection requests.
@@ -224,15 +239,20 @@ public class BorrowRequestService {
         return toResponse(saved);
     }
 
-
     public BorrowRequestResponse updateStatus(Long id, Map<String, String> statusUpdate, String currentUsername) {
         String status = (statusUpdate != null) ? statusUpdate.get("status") : null;
         return updateStatus(id, status);
     }
 
-    @Transactional(readOnly = true)
+    // RESTORED: normal (not read-only) transaction, because it takes a row lock.
+    @Transactional
     public boolean isEquipmentAvailable(Long equipmentId, LocalDate startDate, LocalDate endDate) {
         validateAvailabilityInputs(equipmentId, startDate, endDate);
+
+        // RESTORED: lock the equipment row so concurrent requests are serialized.
+        equipmentRepository.findByIdForUpdate(equipmentId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Equipment not found."));
+
         return isAvailable(equipmentId, startDate, endDate);
     }
 
@@ -369,7 +389,6 @@ public class BorrowRequestService {
             );
         }
     }
-
 
     private boolean isAvailableForApproval(
             Long equipmentId,
